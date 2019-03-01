@@ -10,6 +10,17 @@ function check_up_server()
 	fi
 	return 1
 }
+function goto
+{
+    label=$1
+    cmd=$(sed -n "/#$label:/,/#end:/p" $0 | grep -v ':$')
+    if [[ -z $cmd ]];then
+        echo "$label not defined"
+        return 1
+    fi
+    eval "$cmd"
+    return
+}
 function byte_hr()
 {
 	local size_670b2dbb
@@ -45,9 +56,9 @@ function fget()
 		dld_933be66d="false"
 		if [ -e "$name_933be66d" ];then
 			lsof_933be66d=$(lsof "$name_933be66d" 2>/dev/null)
-			pid_933be66d=$(echo "$lsof_933be66d"|grep -E [[:digit:]]+[w:W:u]|gawk '{printf $2"\n"}')
-			perm_933be66d=$(echo "$lsof_933be66d"|grep -E [[:digit:]]+[w:W:u]|gawk '{printf $4"\n"}')
-			process_933be66d=$(echo "$lsof_933be66d"|grep -E [[:digit:]]+[w:W:u]|gawk '{printf $1"\n"}')
+			pid_933be66d=$(echo "$lsof_933be66d"|grep -E '[[:digit:]]+[w:W:u]'|gawk '{printf $2"\n"}')
+			perm_933be66d=$(echo "$lsof_933be66d"|grep -E '[[:digit:]]+[w:W:u]'|gawk '{printf $4"\n"}')
+			process_933be66d=$(echo "$lsof_933be66d"|grep -E '[[:digit:]]+[w:W:u]'|gawk '{printf $1"\n"}')
 			size_933be66d=$(stat -c%s "$name_933be66d")
 		else
 			size_933be66d=0
@@ -55,7 +66,7 @@ function fget()
 			perm_933be66d=""
 			process_933be66d=""
 		fi
-		if [ -e "$name_933be66d" ] && ((dlsize_933be66d == size_933be66d)) ;then
+		if [ -e "$name_933be66d" ] && ((dlsize_933be66d <= size_933be66d)) ;then
 			dld_933be66d="true"
 		fi
 		if [ $dld_933be66d = "false" ];then
@@ -74,7 +85,8 @@ function fget()
 				fi
 			else
 				echo "$response_933be66d $(server_responce $response_933be66d)"
-				return $response_933be66d
+				[[ $response_933be66d =~ 40. ]]&&${SHOW_URL:-false}&&echo $url_933be66d
+				return ${response_933be66d:0:1}${response_933be66d:2:3}
 			fi
 		fi
 	else
@@ -97,7 +109,11 @@ function fget()
 		tput sgr0
 		return $ex_933be66d
 	else
-		echo -e "Already downloaded $name_933be66d [$(byte_hr $size_933be66d)]."
+		if ((dlsize_933be66d == size_933be66d));then
+			echo -e "Already downloaded $name_933be66d [$(byte_hr $size_933be66d)]."
+		else
+			echo -e "Already downloaded $name_933be66d [$(byte_hr $size_933be66d)],\nbut size doesn't match.[size on server $(byte_hr $dlsize_933be66d)]"
+		fi
 		return 0
 	fi
 }

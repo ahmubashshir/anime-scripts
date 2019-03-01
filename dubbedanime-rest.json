@@ -1,0 +1,54 @@
+{
+	"dubbedanime_api":{
+		"method":"POST",
+		"url":"https://ww5.dubbedanime.net/ajax/paginate",
+		"dict":["params:query"],
+		"list":["params:query[order][by,as]"],
+		"params":{
+			"query":{
+				"search":"query_str",
+				"type":[0,"tv","movie","ova","ona","special"],
+				"status":[0,"ongoing","completed"],
+				"genre":[null],
+				"order":{
+					"default":{
+						"by":"popularity",
+						"as":"asc"
+					},
+					"by":["popularity","english","date","rank"],
+					"as":["asc","desc"],
+				},
+				"season":[0,"Winter","Spring","Summer","Fall"],
+				"year":[0,"1965-"],
+				"lang":[0,"eng","jap"]
+			},
+			"model":["Anime","Cartoon"],
+			"size":30,
+			"what":"query",
+			"letter":["all","[:alpha:]"]
+		},
+
+
+		"config":{
+			"model":{
+				"Anime":{
+					"query":{
+						"order":{
+							"by":"popularity",
+							"as":"asc"
+						}
+					}
+				},
+				"Cartoon":{
+					"query":{
+						"order":{
+							"by":"title",
+							"as":"asc"
+						}
+					}
+				}
+			}
+		}
+	}
+}
+

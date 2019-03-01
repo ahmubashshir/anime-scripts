@@ -1,0 +1,40 @@
+#!/bin/bash
+. libbash
+trap "echo Exiting...;exit" 1 2 3 6 15
+t=$((echo $@|tr \  \\n|grep -q '^c$')&&echo cartoon)
+if [[ $t = "cartoon" ]];then
+    cd "/mnt/Multimedia/${L:-Animetion-Movie/Series}"
+else
+    cd /mnt/Multimedia/Anime
+fi
+page="$(curl "https://ww5.dubbedanime.net/${t:-anime}/${1##*/}" 2>/dev/null)"
+type="$(echo $@|tr \  \\n|grep '^[ds]ub$')"
+lim=$(echo $@|tr \  \\n|grep '^l[[:digit:]]*-$\|^l[[:digit:]]*$'|tr -d 'l[:punct:]')
+title=$(echo "$page"|tr -d \\n|sed "s|</[[:alnum:]]*>|\n|g"|grep "h3 dosis mt-0 text-white pt-2 d-none d-sm-block"|tr \> \\n|tail -1|sed -e 's|^ *||g' -e 's| *$||g'|sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||⫿|g;s|*|🞵|g')
+if [[ ${PWD##*/} != $title ]];then
+    if [[ ! -d $title ]];then
+        mkdir "$title"
+    fi
+    cd "$title"
+fi
+echo Downloading \"$title\"
+if [[ $t = "cartoon" ]];then
+    url=$(echo "$page"|tr -d \'\"|grep $(echo ${1##*/}|cut -d- -f2-)|tr \ \> \\n|grep ^href|tac|sort -u|cut -d= -f2)
+else
+    url=$(echo "$page"|tr -d \\n\'\"|sed 's|<li|\n<li|g;s|</li>|</li>\n|g'|grep data-${type:-dub}bed=true|tr \ \<\> \\n|grep ^href|sort -u|cut -d= -f2|awk "{print \$0\"-english-${type:-dub}bed\";}")
+    [[ -z $url ]]&& $(echo "$page"|tr -d \\n\'\"|sed 's|<li|\n<li|g;s|</li>|</li>\n|g'|grep data-subbed=true|tr \ \<\> \\n|grep ^href|sort -u|cut -d= -f2|awk "{print \$0\"-english-subbed\";}")
+fi
+for n in $(echo "$url"|tail +${lim:-1})
+do
+#redownload:
+tput sc
+a='';while [ "$a" = "" ];do a=$(video_url $n 2>/dev/null);done
+echo "Downloading \"$(echo $a|cut -d: -f3- --output-delimiter=' ')\""
+fget "$(echo -e $(echo $a|cut -d: -f2|sed 's|%|\\x|g'))" "$(echo $a|cut -d: -f1)"
+if [[ $? == 44 ]];then
+    tput rc
+    goto redownload
+fi
+#end:
+done
+

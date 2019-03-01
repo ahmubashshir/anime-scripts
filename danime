@@ -150,15 +150,19 @@ ep_info()
 {
 	if [[ ${2:-0} -le 3 ]];then
 		python3 -c '#!/usr/bin/python3 -d
+# encoding: utf8
 from browsermobproxy import Server
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from urllib.parse import quote_plus
 from random import randint
 from sys import argv
+from psutil import Process
 from subprocess import getoutput
+from jsbeautifier import beautify
 from os import system
 url = argv[1]
-browsermobproxy_location = '\''/'\''.join(argv[2].split('\''/'\'')[0:-1])+'\''/browsermob/browsermob-proxy'\''
+browsermobproxy_location = '\''/'\''.join(argv[0].split('\''/'\'')[0:-1])+'\''/browsermob/browsermob-proxy'\''
 server=Server(browsermobproxy_location)
 while True:
 	try:
@@ -167,7 +171,10 @@ while True:
 		#print('\''%d'\''%server.port)
 		server.start()
 		proxy = server.create_proxy()
-		system('\''rm -f server.log'\'')
+		logs=set([n.path for n in Process(server.process.pid).open_files() if n.mode is '\''w'\''])
+		for n in logs:
+			system('\''rm -f %s'\''%n)
+		system('\''rm -rf /tmp/browsermob-proxy*'\'')
 		break
 	except KeyboardInterrupt:
 		system('\''pkill -9 -P %d'\''%server.process.pid)
@@ -181,11 +188,14 @@ while True:
 		server.stop()
 try:
 	options = webdriver.ChromeOptions()
-	options.add_argument('\''--headless'\'')
+	#options.add_argument('\''--headless'\'')
 	options.add_argument('\''--proxy-server=%s'\'' % proxy.proxy)
 	driver = webdriver.Chrome(chrome_options=options)
 	proxy.new_har('\''Example'\'')
-	driver.get(url)
+	try:
+		driver.get(url)
+	except TimeoutException:
+		pass
 	entries = proxy.har['\''log'\'']['\''entries'\'']
 	title=driver.find_element_by_class_name('\''title-header'\'').text.replace('\''<'\'','\''＜'\'').replace('\''>'\'','\''＞'\'').replace('\'':'\'','\''꞉'\'').replace('\''\"'\'','\''＂'\'').replace('\''/'\'','\''⧸'\'').replace('\''\\\\'\'','\''⧹'\'').replace('\''?'\'','\''？'\'').replace('\''|'\'','\''⫿'\'').replace('\''*'\'','\''🞵'\'').split('\'' '\'')[:]
 	title.reverse()
@@ -202,10 +212,14 @@ try:
 				print(filename,quote_plus(entry['\''request'\'']['\''url'\'']),title,sep='\'':'\'')
 				break
 			elif entry['\''request'\'']['\''url'\''].find('\''www.mp4upload.com/embed-'\'')>-1:
-				vid_id=getoutput('\'''\'''\''txt=$(curl "%s" 2>/dev/null);set +x;if [ -n "$(echo $txt|sed "s|video\\||\\nid:|g;s|setup|\\n|g;s|complete|\\n|g;s|www|\\nwww|g"|grep "^www[[:digit:]].*\\|^id"|tr -d \\\\n|sed "s|id:||g;s|\|$||g")" ];then echo $txt|sed "s|video\||\\nid:|g;s|setup|\\n|g;s|complete|\\n|g;s|www|\\nwww|g"|grep "^www[[:digit:]].*\\|^id"|tr -d \\\\n|sed "s|id:||g;s|\|$||g"|tr \\\\n :;else echo $txt|sed "s|append\||sd:|g;s|\|mp4\||\|mp4:|g;s|\|Video|:port|g"| grep mp4upload|tr \| \\\\n|grep "^sd:[w]*[[:digit:]]$\|^mp4:[[:alnum:]]*$\|^[[:digit:]]*:port$"|tr \\\\n :|cut -d: -f2,4,5|sed "s|:|\||g";fi'\'''\'''\''%entry['\''request'\'']['\''url'\'']).split('\''|'\'')
-				print(filename.replace('\''<'\'','\''＜'\'').replace('\''>'\'','\''＞'\'').replace('\'':'\'','\''꞉'\'').replace('\''\"'\'','\''＂'\'').replace('\''/'\'','\''⧸'\'').replace('\''\\\\'\'','\''⧹'\'').replace('\''?'\'','\''？'\'').replace('\''|'\'','\''⫿'\'').replace('\''*'\'','\''🞵'\''),quote_plus('\''https://%s.mp4upload.com:%s/d/%s/video.mp4'\''%(vid_id[0],vid_id[2],vid_id[1])),title,sep='\'':'\'')
-
-				break
+				while True:
+					res=getoutput('\'''\'''\''curl "%s" 2>/dev/null|grep '\''id=\"player\"'\''|cut -d\> -f3-'\'''\'''\''%entry['\''request'\'']['\''url'\''])
+					if res != '\'''\'':
+						break
+					res=[n for n in '\'''\''.join(list(filter(None,beautify(res).replace('\''"'\'','\'''\'').replace('\'','\'','\'''\'').split('\'' '\'')))).splitlines() if n[0:9]=='\''file:http'\''][0][5:]
+					print(filename,quote_plus(res),title,sep='\'':'\'')
+					del res
+					break
 except KeyboardInterrupt:
 	system('\''pkill -9 -P %d'\''%server.process.pid)
 	system('\''rm -f server.log'\'')
@@ -444,6 +458,8 @@ get()
 	start_spinner "Fetching \"$2\" info"
 	page=$(curl "https://ww5.dubbedanime.net/anime/$id" 2>/dev/null)
 	title="${id#*-}"
+	# curl https://ww5.dubbedanime.net/anime/3714-that-time-i-got-reincarnated-as-a-slime|tr -d \\n|sed 's|</li>|</li>\n|g'|grep data-dubbed=\"true\"|tr '[:blank:]' \\n|grep href|cut -d\' -f2|sort -u
+
 	baseurl=$(echo "$page"| grep "$title"|sed 's| |\n|g'|grep href|sed "s|'||g"|cut -d= -f2|grep -v '>')
 	[[ $baseurl = '' ]]&&baseurl=$(echo "$page"|  grep "$(echo "$id"|cut -d- -f2-)"|sed 's| |\n|g'|grep href|sed "s|'||g"|cut -d= -f2|grep -v '>')
 	stop_spinner $([[ -n $baseurl ]]&&echo 0||echo 1)
@@ -711,7 +727,7 @@ if [[ $# != 0 ]]&&[[ $1 != latest ]];then
 		echo Invalid option $n
 	done
 	((ivc>0))&&exit 1
-	if [[ -n "$ep" ]]||[[ -n "$ch" ]];then
+	if ([[ -n "$ep" ]]||[[ -n "$ch" ]])&&$DOWNLOAD_ALL;then
 		DOWNLOAD_ALL=false
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi

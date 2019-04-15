@@ -41,7 +41,7 @@ expand_limit() {
 	return 0
 }
 validate_limit() {
-	if ! echo "$1" | grep -q '^[[:digit:],-]$'; then
+	if ! echo "$1" | grep -q '^[[:digit:],-]*$'; then
 		return 1
 	fi
 	if [[ $1 =~ ^[[:digit:]]-$ ]]; then

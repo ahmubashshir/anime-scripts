@@ -1,0 +1,114 @@
+#!/bin/bash
+# shellcheck disable=SC2086
+# shellcheck disable=SC1091
+# shellcheck disable=SC1090
+# shellcheck disable=SC1003
+# shellcheck disable=SC2034
+# shellcheck disable=SC2154
+# shellcheck disable=SC2016
+# shellcheck disable=SC2015
+# shellcheck disable=SC2143
+DEBUG=${DEBUG:-false}
+#start:code
+da_api_search() {
+	python3 -c '#!/usr/bin/python3
+import requests
+import json
+from sys import argv
+def refine(Str):
+	d={
+		'\''<'\'':'\''＜'\'',
+		'\''>'\'':'\''＞'\'',
+		'\'':'\'':'\''꞉'\'',
+		'\''"'\'':'\''＂'\'',
+		'\''/'\'':'\''⧸'\'',
+		'\''\\'\'':'\''⧹'\'',
+		'\''?'\'':'\''？'\'',
+		'\''|'\'':'\''⫿'\'',
+		'\''*'\'':'\''🞵'\'',
+	}
+	for n in d.keys():
+		Str=Str.replace(n,d[n])
+	return Str
+if len(argv)>1:
+	data = {
+		'\''model'\'': '\'${TYPE:-anime}\''.title(),
+		'\''size'\'': 200,
+		'\''what'\'': '\''query'\'',
+		'\''letter'\'': '\''all'\'',
+		'\''query[order]'\'': '\''date,asc'\'',
+		'\''query[search]'\'':'\'' '\''.join(argv[1:])
+	}
+	for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
+		try:
+			print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''english'\''] if n['\''english'\''] is not '\'\'' else n['\''title'\''])))
+		except:
+			print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))' "$@"
+}
+da_search() {
+	start_spinner "Searching for $*"
+	RES=$(da_api_search "$@")
+	if [ -z "$(echo "$RES" | tr -d '[:space:]')" ]; then
+		(exit 4)
+	fi
+	stop_spinner $?
+	if [ -z "$(echo "$RES" | tr -d '[:space:]')" ]; then
+		return 4
+	fi
+	total_res=$(echo "$RES" | wc -l)
+	if [ -z "$RES_LIST" ] && ! $DOWNLOAD_ALL; then
+		vbar
+		vbar "DubbedAnime.net Search Result" true
+		vbar
+		vbar "Select One or more to download"
+		vbar
+		echo "$RES" | cut -d: -f2- | awk '{print NR" ) "$0;}'
+		read -rp$': ' RES_LIST
+		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
+	elif $DOWNLOAD_ALL && [ -z "$RES_LIST" ]; then
+		RES_LIST='1-'
+		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
+	elif [ -n "$RES_LIST" ]; then
+		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
+	fi
+
+	for n in $RES_LIST; do
+		target=$(echo "$RES" | head -n "$n" | tail -1)
+		local base
+		base="$(set_basedir "${target%%:*}")"
+		if ! [ -d "$base" ]||! [ -e "$base" ];then
+			rm -rf "$base"
+			mkdir -p "$base"
+		fi
+		cd "$base" || true
+		local dir
+		dir="$(echo "$target"|cut -d: -f2-|replace_invalid dir)"
+		if [ ! -d "$dir" ]; then
+			rm -f "$dir"
+			mkdir "$dir"
+		fi
+		cd "$dir" || continue
+		echo -e "Title: $dir"
+		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
+		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $CONTINUE; then
+			read -rsp$'Press Return to download next.'
+			printf '\n'
+		fi
+	done
+}
+set_basedir()
+{
+	case $1 in
+		anime/*) echo "$ANIME_PATH";;
+		*power-rangers*) echo "$POWER_RANGERS_PATH";;
+		*tv-series*|*kamen-rider*) echo "$TV_SERIES_PATH";;
+		*movie*) echo "$MOVIE_PATH";;
+		cartoon/*) echo	"$CARTOON_PATH";;
+	esac	
+}
+#end:code
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	da_search "$@"
+fi
+

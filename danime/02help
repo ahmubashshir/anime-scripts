@@ -1,0 +1,43 @@
+#!/bin/bash
+DEBUG=${DEBUG:-false}
+#start:code
+danime_help() {
+	echo "$(basename "$0") Help:"
+	echo Usage:
+	printf "  %s [command] [option] <anime name>\n" "$(basename "$0")"
+	echo "Commands:"
+	printf "  s<digit[,[...]]>\tchoose <digit> no. search result autometically.\n"
+	printf "  ep[digit[-[digit]]]\tShow episode list selection to download.\n\t\t\tOr you can provide a list of episode to\n\t\t\tdownload like this 'digit[-[digit]]' limit\n\n"
+	printf "  dub,sub\t\tDownload dubbed or subbed episodes\n"
+	echo
+	echo "Options:"
+	printf "  -c,--continue\t\tcontinue after downloading a selection.(default)\n"
+	printf "  -nc,--no-continue\tWait for user intaraction after downloading a selection.\n"
+	printf "  -l,--list\t\tList downloaded Animes in \"\$ANIME_PATH\"\n"
+	printf "  -nr,--no-reset\tDon't reset terminal certain events.\n"
+	printf "  -t<time>\t\tChange resolving timeout.\n"
+	printf "  --timeout=<time>\n\n"
+	printf "  -f-<value>\t\tForce version,where value is sub/dub\n"
+	printf "  --force-<value>\tThis overrides TYPE_ANIME variable.\n\n"
+	printf "  -h,--help\t\tshow this menu\n"
+	echo
+	echo "Example:"
+	printf "  #1: %s <anime name> \n" "$(basename "$0")"
+	printf "  #2: %s <anime name> s1,2\n" "$(basename "$0")"
+	printf "  #3: %s <anime name> ep5-9\n" "$(basename "$0")"
+	printf "  #4: %s <anime name> ep\n" "$(basename "$0")"
+	printf "  #5: %s s1 <anime name>\n" "$(basename "$0")"
+	printf "  #6: %s ep <anime name>\n" "$(basename "$0")"
+	printf "  #7: %s ep5 <anime name>\n" "$(basename "$0")"
+	printf "  #8: %s dub <anime name>\n" "$(basename "$0")"
+	printf "Note: You must provide <anime name>\n"
+	echo
+	printf "Environment Variable:\n"
+	printf "  TYPE_ANIME:\t supported value:{subbed,dubbed}\n\n"
+	printf "\t\t You can use '@' to denote\n  ANIME_ROOT:\t Base folder for animes.(readonly)\n\t\t path relative to ANIME_ROOT in \"AP\"\n\n"
+	printf "  ANIME_PATH:\t Temporary Base folder for animes\n  \t\t it can be changed.\n"
+	printf "  AP\t    :\t Alias of ANIME_PATH\n"
+	printf "  RSOLV\t    :\t Set dns resolving timeout.\n"
+}
+#end:code
+

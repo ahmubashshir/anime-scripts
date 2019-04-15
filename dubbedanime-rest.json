@@ -16,7 +16,7 @@
 						"as":"asc"
 					},
 					"by":["popularity","english","date","rank"],
-					"as":["asc","desc"],
+					"as":["asc","desc"]
 				},
 				"season":[0,"Winter","Spring","Summer","Fall"],
 				"year":[0,"1965-"],

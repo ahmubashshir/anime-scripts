@@ -12,7 +12,24 @@ DEBUG=${DEBUG:-false}
 if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	while [ -n "$1" ]; do
 		case $1 in
-			-d|--debug)
+			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}
+				BS=$(echo "$BS" | byte_mr)
+				;;
+			-B[[:digit:].]* | --block=[[:digit:].]*)
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+$ ]] || BS=${1/-B/}
+				;;
+			-B | --block)
+				BS=$2
+				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+					BS=$(echo "$BS" | byte_mr)
+				else
+					echo "Invalid block size." 1>&2
+				fi
+				;;
+			-d | --debug)
 				DEBUG=true
 				;;
 			-A)
@@ -36,11 +53,15 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				EP_LIST=true
 				EP_LIST_RANGE=${1#*=}
 				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || EP_LIST_RANGE=${1/-e/}
+				EP_LIST_RANGE=$(echo "$EP_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
 			-s | --select)
 				if [[ $2 =~ ^[[:digit:],-]+$ ]]; then
 					RES_LIST=$2
 					shift
+				else
+					echo "Invalid selection index." 1>&2
+					exit 1
 				fi
 				;;
 			-s[[:digit:],-]* | --select=[[:digit:],-]*)

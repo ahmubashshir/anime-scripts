@@ -53,6 +53,7 @@ da_search() {
 	fi
 	stop_spinner $?
 	if [ -z "$(echo "$RES" | tr -d '[:space:]')" ]; then
+		echo You should check your keywords.
 		return 4
 	fi
 	total_res=$(echo "$RES" | wc -l)
@@ -76,13 +77,13 @@ da_search() {
 		target=$(echo "$RES" | head -n "$n" | tail -1)
 		local base
 		base="$(set_basedir "${target%%:*}")"
-		if ! [ -d "$base" ]||! [ -e "$base" ];then
+		if ! [ -d "$base" ] || ! [ -e "$base" ]; then
 			rm -rf "$base"
 			mkdir -p "$base"
 		fi
 		cd "$base" || true
 		local dir
-		dir="$(echo "$target"|cut -d: -f2-|replace_invalid dir)"
+		dir="$(echo "$target" | cut -d: -f2- | replace_invalid dir)"
 		if [ ! -d "$dir" ]; then
 			rm -f "$dir"
 			mkdir "$dir"
@@ -96,15 +97,14 @@ da_search() {
 		fi
 	done
 }
-set_basedir()
-{
+set_basedir() {
 	case $1 in
-		anime/*) echo "$ANIME_PATH";;
-		*power-rangers*) echo "$POWER_RANGERS_PATH";;
-		*tv-series*|*kamen-rider*) echo "$TV_SERIES_PATH";;
-		*movie*) echo "$MOVIE_PATH";;
-		cartoon/*) echo	"$CARTOON_PATH";;
-	esac	
+		anime/*) echo "$ANIME_PATH" ;;
+		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
+		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;
+		*movie*) echo "$MOVIE_PATH" ;;
+		cartoon/*) echo "$CARTOON_PATH" ;;
+	esac
 }
 #end:code
 if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \

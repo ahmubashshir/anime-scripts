@@ -18,7 +18,7 @@ clear_line() {
 	tput rc
 }
 expand_limit() {
-	$DEBUG && set -x
+	${DEBUG:-false} && set -x
 	if [[ $1 =~ ^[[:digit:]]+-$ ]]; then
 		local n=${1%%-*}
 		for ((i = n; i <= $2; i++)); do
@@ -37,8 +37,14 @@ expand_limit() {
 			fi
 		done
 	fi | tr \  \\n | sort -nu | tr \\n \  | sed 's| $|\n|g'
-	$DEBUG && set +x
+	${DEBUG:-false} && set +x
 	return 0
+}
+byte_mr() {
+	sed '
+	s/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[kK]/\1*1000/g;
+	s/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g
+	' < /dev/stdin | bc | sed 's/\..*$//'
 }
 validate_limit() {
 	if ! echo "$1" | grep -q '^[[:digit:],-]*$'; then
@@ -72,7 +78,7 @@ anime_cover() {
 	fi
 }
 replace_invalid() {
-	if [[ $1 == dir ]];then
+	if [[ $1 == dir ]]; then
 		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||⫿|g;s|\*|🞵|g'
 	else
 		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||⫿|g;s|\*|🞵|g;s| |-|g'

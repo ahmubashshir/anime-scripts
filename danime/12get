@@ -17,7 +17,7 @@ source "$(dirname "$0")"/01include
 #start:code
 da_get() {
 	series="$1"
-	title="$2"
+	TITLE="$2"
 	TYPE=${1%/*}
 	if [ "$series" = "" ]; then
 		exit 3
@@ -25,14 +25,17 @@ da_get() {
 	start_spinner "Fetching \"${series#-*}\" info"
 	da_page=$(curl "https://ww5.dubbedanime.net/$series" 2> /dev/null)
 	if [[ $TYPE == anime ]]; then
-		baseurl=$(echo "$da_page" | tr -d \\n\'\" | sed 's|<li|\n<li|g;s|</li>|</li>\n|g' | sed 's|><| >< |g' | tr -s '[:space:]' | sed 's|>Episode [[:digit:]]*.*$||gI' | grep class=jt-di | cut -d\  -f4,5,8 | sed 's|data-subbed|subbed|g;s|data-dubbed|dubbed|g' | awk '{print $3";"$2";"$1}' | sort -g)
+		baseurl=$(echo "$da_page" | tr -d \\n\'\" | sed 's|<li|\n<li|g;s|</li>|</li>\n|g' | sed 's|><| >< |g' | tr -s '[:space:]' | sed 's|>Episode [[:digit:]]*.*$||gI' | grep class=jt-di | tr -s \>\< \  | (
+			while read -r EPISODE; do echo $EPISODE | tr \  \\n | grep '^href\|^data' | xargs echo | sed 's|data-subbed|subbed|g;s|data-dubbed|dubbed|g' | awk '{print $3";"$2";"$1}'; done
+			unset EPISODE
+		) | sort -g)
 	else
 		baseurl=$(echo "$da_page" | grep "$(echo "$series" | cut -d- -f2-)" | tr \ \> \\n | grep ^href | tac | sort -u | cut -d= -f2 | tr -d \' | sort -g)
 	fi
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	$NORESET || reset
-	$DEBUG && set -x
-	vbar "$title" true
+	${DEBUG:-false} && set -x
+	vbar "$TITLE" true
 	if [[ $TYPE == cartoon ]]; then
 		url="$baseurl"
 	else
@@ -48,24 +51,25 @@ da_get() {
 			echo "$(
 				tput setaf 1
 				tput dim
-			)\'$(ellipsis 38 "$title")\' doesn\'t have any ${FORCE}bed episode yet.$(tput sgr0)" > /dev/stderr
+			)\'$(ellipsis 38 "$TITLE")\' doesn\'t have any ${FORCE}bed episode yet.$(tput sgr0)" 1>&2
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
-		echo "$url" | wc -l
-		exit 0
 	fi
-	$DEBUG && set -x
+	${DEBUG:-false} && set -x
 	if [[ $EP_LIST_RANGE =~ [[:digit:]]+-[[:digit:]]+ ]]; then
 		ep_show="range($EP_LIST_RANGE) "
+		dl_notify="Episodes in ${ep_show}are"
 	elif [[ $EP_LIST_RANGE =~ [[:digit:]]+- ]]; then
 		ep_show="range($EP_LIST_RANGE$(echo "$url" | wc -l)) "
+		dl_notify="Episodes in ${ep_show}are"
 	elif [[ -n $EP_LIST_RANGE ]]; then
 		ep_show="file $EP_LIST_RANGE "
+		dl_notify="Episode ${ep_show:5}is"
 	fi
-	$DEBUG && set -x
-	epc=$(echo "$url" | cat -s | wc -l)
-	$DEBUG && set +x
+	${DEBUG:-false} && set -x
+	epc=$(echo "$url" | wc -l)
+	${DEBUG:-false} && set +x
 	anime_cover "$epc" "https://cdn.animeapi.com/images/${1%%-*}.jpg"
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
 	if [[ -n $ep ]] && [[ -n $ep_show ]]; then
@@ -76,11 +80,11 @@ da_get() {
 	else
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Type:${tr:-dubbed}"
 	fi
-	if ${EP_LIST:-false}; then
+	if ${EP_LIST:-false} && [ -z "$EP_LIST_RANGE" ]; then
 		read -rp$'Enter file list to download: ' EP_LIST_RANGE
 		ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
 	fi
-	$DEBUG && set -x
+	${DEBUG:-false} && set -x
 	for n in $ep; do
 		da_get_episede "$(echo "$url" | head -n "$n" | tail -1)"
 		if ! (exit $?); then
@@ -89,7 +93,7 @@ da_get() {
 			break
 		fi
 	done
-	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "$title ${ep_show}is downloaded"
+	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"
 }
 #end:code
 if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \

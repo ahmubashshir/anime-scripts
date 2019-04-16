@@ -1,6 +1,12 @@
 ifeq ($(OUTPUT),)
 	OUTPUT=danime
 endif
+id:= $(shell id -u)
+ifeq ($(id),0)
+	prefix=/usr
+else
+	prefix=$(HOME)/bin
+endif
 all: merge
 merge: check
 	@echo "Building executable \"$(OUTPUT)\""
@@ -16,3 +22,7 @@ debug: check
 	@echo "Debugging $(OUTPUT)"
 	bashdb $(OUTPUT)
 	@make clean
+install: all
+	@echo Installing $(OUTPUT)
+	install -C $(OUTPUT) $(prefix)/$(OUTPUT)
+

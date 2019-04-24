@@ -13,7 +13,7 @@ SPINNER_DELAY=0.04
 source "$(dirname "$0")"/14parse
 DEBUG=${DEBUG:-false}
 #start:code
-SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid'
+SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming'
 da_get_episede() {
 	tr=${1##*-}
 	if (($# == 0)); then
@@ -40,14 +40,23 @@ da_get_episede() {
 		if [ "$episode_type" = "episode" ]; then
 
 			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')
-			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$3","$2","$4;}')
+
+			ep_id_list=$(
+				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
+				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" | jsonparser | grep '^\[[[:digit:]]\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+			)
+
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
-				ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$3","$2","$4;}')
+				ep_id_list=$(
+					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" | jsonparser | grep '^\[[[:digit:]]\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+				)
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		elif [ "$episode_type" = "cartoon" ]; then
-			ep_title=$(echo "$parse_episede_page" | grep -v doctype | xmllint --html --xpath '/html/body/div[2]/div/div/div[1]/h1' - 2> /dev/null | tail -2 | tr \  \\n | head -n -1 | tr \\n \  | sed 's| $||g;s|^ ||g;')
+
+			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
 			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | sort)
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
@@ -67,6 +76,11 @@ da_get_episede() {
 			vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)"
 		fi
 		vbar
+		if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -z "$REPLACE_ON_ERROR" ]; then
+			REPLACE_ON_ERROR=true
+		elif [ "$(echo "$ep_id_list" | wc -l)" -gt 1 ] && [ -z "$REPLACE_ON_ERROR" ]; then
+			REPLACE_ON_ERROR=false
+		fi
 		for n in $ep_id_list; do
 			ep_file_url=
 			${DEBUG:-false} && set -x
@@ -96,14 +110,14 @@ da_get_episede() {
 				elif (
 					((ret == 4)) \
 						&& (
-							[[ $REPLACE_ON_ERROR == "true" ]] || ((${failed_tests:-0} >= 5))
-						) && [[ ${NO_REPLACE:-false} == "false" ]]
-				) || ((ret == 5)); then
+						 ${REPLACE_ON_ERROR:-false} || ((${failed_tests:-0} <= 5))
+						) && ${NO_REPLACE:-false}
+				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
 					rm "$ep_file_name"
 					download "$ep_file_name" "$ep_file_url"
 					return 0
 				else
-					echo -e "\nFile doesn't match.$?"
+					echo -e "\nFile doesn't match."
 				fi
 			elif [[ $ep_file_url =~ unimplemented:[:alnum:]* ]]; then
 				stop_spinner 1
@@ -113,7 +127,6 @@ da_get_episede() {
 				echo "URL Parsing error"
 			fi
 		done
-		return 1
 	fi
 }
 
@@ -151,7 +164,7 @@ compare_episode() {
 	if ((${BS:-524288} >= size / 2)); then
 		BS=$(echo "$size/200" | bc | cut -d. -f1)
 	fi
-	wsize=$(curl -ksI "$2" 2> /dev/null | dos2unix -f | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
+	wsize=$(curl -LksI "$2" 2> /dev/null | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | dos2unix -f | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then

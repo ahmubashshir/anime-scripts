@@ -42,6 +42,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				CONTINUE=true
 				NORESET=true
 				;;
+			-r | --replace-manual)
+				REPLACE_MANUAL=true
+				;;
 			-e | --ep-list)
 				EP_LIST=true
 				if [[ $2 =~ ^[[:digit:],-]+$ ]]; then

@@ -11,7 +11,7 @@ parse_episede_id() {
 	ep_file_host=$(echo "$@" | jsonparser -b | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[host\]' | cut -d\  -f2 | tr \. _)
 	ep_file_id=$(echo "$@" | jsonparser -b | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[id\]' | cut -d\  -f2)
 	if [ -n "$(type -t get_url_$ep_file_host)" ]; then
-		get_url_$ep_file_host $ep_file_id 2> /dev/null
+		get_url_$ep_file_host "$ep_file_id" 2> /dev/null
 	else
 		echo unimplemented:${ep_file_host/_/.}
 	fi
@@ -24,7 +24,11 @@ get_url_trollvid() {
 	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep ^src | cut -d= -f2-)" 2> /dev/null | grep ^http | cat
 }
 get_url_mp4_sh() {
-	get_url_trollvid "$@"
+	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embedc/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep ^src | cut -d= -f2-)" 2> /dev/null | grep ^http | cat
+}
+
+get_url_vidstreaming() {
+	curl -I -w '%{redirect_url}\n' "$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null | grep sources | grep video/mp4 | cut -d: -f2- | sed 's|[,;]$||g' | js-beautify | tr -d '[:blank:]'\' | grep '^file:' | head -1 | cut -d: -f2- | sed 's|[,;]$||g')" 2>/dev/null|dos2unix -f|tail -1
 }
 #end:code
 

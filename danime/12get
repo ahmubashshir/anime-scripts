@@ -40,7 +40,7 @@ da_get() {
 		url="$baseurl"
 	else
 		if [[ -n $FORCE ]]; then
-			url="$(echo "$baseurl" | grep "${FORCE}bed=true" | cut -d\; -f3 | awk "{print \$0\"-english-${FORCE}bed\";}")"
+			url="$(echo "$baseurl" | grep "${FORCE}bed=true" | cut -d\; -f1 | awk "{print \$0\"-english-${FORCE}bed\";}")"
 		elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ] && [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
 			url="$(echo "$baseurl" | grep "${tr:-dubbed}=true" | cut -d\; -f1 | awk "{print \$0\"-english-${tr:-dubbed}\";}")"
 		else
@@ -57,10 +57,10 @@ da_get() {
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
 	fi
 	${DEBUG:-false} && set -x
-	if [[ $EP_LIST_RANGE =~ [[:digit:]]+-[[:digit:]]+ ]]; then
+	if [[ $EP_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
 		ep_show="range($EP_LIST_RANGE) "
 		dl_notify="Episodes in ${ep_show}are"
-	elif [[ $EP_LIST_RANGE =~ [[:digit:]]+- ]]; then
+	elif [[ $EP_LIST_RANGE =~ [[:digit:],]+- ]]; then
 		ep_show="range($EP_LIST_RANGE$(echo "$url" | wc -l)) "
 		dl_notify="Episodes in ${ep_show}are"
 	elif [[ -n $EP_LIST_RANGE ]]; then
@@ -70,8 +70,12 @@ da_get() {
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
 	${DEBUG:-false} && set +x
-	anime_cover "$epc" "https://cdn.animeapi.com/images/${1%%-*}.jpg"
+	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
+	if [ "$(echo $ep|tr \  \\n|wc -l)" -le 2 ];then
+		ep_show="file ${ep%% *} and ${ep##* } "
+		dl_notify="Episode ${ep_show}are"
+	fi
 	if [[ -n $ep ]] && [[ -n $ep_show ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Downloading:$ep_show" || (
 			vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Type:${tr:-dubbed}"

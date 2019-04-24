@@ -93,7 +93,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				;;
 			-f[[:alpha:]]* | --force=*)
 				FORCE=${1##*=}
-				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=/home/mubashshir/Documents/shell/danime/35footer${1/-f/}
+				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=${1/-f/}
 				;;
 			-f | --force)
 				FORCE=$2

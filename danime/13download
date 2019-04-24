@@ -24,6 +24,12 @@ da_get_episede() {
 		set +x
 		start_spinner "Fetching info about  episode[dubbedanime:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
+		if ! [[ $1 =~ ^http* ]]; then
+			d=$1
+			shift
+			set "https://ww5.dubbedanime.net/$d" "$@"
+			unset d
+		fi
 		parse_episede_page="$(curl "$1" 2> /dev/null)"
 		episode_type=$(echo "$1" | cut -d/ -f4)
 		if [[ $tr = dubbed ]] || [[ $tr = subbed ]]; then
@@ -88,9 +94,11 @@ da_get_episede() {
 					download "$ep_file_name" "$ep_file_url"
 					return 0
 				elif (
-					true
-					((ret == 4)) || ((ret == 5))
-				) && [[ $REPLACE_ON_ERROR == "true" ]]; then
+					((ret == 4)) \
+						&& (
+							[[ $REPLACE_ON_ERROR == "true" ]] || ((${failed_tests:-0} >= 5))
+						) && [[ ${NO_REPLACE:-false} == "false" ]]
+				) || ((ret == 5)); then
 					rm "$ep_file_name"
 					download "$ep_file_name" "$ep_file_url"
 					return 0
@@ -118,7 +126,7 @@ download() {
 	else
 		echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
 	fi
-	if ((ret == 0))|| ([ "$CHECK_FILE" == "false" ]); then
+	if ((ret == 0)) || ([ "$CHECK_FILE" == "false" ]); then
 		return 0
 	fi
 	start_spinner "Checking $(ellipsis 40 "$1") integrity"
@@ -140,20 +148,28 @@ compare_episode() {
 		return 2
 	fi
 	size=$(stat -c%s "$1")
+	if ((${BS:-524288} >= size / 2)); then
+		BS=$(echo "$size/200" | bc | cut -d. -f1)
+	fi
 	wsize=$(curl -ksI "$2" 2> /dev/null | dos2unix -f | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then
 		return 0
 	fi
-	if ! dd if="$1" of=/dev/null bs=1 count=1 status=none 2> /dev/null; then
+	${DEBUG:-false} && set -x
+	if ! (dd if="$1" of=/dev/null bs=1 count=1 status=none 2> /dev/null && exit "$(ffprobe -hide_banner -loglevel 16 "$1" 2>&1 | wc -l)"); then
 		return 5
 	fi
+	${DEBUG:-false} && set +x
+	failed_tests=${TOTAL_CHECKS:-10}
+	offsets=($(srand 0 $((size - ${BS:-524288})) $((BS / 2)) ${TOTAL_CHECKS:-10}))
 	for ((i = 0; i < ${TOTAL_CHECKS:-10}; i++)); do
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
-		start=$(shuf -i 0-$((size - ${BS:-524288})) -n 1)
+		start=${offsets[$i]}
 		hash1="$(dd bs=1 count="${BS:-524288}" status=none if="$1" skip="$start" | sha256sum | cut -d\  -f1)"
 		hash2="$(curl -kr "$start-$((start + ${BS:-524288} - 1))" "$2" 2> /dev/null | sha256sum | cut -d\  -f1)"
+		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
 		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
 		test "$hash1" = "$hash2" || return 4
 	done

@@ -9,6 +9,10 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 DEBUG=${DEBUG:-false}
+source libbash
+source spinner
+. "$(dirname "$0")"/01include
+. "$(dirname "$0")"/12get
 #start:code
 da_api_search() {
 	python3 -c '#!/usr/bin/python3
@@ -57,7 +61,9 @@ da_search() {
 		return 4
 	fi
 	total_res=$(echo "$RES" | wc -l)
-	if [ -z "$RES_LIST" ] && ! $DOWNLOAD_ALL; then
+	if ((total_res==1));then
+		RES_LIST='1'
+	elif [ -z "$RES_LIST" ] && ! $DOWNLOAD_ALL; then
 		vbar
 		vbar "DubbedAnime.net Search Result" true
 		vbar

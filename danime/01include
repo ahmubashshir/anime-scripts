@@ -64,13 +64,35 @@ validate_limit() {
 		return 0
 	fi
 }
+srand()
+{
+python3 -c 'import numpy as np
+from sys import argv
+def random_spaced(low, high, delta, n, size=1):
+	"""
+	Choose n random values between low and high, with minimum spacing delta.
+		If size is None, one sample is returned.
+	Set size=m (an integer) to return m samples.
+		The values in each sample returned by random_spaced are in increasing
+	order.
+	"""
+	empty_space = high - low - (n-1)*delta
+	if empty_space < 0:
+		raise ValueError("not possible")
+	if size is None:
+		u = np.random.rand(n)
+	else:
+		u = np.random.rand(size, n)
+		x = empty_space * np.sort(u, axis=-1)
+	return low + x + delta * np.arange(n)
+for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]:
+	print(int(n))' "$@"
+}
 anime_cover() {
-	local ep_count
 	local anime_cover_img
-	ep_count=$1
-	anime_cover_img=$2
+	anime_cover_img=$1
 	#ext=${anime_cover_img##*.}
-	if ((ep_count > 1)) && [ ! -e folder.jpg ]; then
+	if [ ! -e folder.jpg ]; then
 		wget --no-check-certificate -nv "$anime_cover_img" -cO "cover.jpg"
 		if ! grep -q cover.jpg .hidden &> /dev/null; then
 			echo cover.jpg >> .hidden

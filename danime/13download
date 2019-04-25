@@ -43,14 +43,14 @@ da_get_episede() {
 
 			ep_id_list=$(
 				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
-				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" | jsonparser | grep '^\[[[:digit:]]\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser | grep '^\[[[:digit:]]*\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
 					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
-					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" | jsonparser | grep '^\[[[:digit:]]\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser | grep '^\[[[:digit:]]*\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
@@ -110,7 +110,7 @@ da_get_episede() {
 				elif (
 					((ret == 4)) \
 						&& (
-						 ${REPLACE_ON_ERROR:-false} || ((${failed_tests:-0} <= 5))
+							${REPLACE_ON_ERROR:-false} || ((${failed_tests:-0} <= 5))
 						) && ${NO_REPLACE:-false}
 				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
 					rm "$ep_file_name"

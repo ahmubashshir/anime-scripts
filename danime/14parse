@@ -28,7 +28,7 @@ get_url_mp4_sh() {
 }
 
 get_url_vidstreaming() {
-	curl -I -w '%{redirect_url}\n' "$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null | grep sources | grep video/mp4 | cut -d: -f2- | sed 's|[,;]$||g' | js-beautify | tr -d '[:blank:]'\' | grep '^file:' | head -1 | cut -d: -f2- | sed 's|[,;]$||g')" 2>/dev/null|dos2unix -f|tail -1
+	curl -I -w '%{redirect_url}\n' "$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null | grep sources | grep video/mp4 | cut -d: -f2- | sed 's|[,;]$||g' | js-beautify | tr -d '[:blank:]'\' | grep '^file:' | head -1 | cut -d: -f2- | sed 's|[,;]$||g')" 2> /dev/null | dos2unix -f | tail -1
 }
 #end:code
 

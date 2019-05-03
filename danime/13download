@@ -17,14 +17,16 @@ SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming'
 da_get_episede() {
 	tr=${1##*-}
 	if (($# == 0)); then
-		exit 1
+		return 1
 	else
+		local IFS="$IFS" tr="$tr"
 		IFS=$'\n'
 		tput sc
 		set +x
 		start_spinner "Fetching info about  episode[dubbedanime:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
+			local d
 			d=$1
 			shift
 			set "https://ww5.dubbedanime.net/$d" "$@"
@@ -46,14 +48,14 @@ da_get_episede() {
 
 			ep_id_list=$(
 				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
-				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
 					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
-					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
@@ -110,7 +112,9 @@ da_get_episede() {
 					echo 404 not found.
 					continue
 				fi
-
+				if ${SKIP_DOWNLOAD:-false};then
+					return 0
+				fi
 				compare_episode "$ep_file_name" "$ep_file_url"
 				ret=$?
 				if ((ret == 0)); then
@@ -120,7 +124,7 @@ da_get_episede() {
 					((ret == 4)) \
 						&& (
 							${REPLACE_ON_ERROR:-false} || ((${failed_tests:-0} <= 5))
-						) && ${NO_REPLACE:-false}
+						) && ! ${NO_REPLACE:-false}
 				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
 					rm "$ep_file_name"
 					download "$ep_file_name" "$ep_file_url"
@@ -140,6 +144,7 @@ da_get_episede() {
 }
 
 download() {
+	local s1 s2 ret
 	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | sed 's|^[[:space:]]*||g;s|: |:|g' | grep Content-Length: | cut -d: -f2)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
@@ -164,6 +169,7 @@ download() {
 }
 compare_episode() {
 	${DEBUG:-false} && set -x
+	local size wsize BS="$BS" hash1 hash2
 	if [ ! -e "$1" ] || ([ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]); then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then

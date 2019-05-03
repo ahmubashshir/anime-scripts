@@ -25,6 +25,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				BS=$2
 				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
 					BS=$(echo "$BS" | byte_mr)
+    				shift
 				else
 					echo "Invalid block size." 1>&2
 				fi
@@ -104,6 +105,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				if [ -z "$FORCE" ]; then
 					FORCE=${TYPE_ANIME:0:3}
 				fi
+				;;
+			-S | --skip)
+				SKIP_DOWNLOAD=true;
 				;;
 			-* | --*)
 				echo Invalid option -- $1 1>&2

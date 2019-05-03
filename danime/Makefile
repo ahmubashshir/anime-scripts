@@ -25,4 +25,15 @@ debug: check
 install: all
 	@echo Installing $(OUTPUT)
 	install -C $(OUTPUT) $(prefix)/$(OUTPUT)
-
+install-jsonparser:
+	@echo Installing jsonparser
+	install -C jsonparser $(prefix)/jsonparser
+install-libbash:
+	@echo Installing libbash
+	install -C libbash $(prefix)/libbash
+install-spinner:
+	@echo Installing spinner
+	install -C spinner $(prefix)/spinner
+update:
+	git pull
+upgrade: update install

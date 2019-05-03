@@ -35,5 +35,5 @@ install-spinner:
 	@echo Installing spinner
 	install -C spinner $(prefix)/spinner
 update:
-	git pull
+	@git pull
 upgrade: update install

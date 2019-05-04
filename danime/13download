@@ -44,8 +44,19 @@ da_get_episede() {
 		fi
 		if [ "$episode_type" = "episode" ]; then
 
-			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')
-
+			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
+			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
+				ep_title="${ep_title% *} $(if (($3 > 1)); then
+					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
+				else
+					echo "${ep_title##* }" | tr '[:upper:]' '[:lower:]'
+				fi)"
+			else
+				local ep_number
+				ep_number=${ep_title##* }
+				ep_title=${ep_title% *}
+				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
+			fi
 			ep_id_list=$(
 				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | eval $filter | awk -F, '{print $1","$2","$3"}";}'
 				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
@@ -76,11 +87,7 @@ da_get_episede() {
 		tput rc
 		vbar
 		vbar "$ep_title" true
-		if [[ $2 != '' ]]; then
-			vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1) -- Progress:$2"
-		else
-			vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)"
-		fi
+		vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)"
 		vbar
 		if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -z "$REPLACE_ON_ERROR" ]; then
 			REPLACE_ON_ERROR=true
@@ -112,7 +119,7 @@ da_get_episede() {
 					echo 404 not found.
 					continue
 				fi
-				if ${SKIP_DOWNLOAD:-false};then
+				if ${SKIP_DOWNLOAD:-false}; then
 					return 0
 				fi
 				compare_episode "$ep_file_name" "$ep_file_url"
@@ -135,6 +142,10 @@ da_get_episede() {
 			elif [[ $ep_file_url =~ unimplemented:[:alnum:]* ]]; then
 				stop_spinner 1
 				echo "URL extractor not available for ${ep_file_url##*:}"
+			elif [[ $ep_file_url =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+				stop_spinner 1
+				echo "M3U8 downloader is not implemented." 1>&2
+				echo -e "Please run \n  \`ffmpeg -i \"$ep_file_url\" -c copy \"$PWD/$ep_file_name\"\`"
 			else
 				stop_spinner 1
 				echo "URL Parsing error"
@@ -145,7 +156,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret
-	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }'|tail -1)
+	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }' | tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		fget "$2" "$1"

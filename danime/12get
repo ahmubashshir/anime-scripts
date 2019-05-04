@@ -96,7 +96,7 @@ da_get() {
 	fi
 	${DEBUG:-false} && set -x
 	for k in $ep; do
-		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)"
+		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)" "$k" "$epc"
 		if ! (exit $?); then
 			echo "Failed to download $k"
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"

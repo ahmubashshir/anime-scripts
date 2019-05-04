@@ -73,6 +73,18 @@ da_get_episede() {
 		elif [ "$episode_type" = "cartoon" ]; then
 
 			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
+			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
+				ep_title="${ep_title% *} $(if (($3 > 1)); then
+					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
+				else
+					echo "${ep_title##* }" | tr '[:upper:]' '[:lower:]'
+				fi)"
+			else
+				local ep_number
+				ep_number=${ep_title##* }
+				ep_title=${ep_title% *}
+				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
+			fi
 			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | sort)
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi

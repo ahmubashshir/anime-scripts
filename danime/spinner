@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 sp1='\|/‒'
 sp2='⎺⎻⎼⎽_⎽⎼⎻'
 sp3='╸╹╺╻'
@@ -57,7 +58,7 @@ function _spinner() {
             # calculate the column where spinner and status msg will be displayed
             let column=$(tput cols)-${#2}-8
             # display message and position the cursor in $column column
-            echo -ne ${2}
+            echo -ne "${2}"
             printf "%${column}s"
 
             # start spinner
@@ -74,11 +75,11 @@ function _spinner() {
 	            		printf "\b"
 	            	done
 	            	let column=$(tput cols)-${#2}-8
-	            	echo -ne ${2}
+	            	echo -ne "${2}"
 	            	printf "%${column}s"
 	            fi
-                printf "\b\b\b[${sp:i++%${#sp}:1}]"
-                sleep $delay
+                printf '\b\b\b[%s]' "${sp:i++%${#sp}:1}"
+                sleep "$delay"
             done
             ;;
         stop)
@@ -87,7 +88,7 @@ function _spinner() {
                 exit 1
             fi
 
-            kill $3 > /dev/null 2>&1
+            kill "$3" > /dev/null 2>&1
 
             # inform the user uppon success or failure
             echo -en "\b\b\b["
@@ -115,7 +116,7 @@ function start_spinner {
 
 function stop_spinner {
     # $1 : command exit status
-    _spinner "stop" $1 $_sp_pid
+    _spinner "stop" "$1" $_sp_pid
     unset _sp_pid
 }
 

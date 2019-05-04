@@ -145,7 +145,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret
-	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | sed 's|^[[:space:]]*||g;s|: |:|g' | grep Content-Length: | cut -d: -f2)
+	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }'|tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		fget "$2" "$1"

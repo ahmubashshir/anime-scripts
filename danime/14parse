@@ -19,7 +19,7 @@ parse_episede_id() {
 }
 
 get_url_mp4upload() {
-	curl "https://www.mp4upload.com/embed-$1.html" 2> /dev/null | grep 'id="player"' | cut -d\> -f3- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\  | grep '^file' | cut -d: -f2-
+	curl "https://www.mp4upload.com/embed-$1.html" 2> /dev/null | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
 }
 get_url_trollvid() {
 	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" 2> /dev/null | grep '^http' | cat

@@ -54,7 +54,7 @@ da_get() {
 			echo "$(
 				tput setaf 1
 				tput dim
-			)\'$(ellipsis 38 "$TITLE")\' doesn\'t have any ${FORCE}bed episode yet.$(tput sgr0)" 1>&2
+			)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${FORCE}bed episode yet.$(tput sgr0)" 1>&2
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"

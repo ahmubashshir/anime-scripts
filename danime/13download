@@ -46,6 +46,9 @@ da_get_episede() {
 
 			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
 			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
+				if [ "${ep_title% *}" = "${ep_title##* }" ];then
+					ep_title="$TITLE $ep_title"
+				fi
 				ep_title="${ep_title% *} $(if (($3 > 1)); then
 					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
 				else
@@ -55,6 +58,9 @@ da_get_episede() {
 				local ep_number
 				ep_number=${ep_title##* }
 				ep_title=${ep_title% *}
+				if [ "${ep_title% *}" = "${ep_title##* }" ];then
+					ep_title="$TITLE $ep_title"
+				fi
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
 			ep_id_list=$(

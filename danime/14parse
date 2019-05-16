@@ -25,7 +25,13 @@ get_url_trollvid() {
 	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" 2> /dev/null | grep '^http' | cat
 }
 get_url_mp4_sh() {
-	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embedc/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" 2> /dev/null | grep '^http' | cat
+    local url
+    url="$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embedc/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
+    if ! echo "$url" | grep -q 'st=.*e=.*';then
+	    curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "" 2> /dev/null | grep '^http' | cat
+	else
+	    echo $url
+	fi
 }
 
 get_url_vidstreaming() {

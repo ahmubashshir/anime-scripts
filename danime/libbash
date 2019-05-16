@@ -38,8 +38,12 @@ function byte_hr() {
 function fget() {
 	url_933be66d="$1"
 	name_933be66d="$2"
-	shift 2
-	S_933be66d=$(wget "$@" --no-check-certificate --spider -qS "$url_933be66d" 2>&1 | sed 's|^[[:space:]]*||g')
+	if (($#>2));then
+		shift 2
+	else
+		shift $#
+	fi
+	S_933be66d=$(curl -skLI "$url_933be66d" 2>&1 |dos2unix|sed -n '/HTTP\/[12.]* 2../,/^$/{/^$/d;p}')
 	if (exit "$?"); then
 		if [ "$name_933be66d" = "" ]; then
 			name_933be66d="${url_933be66d##*/}"
@@ -47,7 +51,7 @@ function fget() {
 		if echo "$url_933be66d" | grep -q 'google.com/uc?'; then
 			dlsize_933be66d=$(curl "https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ&fields=size" 2> /dev/null | tr -d '",{}[[:space:]]' | cut -d: -f2)
 		else
-			dlsize_933be66d=$(echo "$S_933be66d" | awk '/Content-Length:/ {print $2}' | tail -1)
+			dlsize_933be66d=$(echo "$S_933be66d" | awk 'tolower($0) ~ /content-length:/ {print $2}' | tail -1)
 		fi
 		dld_933be66d="false"
 		if [ -e "$name_933be66d" ]; then

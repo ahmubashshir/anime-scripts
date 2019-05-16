@@ -23,7 +23,7 @@ da_get_episede() {
 		IFS=$'\n'
 		tput sc
 		set +x
-		start_spinner "Fetching info about  episode[dubbedanime:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
+		start_spinner "Fetching info about episode[dubbedanime:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -46,7 +46,7 @@ da_get_episede() {
 
 			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
 			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
-				if [ "${ep_title% *}" = "${ep_title##* }" ];then
+				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
 				fi
 				ep_title="${ep_title% *} $(if (($3 > 1)); then
@@ -58,7 +58,7 @@ da_get_episede() {
 				local ep_number
 				ep_number=${ep_title##* }
 				ep_title=${ep_title% *}
-				if [ "${ep_title% *}" = "${ep_title##* }" ];then
+				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
 				fi
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
@@ -107,10 +107,10 @@ da_get_episede() {
 		vbar "$ep_title" true
 		vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)"
 		vbar
-		if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -z "$REPLACE_ON_ERROR" ]; then
-			REPLACE_ON_ERROR=true
-		elif [ "$(echo "$ep_id_list" | wc -l)" -gt 1 ] && [ -z "$REPLACE_ON_ERROR" ]; then
-			REPLACE_ON_ERROR=false
+		if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -z "$REPLACE_FAIL" ]; then
+			REPLACE_FAIL=true
+		elif [ "$(echo "$ep_id_list" | wc -l)" -gt 1 ] && [ -z "$REPLACE_FAIL" ]; then
+			REPLACE_FAIL=false
 		fi
 		for n in $ep_id_list; do
 			ep_file_url=
@@ -148,9 +148,10 @@ da_get_episede() {
 				elif (
 					((ret == 4)) \
 						&& (
-							${REPLACE_ON_ERROR:-false} || ((${failed_tests:-0} <= 5))
+							${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
 						) && ! ${NO_REPLACE:-false}
-				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
+				) || ((ret == 5)) || ( ${REPLACE_MANUAL:-false} && ((ret == 3))); then
+					#echo " overwriting"
 					rm "$ep_file_name"
 					download "$ep_file_name" "$ep_file_url"
 					return 0

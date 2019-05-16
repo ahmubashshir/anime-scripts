@@ -25,7 +25,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				BS=$2
 				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
 					BS=$(echo "$BS" | byte_mr)
-    				shift
+					shift
 				else
 					echo "Invalid block size." 1>&2
 				fi
@@ -43,8 +43,28 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				CONTINUE=true
 				NORESET=true
 				;;
-			-r | --replace-manual)
-				REPLACE_MANUAL=true
+			-r | --replace)
+				if echo "$2" | grep -q 'manual\|fail'; then
+					eval "REPLACE_$(echo $2 | tr '[:lower:]' '[:upper:]')=true"
+					shift
+				else
+					REPLACE_FAIL=true
+					REPLACE_MANUAL=true
+				fi
+				;;
+			-r[fm] | --replace=fail | --replace=manual)
+				REPLACE="$(echo ${1#*=} | tr '[:lower:]' '[:upper:]')"
+				if ! echo $REPLACE|grep -qi 'manual\|fail';then
+					REPLACE="$(
+						if [ "${1/-r/}" = "m" ];then
+							echo manual
+						else
+							echo fail
+						fi|tr '[:lower:]' '[:upper:]'
+					)"
+				fi
+				eval "REPLACE_$REPLACE=true"
+				unset REPLACE
 				;;
 			-e | --ep-list)
 				EP_LIST=true
@@ -107,7 +127,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				fi
 				;;
 			-S | --skip)
-				SKIP_DOWNLOAD=true;
+				SKIP_DOWNLOAD=true
 				;;
 			-* | --*)
 				echo Invalid option -- $1 1>&2

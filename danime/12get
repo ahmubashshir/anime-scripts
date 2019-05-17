@@ -36,6 +36,10 @@ da_get() {
 	$NORESET || reset
 	${DEBUG:-false} && set -x
 	vbar "$TITLE" true
+	[[ -z $baseurl ]] && echo "$(
+		tput setaf 1
+		tput dim
+	)No episode is available to download yet.$(tput sgr0)" 1>&2 && exit 1
 	if [[ $TYPE == cartoon ]]; then
 		url="$baseurl"
 	else
@@ -50,11 +54,11 @@ da_get() {
 			tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
 			url="$(echo "$baseurl" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 		fi
-		if ! (echo "$url" | grep -q "${FORCE}bed$"); then
+		if ! (echo "$url" | grep -q "${tr}$"); then
 			echo "$(
 				tput setaf 1
 				tput dim
-			)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${FORCE}bed episode yet.$(tput sgr0)" 1>&2
+			)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr}bed episode yet.$(tput sgr0)" 1>&2
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"

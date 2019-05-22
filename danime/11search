@@ -114,6 +114,9 @@ da_search() {
 }
 set_basedir() {
 	case $1 in
+		*-avatar-the-legend-of-korra-* | *-avatar-the-last-airbender-*)
+			echo "$CARTOON_PATH/Avatar"
+		;;
 		anime/*) echo "$ANIME_PATH" ;;
 		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
 		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;

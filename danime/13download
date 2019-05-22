@@ -50,11 +50,7 @@ da_get_episede() {
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
 				fi
-				ep_title="${ep_title% *} $(if (($3 > 1)); then
-					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
-				else
-					echo "${ep_title##* }" | tr '[:upper:]' '[:lower:]'
-				fi)"
+				ep_title="${ep_title% *} $(echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]')"
 			else
 				local ep_number
 				ep_number=${ep_title##* }

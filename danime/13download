@@ -72,6 +72,9 @@ da_get_episede() {
 						curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 					)
 			fi
+			if echo "$1"|grep -q "-extra-[[:digit:]]*-english-subbed$";then
+				ep_title="${ep_title// ep / extra }"
+			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		elif [ "$episode_type" = "cartoon" ]; then
 
@@ -89,6 +92,9 @@ da_get_episede() {
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
 			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | sort)
+			if echo "$1"|grep -q "-extra-[[:digit:]]*-english-subbed$";then
+				ep_title="${ep_title// ep / extra }"
+			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
 		ep_id_list="$(echo "$ep_id_list" | awk '!x[$0]++')"
@@ -109,9 +115,9 @@ da_get_episede() {
 		elif [ "$(echo "$ep_id_list" | wc -l)" -gt 1 ] && [ -z "$REPLACE_FAIL" ]; then
 			REPLACE_FAIL=false
 		fi
+		${DEBUG:-false} && set -x
 		for n in $ep_id_list; do
 			ep_file_url=
-			${DEBUG:-false} && set -x
 			ep_file_host=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[host\]' | cut -d\  -f2)
 			ep_file_id=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[id\]' | cut -d\  -f2)
 			set +x
@@ -218,7 +224,7 @@ compare_episode() {
 	if ((${BS:-524288} >= size / 2)); then
 		BS=$(echo "$size/200" | bc | cut -d. -f1)
 	fi
-	wsize=$(curl -LksI "$2" 2> /dev/null | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | dos2unix -f | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
+	wsize=$(curl -LksI "$2" 2> /dev/null | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | tr -s '\r' '\n' | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then
@@ -229,7 +235,7 @@ compare_episode() {
 		return 5
 	fi
 	if command -v mediainfo &>/dev/null;then
-		asize=$(mediainfo "$1" 2>/dev/null|tr -s '[:blank:]' \ |grep -i 'stream size'|sed 's|: |:|g'|cut -d: -f2|cut -d\  -f1|awk '{printf $0"*1048576+"};END {printf "0\n"}'|bc|cut -d\. -f1)
+		asize=$(mediainfo "$1" 2>/dev/null|tr -s '[:blank:]' \ |grep -i '^stream size'|sed 's|: |:|g'|cut -d: -f2|cut -d\  -f1|awk '{printf $0"*1048576+"};END {printf "0\n"}'|bc|cut -d\. -f1)
 	else
 		asize=$size
 	fi

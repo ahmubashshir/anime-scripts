@@ -126,8 +126,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					FORCE=${TYPE_ANIME:0:3}
 				fi
 				;;
-			-S | --skip)
+			-n | --skip)
 				SKIP_DOWNLOAD=true
+				;;
+			-S|--sub|-D|--dub)
+				PREFFERED_TR=$(echo "$1"|tr -d -|cut -c1 |tr '[:upper:]' '[:lower:]')ub
 				;;
 			-* | --*)
 				echo Invalid option -- $1 1>&2

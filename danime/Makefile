@@ -27,13 +27,13 @@ install: all
 	install -C $(OUTPUT) $(prefix)/$(OUTPUT)
 install-jsonparser:
 	@echo Installing jsonparser
-	install -C jsonparser $(prefix)/jsonparser
+	install -C ../lib/jsonparser $(prefix)/jsonparser
 install-libbash:
 	@echo Installing libbash
-	install -C libbash $(prefix)/libbash
+	install -C ../lib/libbash $(prefix)/libbash
 install-spinner:
 	@echo Installing spinner
-	install -C spinner $(prefix)/spinner
+	install -C ../lib/spinner $(prefix)/spinner
 update:
 	@git pull
 upgrade: update install

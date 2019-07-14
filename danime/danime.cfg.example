@@ -1,9 +1,9 @@
 #!/bin/bash
 #danime config file
 readonly MEDIA_ROOT='/mnt/Multimedia'
-ANIME_PATH=$BASEDIR/Anime
-CARTOON_PATH=$BASEDIR/Animetion-Movie/Series
-MOVIE_PATH=$BASEDIR/Movie
+ANIME_PATH=$MEDIA_ROOT/Anime
+CARTOON_PATH=$MEDIA_ROOT/Animetion-Movie/Series
+MOVIE_PATH=$MEDIA_ROOT/Movie
 TV_SERIES_PATH=$MOVIE_PATH/Series
 POWER_RANGERS_PATH=$MOVIE_PATH/Power\ Rangers
 CONTINUE=true
@@ -15,4 +15,4 @@ RSOLV=3
 FORCE=
 SEARCHSTR=
 TYPE=anime
-
+PREFFERED_TR=

@@ -41,7 +41,7 @@ get_url_vidstreaming() {
 	local url_wx1232144
     url_wx1232144=$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null | grep sources | grep 'video/mp4' | cut -d: -f2- | sed 's|[,;]$||g' | js-beautify | tr -d '[:blank:]'\' | grep '^file:' | head -1 | cut -d: -f2- | sed 's|[,;]$||g')
     if [[ $url_wx1232144 =~ ^https://redirector.googlevideo.com/videoplayback* ]];then
-	    curl -I -w '%{redirect_url}\n' "$url_wx1232144" 2> /dev/null | dos2unix -f | tail -1
+	    curl -I -w '%{redirect_url}\n' "$url_wx1232144" 2> /dev/null | tr -s '\r' '\n' | tail -1
 	else
 	    url_wx1232144=$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null |grep sources|grep mp4|cut -d: -f2-|sed 's|[,;]$||g'|js-beautify|tr -d '[:blank:]'\'|grep '^file:'|head -1|cut -d: -f2-|sed 's|[,;]$||g')
 	    echo "$(dirname "$url_wx1232144")/$(curl "$url_wx1232144" -H 'referer: http://vidstreaming.io/' -s|grep -v '^#'|sort|tail -1)"

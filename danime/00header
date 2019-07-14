@@ -27,6 +27,7 @@ else
 	FORCE=
 	SEARCHSTR=
 	TYPE=anime
+	PREFFERED_TR=
 fi
 if [ -n "$AP" ]; then
 	ANIME_PATH="$AP"
@@ -67,5 +68,6 @@ DOWNLOAD_ALL=${DOWNLOAD_ALL:-false}
 EP_LIST=${EP_LIST:-false}
 FORCE=
 SEARCHSTR=
+PREFFERED_TR=${PREFFERED_TR:-dub}
 #end:code
 

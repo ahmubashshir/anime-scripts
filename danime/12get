@@ -43,17 +43,25 @@ da_get() {
 	if [[ $TYPE == cartoon ]]; then
 		url="$baseurl"
 	else
-		if [[ -n $FORCE ]]; then
-			url="$(echo "$baseurl" | grep "${FORCE}bed=true" | cut -d\; -f1 | awk "{print \$0\"-english-${FORCE}bed\";}")"
+		set -x
+		if [[ -n ${PREFFERED_TR:-dub} ]];then
+			tr="$(
+				(
+					echo "$baseurl" | grep -q "${PREFFERED_TR:-dub}bed=true" && echo ${PREFFERED_TR:-dub}
+				)||(
+					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub'|grep -v ${PREFFERED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
+				)||(
+					echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
+				)
+			)bed"
+		elif [[ -n $FORCE ]]; then
 			tr=${FORCE}bed
 		elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ] ; then
 			tr=dubbed
-			url="$(echo "$baseurl" | grep "${tr:-dubbed}=true" | cut -d\; -f1 | awk "{print \$0\"-english-${tr:-dubbed}\";}")"
-
 		elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ];then
 			tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
-			url="$(echo "$baseurl" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 		fi
+		url="$(echo "$baseurl" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 		if ! (echo "$url" | grep -q "${tr}$"); then
 			echo "$(
 				tput setaf 1
@@ -62,6 +70,11 @@ da_get() {
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
+		for k in $url;do
+			if [ "$(echo "${k##*/}"|cut -d- -f1)" -gt "$(echo "$url"|grep "${k#*-}"|head -1|xargs basename|cut -d- -f1)" ];then
+				url="${url//$k/${k//-episode-/-extra-}}"
+			fi
+		done
 	fi
 	${DEBUG:-false} && set -x
 	if [[ $EP_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then

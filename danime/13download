@@ -19,8 +19,8 @@ da_get_episede() {
 	if (($# == 0)); then
 		return 1
 	else
-		local IFS tr file_num ret dlret
-		tr="$tr"
+		local IFS file_num ret dlret
+		local tr="$tr"
 		IFS=$'\n'
 		tput sc
 		set +x

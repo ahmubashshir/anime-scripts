@@ -43,7 +43,6 @@ da_get() {
 	if [[ $TYPE == cartoon ]]; then
 		url="$baseurl"
 	else
-		set -x
 		if [[ -n ${PREFFERED_TR:-dub} ]];then
 			tr="$(
 				(

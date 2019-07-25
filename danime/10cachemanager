@@ -1,0 +1,14 @@
+#!/bin/bash
+# shellcheck disable=SC2015
+DEBUG=${DEBUG:-false}
+#start:code
+da_cachemanager()
+{
+	echo "not yet implemented."
+}
+#end:code
+
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	da_cachemanager "$@"
+fi
+

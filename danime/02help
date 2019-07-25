@@ -39,5 +39,28 @@ danime_help() {
 	printf "  AP\t    :\t Alias of ANIME_PATH\n"
 	printf "  RSOLV\t    :\t Set dns resolving timeout.\n"
 }
+
+da_get_license()
+{
+	echo " Copyright $(date +%Y) Ahmad Hasan Mubashshir <ahmubashshir@gmail.com>"
+	echo
+	echo " 'danime' is free software; you can redistribute it and/or modify"
+	echo " it under the terms of the GNU General Public License as published by"
+	echo " the Free Software Foundation; either version 2 of the License, or"
+	echo " (at your option) any later version."
+	if ${1:-false};then
+		return 0
+	fi
+	echo
+	echo " 'danime' is distributed in the hope that it will be useful,"
+	echo " but WITHOUT ANY WARRANTY; without even the implied warranty of"
+	echo " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
+	echo " GNU General Public License for more details."
+	echo
+	echo " You should have received a copy of the GNU General Public License"
+	echo " along with 'danime'; if not, write to the Free Software"
+	echo " Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,"
+	echo " MA 02110-1301, USA."
+}
 #end:code
 

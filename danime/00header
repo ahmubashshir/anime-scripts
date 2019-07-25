@@ -10,6 +10,7 @@
 # shellcheck disable=SC2143
 #start:code
 #!/bin/bash
+#VERSION_INFO=
 if [ -e ~/.config/danime.cfg ]; then
 	source ~/.config/danime.cfg
 else

@@ -11,6 +11,7 @@ source spinner
 sp=$sp31
 SPINNER_DELAY=0.04
 source "$(dirname "$0")"/14parse
+source "$(dirname "$0")"/01include
 DEBUG=${DEBUG:-false}
 #start:code
 SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming'
@@ -117,6 +118,9 @@ da_get_episede() {
 		fi
 		${DEBUG:-false} && set -x
 		for n in $ep_id_list; do
+			if [ -n "$_sp_pid" ];then
+				stop_spinner 1;
+			fi
 			ep_file_url=
 			ep_file_host=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[host\]' | cut -d\  -f2)
 			ep_file_id=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[id\]' | cut -d\  -f2)
@@ -131,60 +135,76 @@ da_get_episede() {
 			else
 				ep_file_url=$(parse_episede_id "$n")
 			fi
+			for ep_file_url_current in $ep_file_url;do
+				if ! remote_exist "$ep_file_url_current";then
+					ep_file_url=
+					stop_spinner 1
+					echo "404 Error on this mirror."
+					continue 2
+				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.mp4[[:alnum:][:punct:]]* ]]; then
+					continue
+				elif [[ $ep_file_url_current =~ unimplemented:[:alnum:]* ]]; then
+					ep_file_url=
+					stop_spinner 1
+					echo "URL extractor not available for ${ep_file_url##*:}"
+					continue 2
+				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+					ep_file_url=
+					stop_spinner 1
+					echo "M3U8 downloader is not implemented." 1>&2
+					echo -e "Please run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
+					continue 2
+				else
+					ep_file_url=
+					stop_spinner 1
+					echo "URL Parsing error"
+					continue 2
+				fi
+			done
+			if [ -n "$ep_file_url" ];then
+				stop_spinner 0
+			else
+				continue
+			fi
 			if [[ $(echo "$ep_file_url"|wc -l) -gt 1 ]];then
 				file_num=0
 			fi
-			if [[ $ep_file_url =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.mp4[[:alnum:][:punct:]]* ]]; then
-				stop_spinner 0
-				for ep_file_url_current in $ep_file_url;do
-					if [ -n "$file_num" ];then
-						file_num=$((file_num+1))
-						if [ "$episode_type" = "cartoon" ];then
-							ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num.mp4"
-						else
-							ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num-$tr.mp4"
-						fi
-					fi
-					if ! ([[ $tr = dubbed ]] || [[ $tr = subbed ]]); then
-						tr=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[type\]' | cut -d\  -f2)
-					fi
-					if [[ $(curl -kLsI "$ep_file_url_current" 2> /dev/null | grep -i '^http/' | tail -1 | cut -d\  -f2) =~ ^4[[:digit:]][[:digit:]]$ ]]; then
-						echo 404 not found.
-						continue
-					fi
-					if ${SKIP_DOWNLOAD:-false}; then
-						continue
-					fi
-					compare_episode "$ep_file_name" "$ep_file_url_current"
-					ret=$?
-					if ((ret == 0)); then
-						download "$ep_file_name" "$ep_file_url_current"
-					elif (
-						((ret == 4)) \
-							&& (
-								${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
-							) && ! ${NO_REPLACE:-false}
-					) || ((ret == 5)) || ( ${REPLACE_MANUAL:-false} && ((ret == 3))); then
-						#echo " overwriting"
-						rm "$ep_file_name"
-						download "$ep_file_name" "$ep_file_url_current"
+			for ep_file_url_current in $ep_file_url;do
+				if [ -n "$file_num" ];then
+					file_num=$((file_num+1))
+					if [ "$episode_type" = "cartoon" ];then
+						ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num.mp4"
 					else
-						echo -e "\nFile doesn't match."
+						ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num-$tr.mp4"
 					fi
-				done
-				break
-			elif [[ $ep_file_url_current =~ unimplemented:[:alnum:]* ]]; then
-				stop_spinner 1
-				echo "URL extractor not available for ${ep_file_url##*:}"
-			elif [[ $ep_file_url =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
-				stop_spinner 1
-				echo "M3U8 downloader is not implemented." 1>&2
-				echo -e "Please run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
-			else
-				stop_spinner 1
-				echo "URL Parsing error"
-			fi
+				fi
+				if ! ([[ $tr = dubbed ]] || [[ $tr = subbed ]]); then
+					tr=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[type\]' | cut -d\  -f2)
+				fi
+				if ${SKIP_DOWNLOAD:-false}; then
+					continue
+				fi
+				compare_episode "$ep_file_name" "$ep_file_url_current"
+				ret=$?
+				if ((ret == 0)); then
+					download "$ep_file_name" "$ep_file_url_current"
+				elif (
+					((ret == 4)) \
+					&& (
+						${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
+					) && ! ${NO_REPLACE:-false}
+				) || ((ret == 5)) || ( ${REPLACE_MANUAL:-false} && ((ret == 3))); then
+					#echo " overwriting"
+					rm "$ep_file_name"
+					download "$ep_file_name" "$ep_file_url_current"
+				else
+					echo "File doesn't match."
+				fi
+			done
 		done
+		if [ -z "$ep_file_url" ];then
+			echo "Episode not available."
+		fi
 	fi
 }
 

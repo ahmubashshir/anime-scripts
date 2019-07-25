@@ -12,6 +12,27 @@ DEBUG=${DEBUG:-false}
 if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	while [ -n "$1" ]; do
 		case $1 in
+			-v|--version)
+				if [ "${0##*/}" = "35footer" ];then
+					echo " danime  master-$(git rev-parse HEAD|cut -c 1-6)"
+				else
+					echo " danime  dist-$(grep '^#VERSION_INFO=' "$0"|cut -d= -f2)"
+				fi
+				echo
+				echo
+				da_get_license
+				exit 0
+			;;
+			-l|--license)
+				if [ -e "LICENSE" ] && [ "$(head -1 LICENSE|tr -d '[:blank:]')" = "GNUGENERALPUBLICLICENSE" ];then
+					da_get_license true
+					echo
+					echo "See 'LICENSE' for more details."
+				else
+					da_get_license
+				fi
+				exit 0
+			;;
 			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
 				BS=${1#*=}
 				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}

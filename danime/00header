@@ -28,7 +28,7 @@ else
 	FORCE=
 	SEARCHSTR=
 	TYPE=anime
-	PREFFERED_TR=
+	PREFFERED_TR=${PREFFERED_TR:-dub}
 fi
 if [ -n "$AP" ]; then
 	ANIME_PATH="$AP"

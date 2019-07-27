@@ -199,8 +199,10 @@ da_get_episede() {
 					download "$ep_file_name" "$ep_file_url_current"
 				else
 					echo "File doesn't match."
+					continue 2
 				fi
 			done
+			break
 		done
 		if [ -z "$ep_file_url" ];then
 			echo "Episode not available."
@@ -235,6 +237,11 @@ download() {
 compare_episode() {
 	${DEBUG:-false} && set -x
 	local size wsize BS="$BS" hash1 hash2
+	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+		BS=$(echo "$BS" | byte_mr)
+	else
+		BS=524288
+	fi
 	if [ ! -e "$1" ] || ([ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]); then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
@@ -265,6 +272,9 @@ compare_episode() {
 	${DEBUG:-false} && set +x
 	failed_tests=${TOTAL_CHECKS:-10}
 	offsets=($(srand 0 $((size - ${BS:-524288})) $((BS / 2)) ${TOTAL_CHECKS:-10}))
+	if [ "${#offsets}" = "0" ];then
+		exit 1;
+	fi
 	for ((i = 0; i < ${TOTAL_CHECKS:-10}; i++)); do
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
 		start=${offsets[$i]}

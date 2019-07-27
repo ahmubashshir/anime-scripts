@@ -34,20 +34,24 @@ def refine(Str):
 	for n in d.keys():
 		Str=Str.replace(n,d[n])
 	return Str
-if len(argv)>1:
-	data = {
-		'\''model'\'': '\'${TYPE:-anime}\''.title(),
-		'\''size'\'': 200,
-		'\''what'\'': '\''query'\'',
-		'\''letter'\'': '\''all'\'',
-		'\''query[order]'\'': '\''date,asc'\'',
-		'\''query[search]'\'':'\'' '\''.join(argv[1:])
-	}
-	for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
-		try:
-			print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''english'\''] if n['\''english'\''] is not '\'\'' else n['\''title'\''])))
-		except:
-			print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))' "$@"
+try:
+	if len(argv)>1:
+		data = {
+			'\''model'\'': '\'${TYPE:-anime}\''.title(),
+			'\''size'\'': 200,
+			'\''what'\'': '\''query'\'',
+			'\''letter'\'': '\''all'\'',
+			'\''query[order]'\'': '\''date,asc'\'',
+			'\''query[search]'\'':'\'' '\''.join(argv[1:])
+		}
+		for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
+			try:
+				print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''english'\''] if n['\''english'\''] is not '\'\'' else n['\''title'\''])))
+			except:
+				print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
+except KeyboardInterrupt:
+	pass' "$@"
+
 }
 da_search() {
 	start_spinner "Searching for $*"

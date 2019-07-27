@@ -3,12 +3,16 @@
 DEBUG=${DEBUG:-false}
 #start:code
 ellipsis() {
-	python3 -c "from sys import argv
-l=int(int(argv[1])/2)
-if len(' '.join(argv[2:]))>l*2:
-	print(' '.join(argv[2:])[0:l],'...',' '.join(argv[2:])[-l:],sep='')
-else:
-	print(' '.join(argv[2:]),sep='')" "$@"
+	python3 -c "try:
+	from sys import argv
+	l=int(int(argv[1])/2)
+	if len(' '.join(argv[2:]))>l*2:
+		print(' '.join(argv[2:])[0:l],'...',' '.join(argv[2:])[-l:],sep='')
+	else:
+		print(' '.join(argv[2:]),sep='')
+except KeyboardInterrupt:
+	pass" "$@"
+
 }
 clear_line() {
 	tput sc
@@ -85,8 +89,12 @@ def random_spaced(low, high, delta, n, size=1):
 		u = np.random.rand(size, n)
 		x = empty_space * np.sort(u, axis=-1)
 	return low + x + delta * np.arange(n)
-for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]:
-	print(int(n))' "$@"
+try:
+	for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]:
+		print(int(n))
+except KeyboardInterrupt:
+	pass' "$@"
+
 }
 anime_cover() {
 	local anime_cover_img

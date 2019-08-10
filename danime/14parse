@@ -38,15 +38,7 @@ get_url_mp4_sh() {
 }
 
 get_url_vidstreaming() {
-	local url_wx1232144
-    url_wx1232144=$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null | grep sources | grep 'video/mp4' | cut -d: -f2- | sed 's|[,;]$||g' | js-beautify | tr -d '[:blank:]'\' | grep '^file:' | head -1 | cut -d: -f2- | sed 's|[,;]$||g')
-    if [[ $url_wx1232144 =~ ^https://redirector.googlevideo.com/videoplayback* ]];then
-	    curl -I -w '%{redirect_url}\n' "$url_wx1232144" 2> /dev/null | tr -s '\r' '\n' | tail -1
-	else
-	    url_wx1232144=$(curl "http://vidstreaming.io/streaming.php?id=$1" 2> /dev/null |grep sources|grep mp4|cut -d: -f2-|sed 's|[,;]$||g'|js-beautify|tr -d '[:blank:]'\'|grep '^file:'|head -1|cut -d: -f2-|sed 's|[,;]$||g')
-	    echo "$(dirname "$url_wx1232144")/$(curl "$url_wx1232144" -H 'referer: http://vidstreaming.io/' -s|grep -v '^#'|sort|tail -1)"
-	fi
-	#curl 'https://hls10x.cdnfile.info/videos/hls/vhxmj2Xjiz9qoSzV_mdbFA/1556808443/91920/272663fbf6a44feff4bea6698e7e6362/dub.7.m3u8' -H 'referer: http://vidstreaming.io/' -s|grep -v '^#'|sort|tail -1
+	curl -s "https://vidstreaming.io/download?id=$1" |grep 'http'|grep 'download'|tr -d '[:blank:]'|cut -d\" -f2|sed 's|amp\;||g'|tail -2|head -1
 }
 #end:code
 

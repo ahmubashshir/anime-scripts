@@ -47,7 +47,7 @@ da_get_episede() {
 		if [ "$episode_type" = "episode" ]; then
 
 			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
-			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
+			if ! [[ ${ep_title##* } =~ ^[[:digit:]-]+$ ]]; then
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
 				fi
@@ -106,6 +106,7 @@ da_get_episede() {
 			stop_spinner 1
 			return 1
 		fi
+		ep_title=$(ellipsis $(($(tput cols)-8)) "$ep_title")
 		tput rc
 		vbar
 		vbar "$ep_title" true
@@ -178,6 +179,7 @@ da_get_episede() {
 						ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num-$tr.mp4"
 					fi
 				fi
+				ep_file_name="${ep_file_name//---/--}"
 				if ! ([[ $tr = dubbed ]] || [[ $tr = subbed ]]); then
 					tr=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[type\]' | cut -d\  -f2)
 				fi
@@ -205,6 +207,9 @@ da_get_episede() {
 			break
 		done
 		if [ -z "$ep_file_url" ];then
+			if [ -n "$_sp_pid" ];then
+				stop_spinner 1;
+			fi
 			echo "Episode not available."
 		fi
 	fi

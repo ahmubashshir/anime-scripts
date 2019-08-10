@@ -35,7 +35,7 @@ da_get() {
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	$NORESET || reset
 	${DEBUG:-false} && set -x
-	vbar "$TITLE" true
+	vbar "$(ellipsis $(($(tput cols)-10)) "$TITLE")" true
 	[[ -z $baseurl ]] && echo "$(
 		tput setaf 1
 		tput dim
@@ -116,7 +116,8 @@ da_get() {
 		if ! (exit $?); then
 			echo "Failed to download $k"
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"
-			break
+			echo $BREAK
+			${BREAK:-true} && break
 		fi
 	done
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"

@@ -33,6 +33,12 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				fi
 				exit 0
 			;;
+			--break|-b)
+				BREAK=true
+			;;
+			--no-break|-nb)
+				BREAK=false
+			;;
 			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
 				BS=${1#*=}
 				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}

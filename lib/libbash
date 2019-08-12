@@ -86,7 +86,7 @@ function fget() {
 			else
 				echo "$response_933be66d $(server_responce "$response_933be66d")"
 				[[ $response_933be66d =~ 40. ]] && ${SHOW_URL:-false} && echo "$url_933be66d"
-				return "${response_933be66d:0:1}${response_933be66d:2:3}"
+				[[ -z "${response_933be66d:0:1}${response_933be66d:2:3}" ]] && return "${response_933be66d:0:1}${response_933be66d:2:3}" || return 99
 			fi
 		fi
 	else

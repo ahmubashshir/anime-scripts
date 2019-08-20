@@ -62,18 +62,18 @@ da_get_episede() {
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
 			ep_id_list=$(
-				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- |sed 's|","|"\|"|g'| grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}'|sed 's|"\|"|","|g'
+				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]?*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
 				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
-					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- |sed 's|","|"\|"|g'| grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}'|sed 's|"\|"|","|g'
-						curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
-					)
+					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+				)
 			fi
-			if echo "$1"|grep -q "-extra-[[:digit:]]*-english-subbed$";then
+			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
 				ep_title="${ep_title// ep / extra }"
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
@@ -92,13 +92,13 @@ da_get_episede() {
 				ep_title=${ep_title% *}
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
-			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | sort)
-			if echo "$1"|grep -q "-extra-[[:digit:]]*-english-subbed$";then
+			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
+			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
 				ep_title="${ep_title// ep / extra }"
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
-		ep_id_list="$(echo "$ep_id_list" | awk '!x[$0]++')"
+		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFFERED_HOSTS//,/|}"'/{print};!/'"${PREFFERED_HOSTS//,/|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
 		set +x
 		if [ -n "$parse_episede_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0
@@ -106,7 +106,7 @@ da_get_episede() {
 			stop_spinner 1
 			return 1
 		fi
-		ep_title=$(ellipsis $(($(tput cols)-8)) "$ep_title")
+		ep_title=$(ellipsis $(($(tput cols) - 8)) "$ep_title")
 		tput rc
 		vbar
 		vbar "$ep_title" true
@@ -119,14 +119,14 @@ da_get_episede() {
 		fi
 		${DEBUG:-false} && set -x
 		for n in $ep_id_list; do
-			if [ -n "$_sp_pid" ];then
-				stop_spinner 1;
+			if [ -n "$_sp_pid" ]; then
+				stop_spinner 1
 			fi
 			ep_file_url=
 			ep_file_host=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[host\]' | cut -d\  -f2)
 			ep_file_id=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[id\]' | cut -d\  -f2)
 			set +x
-			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id" )]"
+			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
 			if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ]; then
 				while [ -z "$ep_file_url" ]; do
@@ -136,8 +136,8 @@ da_get_episede() {
 			else
 				ep_file_url=$(parse_episede_id "$n")
 			fi
-			for ep_file_url_current in $ep_file_url;do
-				if ! remote_exist "$ep_file_url_current";then
+			for ep_file_url_current in $ep_file_url; do
+				if ! remote_exist "$ep_file_url_current"; then
 					ep_file_url=
 					stop_spinner 1
 					echo "404 Error on this mirror."
@@ -162,18 +162,18 @@ da_get_episede() {
 					continue 2
 				fi
 			done
-			if [ -n "$ep_file_url" ];then
+			if [ -n "$ep_file_url" ]; then
 				stop_spinner 0
 			else
 				continue
 			fi
-			if [[ $(echo "$ep_file_url"|wc -l) -gt 1 ]];then
+			if [[ $(echo "$ep_file_url" | wc -l) -gt 1 ]]; then
 				file_num=0
 			fi
-			for ep_file_url_current in $ep_file_url;do
-				if [ -n "$file_num" ];then
-					file_num=$((file_num+1))
-					if [ "$episode_type" = "cartoon" ];then
+			for ep_file_url_current in $ep_file_url; do
+				if [ -n "$file_num" ]; then
+					file_num=$((file_num + 1))
+					if [ "$episode_type" = "cartoon" ]; then
 						ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num.mp4"
 					else
 						ep_file_name="$(echo "$ep_title" | replace_invalid)-part$file_num-$tr.mp4"
@@ -192,10 +192,10 @@ da_get_episede() {
 					download "$ep_file_name" "$ep_file_url_current"
 				elif (
 					((ret == 4)) \
-					&& (
-						${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
-					) && ! ${NO_REPLACE:-false}
-				) || ((ret == 5)) || ( ${REPLACE_MANUAL:-false} && ((ret == 3))); then
+						&& (
+							${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
+						) && ! ${NO_REPLACE:-false}
+				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
 					#echo " overwriting"
 					rm "$ep_file_name"
 					download "$ep_file_name" "$ep_file_url_current"
@@ -206,9 +206,9 @@ da_get_episede() {
 			done
 			break
 		done
-		if [ -z "$ep_file_url" ];then
-			if [ -n "$_sp_pid" ];then
-				stop_spinner 1;
+		if [ -z "$ep_file_url" ]; then
+			if [ -n "$_sp_pid" ]; then
+				stop_spinner 1
 			fi
 			echo "Episode not available."
 		fi
@@ -266,19 +266,19 @@ compare_episode() {
 	if ! (dd if="$1" of=/dev/null bs=1 count=1 status=none 2> /dev/null && exit "$(ffprobe -hide_banner -loglevel 14 "$1" 2>&1 | wc -l)"); then
 		return 5
 	fi
-	if command -v mediainfo &>/dev/null;then
-		asize=$(mediainfo "$1" 2>/dev/null|tr -s '[:blank:]' \ |grep -i '^stream size'|sed 's|: |:|g'|cut -d: -f2|cut -d\  -f1|awk '{printf $0"*1048576+"};END {printf "0\n"}'|bc|cut -d\. -f1)
+	if command -v mediainfo &> /dev/null; then
+		asize=$(mediainfo "$1" 2> /dev/null | tr -s '[:blank:]' \  | grep -i '^stream size' | sed 's|: |:|g' | cut -d: -f2 | cut -d\  -f1 | awk '{printf $0"*1048576+"};END {printf "0\n"}' | bc | cut -d\. -f1)
 	else
 		asize=$size
 	fi
-	if ((asize>wsize));then
+	if ((asize > wsize)); then
 		return 3
 	fi
 	${DEBUG:-false} && set +x
 	failed_tests=${TOTAL_CHECKS:-10}
 	offsets=($(srand 0 $((size - ${BS:-524288})) $((BS / 2)) ${TOTAL_CHECKS:-10}))
-	if [ "${#offsets}" = "0" ];then
-		exit 1;
+	if [ "${#offsets}" = "0" ]; then
+		exit 1
 	fi
 	for ((i = 0; i < ${TOTAL_CHECKS:-10}; i++)); do
 		printf "\rComparing episode[test:%d]" "$((i + 1))"

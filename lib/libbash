@@ -38,16 +38,16 @@ function byte_hr() {
 function fget() {
 	url_933be66d="$1"
 	name_933be66d="$2"
-	if (($#>2));then
+	if (($# > 2)); then
 		shift 2
 	else
 		shift $#
 	fi
 	if echo "$url_933be66d" | grep -q 'google.com/uc?'; then
 		url_933be66d="https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?alt=media&key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ"
-		name_933be66d=$(curl "https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ" 2>/dev/null|tr -d '\"'|grep '^[[:blank:]]name'|cut -d: -f2-|sed 's/,$//')
+		name_933be66d=$(curl "https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ" 2> /dev/null | tr -d '\"' | grep '^[[:blank:]]name' | cut -d: -f2- | sed 's/,$//')
 	fi
-	S_933be66d=$(curl -skLI "$url_933be66d" 2>&1 |dos2unix|sed -n '/HTTP\/[12.]* 2../,/^$/{/^$/d;p}')
+	S_933be66d=$(curl -skLI "$url_933be66d" 2>&1 | dos2unix | sed -n '/HTTP\/[12.]* 2../,/^$/{/^$/d;p}')
 	if (exit "$?"); then
 		if [ "$name_933be66d" = "" ]; then
 			name_933be66d="${url_933be66d##*/}"
@@ -99,7 +99,7 @@ function fget() {
 				echo -e "$(
 					tput setaf 2
 					tput bold
-				)Saved $name_933be66d [$(byte_hr "$dlsize_933be66d" "" )]"
+				)Saved $name_933be66d [$(byte_hr "$dlsize_933be66d" "")]"
 				;;
 
 			1) echo -e "$(

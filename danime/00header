@@ -56,8 +56,8 @@ check_deps spinner libbash tput wget cd echo mkdir printf read rm curl lsof slee
 . spinner
 . libbash
 #variables
-sp=$sp31
-SPINNER_DELAY=0.04
+sp=$sp18
+SPINNER_DELAY=0.07
 #main
 ANIME_PATH="${ANIME_PATH:-$MEDIA_ROOT/Anime}"
 CARTOON_PATH="${CARTOON_PATH:-$MEDIA_ROOT/Animetion-Movie/Series}"
@@ -71,4 +71,3 @@ FORCE=
 SEARCHSTR=
 PREFFERED_TR=${PREFFERED_TR:-dub}
 #end:code
-

@@ -25,17 +25,14 @@ da_get() {
 	start_spinner "Fetching \"${series#-*}\" info"
 	da_page=$(curl "https://ww5.dubbedanime.net/$series" 2> /dev/null)
 	if [[ $TYPE == anime ]]; then
-		baseurl=$(echo "$da_page" | tr -d \\n\'\" | sed 's|<li|\n<li|g;s|</li>|</li>\n|g' | sed 's|><| >< |g' | tr -s '[:space:]' | sed 's|>Episode [[:digit:]]*.*$||gI' | grep class=jt-di | tr -s \>\< \  | (
-			while read -r EPISODE; do echo $EPISODE | tr \  \\n | grep '^href\|^data' | xargs echo | sed 's|data-subbed|subbed|g;s|data-dubbed|dubbed|g' | awk '{print $3";"$2";"$1}'; done
-			unset EPISODE
-		) | sort -g)
+		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | (while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true",";dubbed=",//li/@data-dubbed="true"," ")' -; done) | tr -s ' ' \\n | tac)
 	else
-		baseurl=$(echo "$da_page" | grep "$(echo "$series" | cut -d- -f2-)" | tr \ \> \\n | grep ^href | tac | sort -u | cut -d= -f2 | tr -d \' | sort -g)
+		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/node()' - 2>&3 | (while read -rs xml_node; do echo "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href," ")' - 2> /dev/null; done) | tr -s ' ' '\n' | grep -v '=$' | tac)
 	fi
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	$NORESET || reset
 	${DEBUG:-false} && set -x
-	vbar "$(ellipsis $(($(tput cols)-10)) "$TITLE")" true
+	vbar "$(ellipsis $(($(tput cols) - 10)) "$TITLE")" true
 	[[ -z $baseurl ]] && echo "$(
 		tput setaf 1
 		tput dim
@@ -43,24 +40,24 @@ da_get() {
 	if [[ $TYPE == cartoon ]]; then
 		url="$baseurl"
 	else
-		if [[ -n ${PREFFERED_TR:-dub} ]];then
+		if [[ -n ${PREFFERED_TR:-dub} ]]; then
 			tr="$(
 				(
 					echo "$baseurl" | grep -q "${PREFFERED_TR:-dub}bed=true" && echo ${PREFFERED_TR:-dub}
-				)||(
-					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub'|grep -v ${PREFFERED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
-				)||(
+				) || (
+					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub' | grep -v ${PREFFERED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
+				) || (
 					echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
 				)
 			)bed"
 		elif [[ -n $FORCE ]]; then
 			tr=${FORCE}bed
-		elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ] ; then
+		elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ]; then
 			tr=dubbed
-		elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ];then
+		elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
 			tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
 		fi
-		url="$(echo "$baseurl" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
+		url="$(echo "$baseurl" | grep "$tr=true" |cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 		if ! (echo "$url" | grep -q "${tr}$"); then
 			echo "$(
 				tput setaf 1
@@ -69,8 +66,8 @@ da_get() {
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
-		for k in $url;do
-			if [ "$(echo "${k##*/}"|cut -d- -f1)" -gt "$(echo "$url"|grep "${k#*-}"|head -1|xargs basename|cut -d- -f1)" ];then
+		for k in $url; do
+			if [ "$(echo "${k##*/}" | cut -d- -f1)" -gt "$(echo "$url" | grep "${k#*-}" | head -1 | xargs basename | cut -d- -f1)" ]; then
 				url="${url//$k/${k//-episode-/-extra-}}"
 			fi
 		done
@@ -91,10 +88,10 @@ da_get() {
 	${DEBUG:-false} && set +x
 	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
-	if [ "$(echo $ep|tr \  \\n|wc -l)" -eq 2 ];then
+	if [ "$(echo $ep | tr \  \\n | wc -l)" -eq 2 ]; then
 		ep_show="file ${ep%% *} and ${ep##* } "
 		dl_notify="Episode ${ep_show}are"
-	elif [ "$(echo $ep|tr \  \\n|wc -l)" -eq 1 ];then
+	elif [ "$(echo $ep | tr \  \\n | wc -l)" -eq 1 ]; then
 		ep_show="file $ep "
 		dl_notify="Episode ${ep_show:5}is"
 	fi
@@ -127,4 +124,3 @@ if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
 	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_get "$@"
 fi
-

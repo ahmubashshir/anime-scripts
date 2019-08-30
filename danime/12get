@@ -38,7 +38,7 @@ da_get() {
 		tput dim
 	)No episode is available to download yet.$(tput sgr0)" 1>&2 && exit 1
 	if [[ $TYPE == cartoon ]]; then
-		url="$baseurl"
+		url="$(echo "$baseurl"|cut -d= -f2-)"
 	else
 		if [[ -n ${PREFFERED_TR:-dub} ]]; then
 			tr="$(
@@ -73,6 +73,13 @@ da_get() {
 		done
 	fi
 	${DEBUG:-false} && set -x
+	epc=$(echo "$url" | wc -l)
+	if ${EP_LIST:-false} && [[ -z $EP_LIST_RANGE ]]; then
+		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Type:${tr:-dubbed} Files:$epc"
+		read -ri "1-$epc" -p$'Episode list: '  EP_LIST_RANGE
+		ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
+		tput cuu 2
+	fi
 	if [[ $EP_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
 		ep_show="range($EP_LIST_RANGE) "
 		dl_notify="Episodes in ${ep_show}are"
@@ -83,8 +90,6 @@ da_get() {
 		ep_show="file $EP_LIST_RANGE "
 		dl_notify="Episode ${ep_show:5}is"
 	fi
-	${DEBUG:-false} && set -x
-	epc=$(echo "$url" | wc -l)
 	${DEBUG:-false} && set +x
 	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
@@ -103,10 +108,7 @@ da_get() {
 	else
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Type:${tr:-dubbed}"
 	fi
-	if ${EP_LIST:-false} && [ -z "$EP_LIST_RANGE" ]; then
-		read -rp$'Enter file list to download: ' EP_LIST_RANGE
-		ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
-	fi
+
 	${DEBUG:-false} && set -x
 	for k in $ep; do
 		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)" "$k" "$epc"

@@ -120,7 +120,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			-e[[:digit:],-]* | --ep-list=[[:digit:],-]*)
 				EP_LIST=true
 				EP_LIST_RANGE=${1#*=}
-				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || EP_LIST_RANGE=${1/-e/}
+				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]]
 				EP_LIST_RANGE=$(echo "$EP_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
 			-s | --select)

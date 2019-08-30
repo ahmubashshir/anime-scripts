@@ -62,7 +62,7 @@ da_get_episede() {
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
 			ep_id_list=$(
-				echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]?*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
+				echo "$parse_episede_page" | sed 's|\;$||g;s/^[[:blank:]]*//g' | grep var\ episode | cut -d= -f2- | jsonparser -q | grep '\[\"videos\",[[:digit:]]?*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
 				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
@@ -296,4 +296,3 @@ compare_episode() {
 if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_get_episede "$@"
 fi
-

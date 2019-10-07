@@ -22,6 +22,7 @@ da_get() {
 	if [ "$series" = "" ]; then
 		exit 3
 	fi
+	local ep_progress total_pw
 	start_spinner "Fetching \"${series#-*}\" info"
 	da_page=$(curl "https://ww5.dubbedanime.net/$series" 2> /dev/null)
 	if [[ $TYPE == anime ]]; then
@@ -76,19 +77,19 @@ da_get() {
 	epc=$(echo "$url" | wc -l)
 	if ${EP_LIST:-false} && [[ -z $EP_LIST_RANGE ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Type:${tr:-dubbed} Files:$epc"
-		read -ri "1-$epc" -p$'Episode list: '  EP_LIST_RANGE
-		ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
+		read -eri "1-$epc" -p$'Episode list: '  EP_LIST_RANGE
+		ep="$(echo "${EP_LIST_RANGE:-1-}"| num_unicode2ascii)"
 		tput cuu 2
 	fi
 	if [[ $EP_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
-		ep_show="range($EP_LIST_RANGE) "
-		dl_notify="Episodes in ${ep_show}are"
+		ep_show="range($(ellipsis "$(($(tput cols) - 50))" "$(echo "$EP_LIST_RANGE"|tr -d \ )" ))"
+		dl_notify="Episodes in ${ep_show} are"
 	elif [[ $EP_LIST_RANGE =~ [[:digit:],]+- ]]; then
-		ep_show="range($EP_LIST_RANGE$(echo "$url" | wc -l)) "
-		dl_notify="Episodes in ${ep_show}are"
+		ep_show="range($EP_LIST_RANGE$(echo "$url" | wc -l))"
+		dl_notify="Episodes in ${ep_show} are"
 	elif [[ -n $EP_LIST_RANGE ]]; then
-		ep_show="file $EP_LIST_RANGE "
-		dl_notify="Episode ${ep_show:5}is"
+		ep_show="file $EP_LIST_RANGE"
+		dl_notify="Episode ${ep_show:5} is"
 	fi
 	${DEBUG:-false} && set +x
 	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
@@ -103,15 +104,16 @@ da_get() {
 	if [[ -n $ep ]] && [[ -n $ep_show ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Downloading:$ep_show" || (
 			vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Type:${tr:-dubbed}"
-			vbar " Files:$epc Downloading:$ep_show"
+			vbar " Files:$epc Downloading:$ep_show "
 		)
 	else
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Type:${tr:-dubbed}"
 	fi
-
+	total_pw=$(echo "$ep"|tr \  \\n|wc -l)
 	${DEBUG:-false} && set -x
 	for k in $ep; do
-		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)" "$k" "$epc"
+		let ep_progress+=1
+		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)" "$k" "$epc" "$ep_progress" "$total_pw"
 		if ! (exit $?); then
 			echo "Failed to download $k"
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"

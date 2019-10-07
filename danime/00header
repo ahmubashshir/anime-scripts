@@ -1,4 +1,6 @@
 #!/bin/bash
+#start:code
+#!/bin/bash
 # shellcheck disable=SC2086
 # shellcheck disable=SC1091
 # shellcheck disable=SC1090
@@ -8,8 +10,6 @@
 # shellcheck disable=SC2016
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
-#start:code
-#!/bin/bash
 #VERSION_INFO=
 if [ -e ~/.config/danime.cfg ]; then
 	source ~/.config/danime.cfg
@@ -34,10 +34,10 @@ if [ -n "$AP" ]; then
 	ANIME_PATH="$AP"
 fi
 if [[ $ANIME_PATH =~ @/* ]]; then
-	ANIME_PATH="$ANIME_ROOT/${ANIME_PATH#*/}"
+	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#*/}"
 fi
 if [[ -z $ANIME_PATH ]]; then
-	readonly ANIME_PATH="$ANIME_ROOT"
+	readonly ANIME_PATH="$MEDIA_ROOT/Anime"
 fi
 if [[ ! -d $ANIME_PATH ]]; then
 	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1

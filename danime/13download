@@ -20,7 +20,9 @@ da_get_episede() {
 	if (($# == 0)); then
 		return 1
 	else
-		local IFS file_num ret dlret
+		local IFS file_num ret progress total_pw
+		progress=$4
+		total_pw=$5
 		local tr="$tr"
 		IFS=$'\n'
 		tput sc
@@ -40,7 +42,7 @@ da_get_episede() {
 			tr=dubbed
 		fi
 		if [[ $tr = dubbed ]] || [[ $tr = subbed ]]; then
-			filter='grep \"type\":\"$tr'
+			filter="grep '\"type\":\"$tr'"
 		else
 			filter="cat"
 		fi
@@ -110,7 +112,7 @@ da_get_episede() {
 		tput rc
 		vbar
 		vbar "$ep_title" true
-		vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)"
+		vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)$([ -n "$progress" ] && [ -n "$total_pw" ] && echo " - Progress:$progress/$total_pw")"
 		vbar
 		if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -z "$REPLACE_FAIL" ]; then
 			REPLACE_FAIL=true
@@ -137,28 +139,28 @@ da_get_episede() {
 				ep_file_url=$(parse_episede_id "$n")
 			fi
 			for ep_file_url_current in $ep_file_url; do
-				if ! remote_exist "$ep_file_url_current"; then
+				if [[ $ep_file_url_current =~ error:* ]]; then
 					ep_file_url=
 					stop_spinner 1
-					echo "404 Error on this mirror."
-					continue 2
-				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.mp4[[:alnum:][:punct:]]* ]]; then
+					echo "[Error] ${ep_file_url_current#*:}"
 					continue
 				elif [[ $ep_file_url_current =~ unimplemented:[:alnum:]* ]]; then
 					ep_file_url=
 					stop_spinner 1
-					echo "URL extractor not available for ${ep_file_url##*:}"
+					echo "[Error] URL extractor not implemented for ${ep_file_url##*:}"
 					continue 2
 				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
 					ep_file_url=
 					stop_spinner 1
-					echo "M3U8 downloader is not implemented." 1>&2
+					echo "[Warn] HLS video downloader is not implemented." 1>&2
 					echo -e "Please run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
 					continue 2
+				elif remote_exist "$ep_file_url_current"; then
+					continue
 				else
 					ep_file_url=
 					stop_spinner 1
-					echo "URL Parsing error"
+					echo "[Error] 404 not found."
 					continue 2
 				fi
 			done

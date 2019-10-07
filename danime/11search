@@ -74,13 +74,9 @@ da_search() {
 		vbar "Select One or more to download"
 		vbar
 		echo "$RES" | cut -d: -f2- | awk '{print NR" ) "$0;}'
-		read -rp$': ' RES_LIST
-		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
+		read -rp$'Download: ' RES_LIST
 	elif $DOWNLOAD_ALL && [ -z "$RES_LIST" ]; then
 		RES_LIST='1-'
-		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
-	elif [ -n "$RES_LIST" ]; then
-		RES_LIST=$(expand_limit "$RES_LIST" "$total_res")
 	fi
 	if [ -z "$RES_LIST" ];then
 		vbar
@@ -89,9 +85,9 @@ da_search() {
 		vbar "Select One or more to download"
 		vbar
 		echo "$RES" | cut -d: -f2- | awk '{print NR" ) "$0;}'
-		read -rp$': ' RES_LIST
-		RES_LIST=$(expand_limit "${RES_LIST:-1}" "$total_res")
+		read -rp$'Download: ' RES_LIST
 	fi
+	RES_LIST=$(expand_limit "$(echo "$RES_LIST"|num_unicode2ascii)" "$total_res")
 	for n in $RES_LIST; do
 		target=$(echo "$RES" | head -n "$n" | tail -1)
 		local base
@@ -133,4 +129,3 @@ if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
 	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_search "$@"
 fi
-

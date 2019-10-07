@@ -2,6 +2,11 @@
 # shellcheck disable=SC2015
 DEBUG=${DEBUG:-false}
 #start:code
+langs=(
+	'০১২৩৪৫৬৭৮৯'
+	'〇一二三四五六七八九'
+	'０１２３４５６７８９'
+)
 ellipsis() {
 	python3 -c "try:
 	from sys import argv
@@ -67,6 +72,10 @@ validate_limit() {
 	else
 		return 0
 	fi
+}
+num_unicode2ascii()
+{
+	sed "$(for n in "${langs[@]}";do echo "y/$n/0123456789/;";done)"
 }
 srand()
 {

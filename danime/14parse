@@ -15,7 +15,7 @@ parse_episede_id() {
 		if [ -n "$(type -t get_url_$ep_file_host)" ]; then
 			get_url_$ep_file_host "$n" 2> /dev/null
 		else
-			echo unimplemented:${ep_file_host/_/.}
+			echo "unimplemented:${ep_file_host/_/.}"
 			break
 		fi
 	done
@@ -23,6 +23,9 @@ parse_episede_id() {
 
 get_url_mp4upload() {
 	curl "https://www.mp4upload.com/embed-$1.html" 2> /dev/null | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
+	if [ "${PIPESTATUS[1]}" = "1" ];then
+		echo "error:File is deleted."
+	fi
 }
 get_url_trollvid() {
 	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" 2> /dev/null | grep '^http' | cat
@@ -33,7 +36,7 @@ get_url_mp4_sh() {
     if ! echo "$url" | grep -q 'st=.*e=.*';then
 	    curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "" 2> /dev/null | grep '^http' | cat
 	else
-	    echo $url
+	    echo "$url"
 	fi
 }
 
@@ -41,4 +44,3 @@ get_url_vidstreaming() {
 	curl -s "https://vidstreaming.io/download?id=$1" |grep 'http'|grep 'download'|tr -d '[:blank:]'|cut -d\" -f2|sed 's|amp\;||g'|tail -2|head -1
 }
 #end:code
-

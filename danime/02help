@@ -15,7 +15,7 @@ danime_help() {
 	printf "  -nc,--no-continue\tWait for user intaraction after downloading a selection.\n"
 	printf "  -l,--list\t\tList downloaded Animes in \"\$ANIME_PATH\"\n"
 	printf "  -nr,--no-reset\tDon't reset terminal certain events.\n"
-	printf "  -t<time>\t\tChange resolving timeout.\n"
+	printf "  -T<time>\t\tChange resolving timeout.\n"
 	printf "  --timeout=<time>\n\n"
 	printf "  -f-<value>\t\tForce version,where value is sub/dub\n"
 	printf "  --force-<value>\tThis overrides TYPE_ANIME variable.\n\n"
@@ -63,4 +63,3 @@ da_get_license()
 	echo " MA 02110-1301, USA."
 }
 #end:code
-

@@ -218,12 +218,20 @@ da_get_episede() {
 }
 
 download() {
-	local s1 s2 ret
+	local s1 s2 ret tried
 	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }' | tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
+	tried=1
 	if ((s1 >= s2)); then
-		fget "$2" "$1"
-		ret=$?
+		until fget "$2" "$1";do
+			ret=$?
+			if ((tried <= ${MAX_TRY:-5}));then
+				echo "Retrying...[$tried]"
+				let tried+=1
+			else
+				break
+			fi
+		done
 	else
 		echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
 	fi

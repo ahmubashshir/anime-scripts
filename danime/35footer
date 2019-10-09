@@ -114,6 +114,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				if [[ ${2// /} =~ ^[[:digit:],-]+$ ]]; then
 					EP_LIST_RANGE=${2// /}
 					shift
+				else
+					echo Invalid argument.
+					exit 1
 				fi
 				;;
 			-e[[:digit:],-\ ]* | --ep-list=[[:digit:],-\ ]*)
@@ -144,14 +147,33 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				danime_help
 				exit 0
 				;;
-			-t[[:digit:]]* | --timeout=[[:digit:]]*)
+			-T[[:digit:]]* | --timeout=[[:digit:]]*)
 				RSOLV=${1#*=}
-				[[ $RSOLV =~ ^[[:digit:]]+$ ]] || RSOLV=${1/-t/}
+				[[ $RSOLV =~ ^[[:digit:]]+$ ]] || RSOLV=${1/-T/}
 				;;
-			-t | --timeout)
-				RSOLV=$2
-				shift 1
+			-T | --timeout)
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					RSOLV=${2}
+					shift
+				else
+					echo Invalid argument.
+					exit 1
+				fi
+				shift
 				;;
+			-t | --try)
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					MAX_TRY=${2}
+					shift
+				else
+					echo Invalid argument.
+					exit 1
+				fi
+			;;
+			-t[[:digit:]]* | --try=[[:digit:]]* )
+				MAX_TRY=${1#*=}
+				[[ $MAX_TRY =~ ^[[:digit:]]+$ ]] || MAX_TRY=${1/-t/}
+			;;
 			-a | --all)
 				DOWNLOAD_ALL=true
 				unset RES_LIST EP_LIST_RANGE

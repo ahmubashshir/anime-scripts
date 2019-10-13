@@ -73,7 +73,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					echo "Invalid block size." 1>&2
 				fi
 				;;
-			-d | --debug)
+			--debug)
 				DEBUG=true
 				;;
 			-A)
@@ -84,6 +84,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				;;
 			-c | --continue)
 				CONTINUE=true
+			;;
+			-n | --nobreak)
+				NOBREAK=true
 				NORESET=true
 				;;
 			-r | --replace)
@@ -114,9 +117,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				if [[ ${2// /} =~ ^[[:digit:],-]+$ ]]; then
 					EP_LIST_RANGE=${2// /}
 					shift
-				else
-					echo Invalid argument.
-					exit 1
 				fi
 				;;
 			-e[[:digit:],-\ ]* | --ep-list=[[:digit:],-\ ]*)
@@ -139,8 +139,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				RES_LIST=${1#*=}
 				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || RES_LIST=${1/-s/}
 				;;
-			-nc | --no-continue)
-				CONTINUE=false
+			-nc | --no-NOBREAK)
+				NOBREAK=false
 				NORESET=true
 				;;
 			-h | --help)
@@ -192,7 +192,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					FORCE=${TYPE_ANIME:0:3}
 				fi
 				;;
-			-n | --skip)
+			-d | --dry-run)
 				SKIP_DOWNLOAD=true
 				;;
 			-S | --sub | -D | --dub)

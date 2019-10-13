@@ -26,6 +26,40 @@ clear_line() {
 	done
 	tput rc
 }
+enqueue()
+{
+	local queue_file
+	queue_file="$1"
+	if (($#<2));then
+		return 1
+	fi
+	shift
+	while [ -n "$1" ];do
+		echo "$1" >> "$queue_file"
+		shift
+	done
+	sort -bun --output="$queue_file" "$queue_file"
+	return 0
+}
+dequeue()
+{
+	local queue_file
+	queue_file="$1"
+	if (($#!=1))|| ! [ -f "$queue_file" ];then
+		return 1
+	fi
+	shift
+	tail +2 "$queue_file" > "$queue_file.bak"
+	if [ "$(stat -c%s "$queue_file.bak")" != "0" ];then
+		mv "$queue_file.bak" "$queue_file"
+	else
+		rm -f "$queue_file.bak" "$queue_file"
+	fi
+}
+pqueue()
+{
+	tr -s '\n' ',' < "$1" |sed 's/[[:punct:]]$/\n/g'
+}
 expand_limit() {
 	${DEBUG:-false} && set -x
 	if [[ $1 =~ ^[[:digit:]]+-$ ]]; then
@@ -46,6 +80,42 @@ expand_limit() {
 			fi
 		done
 	fi | tr \  \\n | sort -nu | tr \\n \  | sed 's| $|\n|g'
+	${DEBUG:-false} && set +x
+	return 0
+}
+contract_limit()
+{
+	local k
+	k=( $(echo "$@"|tr , ' ';echo) )
+	set "${k[@]}"
+	unset k
+	${DEBUG:-false} && set -x
+	local max k m n o
+	max=$1
+	k=0
+	shift
+	for ((i=2;i<=$#;i++));do
+		m=${*:i-2:1}
+		n=${*:i-1:1}
+		o=${*:i:1}
+		k=$((${o:-0}-${n:-0}))
+		if ((k>=2)) && ((n-m<2)) && ((m!=n))&&((o<max));then
+			printf -- '-%d,%d' "$n" "$o"
+		elif ((i==2));then
+			printf '%d' "$n"
+		elif (((n-m)>1))&&(((o-n)>1)) || ((m==n));then
+			printf ',%d' "$o"
+		elif ((i==$#))&&((o>=max));then
+			printf -- '-\n'
+			break
+		elif ((i==$#))&&((o<max));then
+			printf -- '-%d\n' "$o"
+			break
+		fi
+		if ((o>max));then
+			break
+		fi
+	done
 	${DEBUG:-false} && set +x
 	return 0
 }

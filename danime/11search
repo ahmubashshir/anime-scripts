@@ -107,7 +107,7 @@ da_search() {
 		cd "$dir" || continue
 		echo -e "Title: '$dir'"
 		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
-		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $CONTINUE; then
+		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $NOBREAK; then
 			read -rsp$'Press Return to download next.'
 			printf '\n'
 		fi

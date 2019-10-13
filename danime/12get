@@ -75,6 +75,9 @@ da_get() {
 	fi
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
+	if ${CONTINUE-false} && [[ -z $EP_LIST_RANGE ]] && [[ -f ".ep_queue" ]]; then
+		EP_LIST_RANGE="$(contract_limit $epc "$(pqueue ".ep_queue")")"
+	fi
 	if ${EP_LIST:-false} && [[ -z $EP_LIST_RANGE ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Type:${tr:-dubbed} Files:$epc"
 		read -eri "1-$epc" -p$'Episode list: '  EP_LIST_RANGE
@@ -110,6 +113,7 @@ da_get() {
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Type:${tr:-dubbed}"
 	fi
 	total_pw=$(echo "$ep"|tr \  \\n|wc -l)
+	enqueue ".ep_queue" $ep
 	${DEBUG:-false} && set -x
 	for k in $ep; do
 		let ep_progress+=1
@@ -119,6 +123,8 @@ da_get() {
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"
 			echo $BREAK
 			${BREAK:-true} && break
+		else
+			dequeue ".queue_file"
 		fi
 	done
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"

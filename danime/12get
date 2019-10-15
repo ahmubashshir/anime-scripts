@@ -124,7 +124,7 @@ da_get() {
 			echo $BREAK
 			${BREAK:-true} && break
 		else
-			dequeue ".queue_file"
+			dequeue ".ep_queue"
 		fi
 	done
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"

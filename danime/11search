@@ -46,10 +46,7 @@ try:
 		}
 		for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
 			if int(n['\''total'\''])>0:
-				try:
-					print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''english'\''] if n['\''english'\''] is not '\'\'' else n['\''title'\''])))
-				except:
-					print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
+				print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
 except KeyboardInterrupt:
 	pass' "$@"
 

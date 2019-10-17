@@ -52,7 +52,7 @@ check_deps() {
 	done
 	return $a
 }
-check_deps spinner libbash tput wget cd echo mkdir printf read rm curl lsof sleep python3 ffprobe || exit $?
+check_deps spinner libbash tput wget cd echo mkdir printf read rm curl lsof sleep python3 ffprobe jq|| exit $?
 . spinner
 . libbash
 #variables

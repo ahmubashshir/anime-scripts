@@ -121,7 +121,6 @@ da_get() {
 		if ! (exit $?); then
 			echo "Failed to download $k"
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"
-			echo $BREAK
 			${BREAK:-true} && break
 		else
 			dequeue ".ep_queue"

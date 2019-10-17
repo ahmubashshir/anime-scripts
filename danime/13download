@@ -26,8 +26,8 @@ da_get_episede() {
 		local tr="$tr"
 		IFS=$'\n'
 		tput sc
-		set +x
-		start_spinner "Fetching info about episode[dubbedanime:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
+		episode_type=$(echo "$1" | cut -d/ -f4)
+		start_spinner "Fetching info about episode[$episode_type:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -36,8 +36,7 @@ da_get_episede() {
 			set "https://ww5.dubbedanime.net/$d" "$@"
 			unset d
 		fi
-		parse_episede_page="$(curl "$1" 2> /dev/null)"
-		episode_type=$(echo "$1" | cut -d/ -f4)
+		parse_episede_page="$(curl "$1" 2> /dev/null | sed 's|\;$||g' | grep var\ episode | cut -d= -f2)"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi
@@ -48,7 +47,7 @@ da_get_episede() {
 		fi
 		if [ "$episode_type" = "episode" ]; then
 
-			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
+			ep_title=$(echo "$parse_episede_page" | jq -r '.name.default')
 			if ! [[ ${ep_title##* } =~ ^[[:digit:]-]+$ ]]; then
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
@@ -64,15 +63,15 @@ da_get_episede() {
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
 			ep_id_list=$(
-				echo "$parse_episede_page" | sed 's|\;$||g;s/^[[:blank:]]*//g' | grep var\ episode | cut -d= -f2- | jsonparser -q | grep '\[\"videos\",[[:digit:]]?*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
-				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+				echo "$parse_episede_page" | jq --tab -r '.videos'|grep -v '"date"' |tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|tr -d \\t|sed 's/,},/}/;s/,}/}/'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
+				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
-					echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | sed 's|","|"\|"|g' | grep $SUPPORTED_HOSTS | eval $filter | awk -F\| '{print $1","$2","$3"}";}' | sed 's|"\|"|","|g'
-					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | grep 'var episode' | sed 's|;$||g' | cut -d= -f2 | jsonparser -b -q | grep slug | tr -s '[:blank:]' \  | cut -d\  -f2 | tr -d \")" -s 2> /dev/null | jsonparser -q | grep -E '^\[[[:digit:]]+\]' | tr -s '[:blank:]' \  | cut -d\  -f2 | grep $SUPPORTED_HOSTS | eval $filter
+					echo "$parse_episede_page" | jq --tab -r '.videos'|grep -v '"date"' |tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|tr -d \\t|sed 's/,},/}/;s/,}/}/'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
@@ -81,9 +80,9 @@ da_get_episede() {
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		elif [ "$episode_type" = "cartoon" ]; then
 
-			ep_title=$(echo "$parse_episede_page" | grep -v doctype | sed -n "/<h1 class='dosis ep-title'>/,/<\/h1>/{/<h1 class='dosis ep-title'>/d;s| *</h1>||g;p}")
+			ep_title=$(basename "$1" | cut -d- -f2- --output-delimiter=' '|sed 's/.*/\L&/; s/[a-z]*/\u&/g;s/\ba\b/a/i;s/\ban\b/an/i;s/\bis\b/is/i;s/\bthe\b/the/i;s/\bof\b/of/i;s/\band\b/and/i;s/\bbut\b/but/i;s/\bor\b/or/i')
 			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
-				ep_title="${ep_title% *} $(if (($3 > 1)); then
+				ep_title="${ep_title% *} $(if ((${3:-0} > 1)); then
 					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
 				else
 					echo "${ep_title##* }" | tr '[:upper:]' '[:lower:]'
@@ -94,7 +93,7 @@ da_get_episede() {
 				ep_title=${ep_title% *}
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
-			ep_id_list=$(echo "$parse_episede_page" | sed 's|\;$||g' | grep var\ episode | cut -d= -f2 | jsonparser -q | grep '\[\"videos\",[[:digit:]]*\]' | tr -d '[:blank:]' | cut -d\] -f2- | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
+			ep_id_list=$(echo "$parse_episede_page" |jq --tab -r '.videos'|grep -v '"date"' |tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|tr -d \\t|sed 's/,},/}/;s/,}/}/'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
 				ep_title="${ep_title// ep / extra }"
 			fi
@@ -125,8 +124,8 @@ da_get_episede() {
 				stop_spinner 1
 			fi
 			ep_file_url=
-			ep_file_host=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[host\]' | cut -d\  -f2)
-			ep_file_id=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[id\]' | cut -d\  -f2)
+			ep_file_host=$(echo "$n" | jq -r '.host')
+			ep_file_id=$(echo "$n" | jq -r '.id')
 			set +x
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
@@ -183,7 +182,7 @@ da_get_episede() {
 				fi
 				ep_file_name="${ep_file_name//---/--}"
 				if ! ([[ $tr = dubbed ]] || [[ $tr = subbed ]]); then
-					tr=$(echo "$n" | jsonparser -b -q | tr -d \" | tr \[:blank:\] \  | tr -s \  | grep '^\[type\]' | cut -d\  -f2)
+					tr=$(echo "$n" | jq -r '.type')
 				fi
 				if ${SKIP_DOWNLOAD:-false}; then
 					continue

@@ -43,16 +43,31 @@ if [[ ! -d $ANIME_PATH ]]; then
 	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1
 fi
 check_deps() {
+	check_deps_py3()
+	{
+		python3  -c "import $1" &>/dev/null||(echo "Please install python3-$1." && return 1)
+	}
+	check_deps_x11()
+	{
+		if [[ -n $DISPLAY ]];then
+			type $1 &> /dev/null||(echo "Please install $1 or make sure it is in your path." && return 1)
+		else
+			return 0
+		fi
+	}
+	check_deps_()
+	{
+		type $1 &> /dev/null||(echo "Please install $1 or make sure it is in your path." && return 1)
+	}
 	a=0
 	for n in "$@"; do
-		if ! type $n &> /dev/null; then
-			echo "Please install $n or make sure it is in your path."
+		if ! "check_deps_$( echo "$n"|cut -d: -f1)" "$( echo "$n"|cut -d: -f2)"; then
 			let a=a+1
 		fi
 	done
 	return $a
 }
-check_deps spinner libbash tput wget cd echo mkdir printf read rm curl lsof sleep python3 ffprobe jq|| exit $?
+check_deps :awk :bash :cd :curl :cut :dd :echo :false :ffmpeg :ffprobe :grep :head :jq :libbash :lsof :mkdir :mv :printf py3:json py3:numpy py3:requests :python3 :read :readonly :rm :sed :sha256sum :sleep :sort :spinner :stat :tac :tail :tput :tr :true :wc :wget x11:notify-send :xmllint|| exit $?
 . spinner
 . libbash
 #variables

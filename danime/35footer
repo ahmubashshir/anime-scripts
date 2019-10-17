@@ -48,6 +48,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				if echo "${SUPPORTED_HOSTS//\\|/$'\n'}" | grep -q "${tmp//,/\\|}"; then
 					PREFFERED_HOSTS="${tmp//,/|}"
 				fi
+				unset tmp
 				;;
 			--break | -b)
 				BREAK=true

@@ -34,7 +34,7 @@ get_url_mp4_sh() {
     local url
     url="$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embedc/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
     if ! echo "$url" | grep -q 'st=.*e=.*';then
-	    curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "" 2> /dev/null | grep '^http' | cat
+	    curl -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url" 2> /dev/null | grep '^http' | cat
 	else
 	    echo "$url"
 	fi

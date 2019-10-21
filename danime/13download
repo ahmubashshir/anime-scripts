@@ -27,7 +27,7 @@ da_get_episede() {
 		IFS=$'\n'
 		tput sc
 		episode_type=$(echo "$1" | cut -d/ -f4)
-		start_spinner "Fetching info about episode[$episode_type:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
+		start_spinner "Fetching info about episode[${episode_type:0:2}:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -48,14 +48,14 @@ da_get_episede() {
 		if [ "$episode_type" = "episode" ]; then
 
 			ep_title=$(echo "$parse_episede_page" | jq -r '.name.default')
-			if ! [[ ${ep_title##* } =~ ^[[:digit:]-]+$ ]]; then
+			if ! [[ ${ep_title##* } =~ ^[[:digit:].-]+$ ]]; then
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
 				fi
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]')"
 			else
 				local ep_number
-				ep_number=${ep_title##* }
+				ep_number=$(echo "$parse_episede_page" | jq -r '.number')
 				ep_title=${ep_title% *}
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
@@ -64,14 +64,14 @@ da_get_episede() {
 			fi
 			ep_id_list=$(
 				echo "$parse_episede_page" | jq --tab -r '.videos'|grep -v '"date"' |tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|tr -d \\t|sed 's/,},/}/;s/,}/}/'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
-				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
+				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|grep -v status|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
 					echo "$parse_episede_page" | jq --tab -r '.videos'|grep -v '"date"' |tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|tr -d \\t|sed 's/,},/}/;s/,}/}/'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
-					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
+					curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null |jq '.'|tail +2|head -n -1|awk '!match($0,"}"){printf $0};match($0,"}")'|grep -v status|sed 's/,$//'|jq -Mc .|grep '"id"'| grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
@@ -99,7 +99,8 @@ da_get_episede() {
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
-		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFFERED_HOSTS//,/|}"'/{print};!/'"${PREFFERED_HOSTS//,/|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
+		echo $PREFERRED_HOSTS
+		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
 		set +x
 		if [ -n "$parse_episede_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0

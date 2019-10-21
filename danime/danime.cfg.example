@@ -1,17 +1,30 @@
 #!/bin/bash
 #danime config file
+#Base Directory for Media
 readonly MEDIA_ROOT='/mnt/Multimedia'
+#Directory for anime
 ANIME_PATH=$MEDIA_ROOT/Anime
+#Directory for animation series
 CARTOON_PATH=$MEDIA_ROOT/Animetion-Movie/Series
+#Directory for Movies
 MOVIE_PATH=$MEDIA_ROOT/Movie
+#Directory for TV Series
 TV_SERIES_PATH=$MOVIE_PATH/Series
+#Directory for Power Rangers
 POWER_RANGERS_PATH=$MOVIE_PATH/Power\ Rangers
+#Don't break on failure.
 NOBREAK=true
+#Don't reset terminal on completion.
 NORESET=false
+#Get all search results.
 DOWNLOAD_ALL=false
+#Show episode list always
 EP_LIST=false
+#Timeout for dns resolving.
 RSOLV=3
-FORCE=
-SEARCHSTR=
+#default search mode
 TYPE=anime
-PREFFERED_TR=
+#Preferred type for anime [sub/dub]
+PREFERRED_TR=
+#file checker block size[1-100 kb]
+BS=

@@ -7,6 +7,7 @@
 # shellcheck disable=SC2016
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
+# shellcheck disable=SC2001
 source libbash
 source spinner
 DEBUG=${DEBUG:-false}
@@ -41,12 +42,12 @@ da_get() {
 	if [[ $TYPE == cartoon ]]; then
 		url="$(echo "$baseurl"|cut -d= -f2-)"
 	else
-		if [[ -n ${PREFFERED_TR:-dub} ]]; then
+		if [[ -n ${PREFERRED_TR:-dub} ]] && [[ -z $FORCE ]]; then
 			tr="$(
 				(
-					echo "$baseurl" | grep -q "${PREFFERED_TR:-dub}bed=true" && echo ${PREFFERED_TR:-dub}
+					echo "$baseurl" | grep -q "${PREFERRED_TR:-dub}bed=true" && echo ${PREFERRED_TR:-dub}
 				) || (
-					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub' | grep -v ${PREFFERED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
+					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub' | grep -v ${PREFERRED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
 				) || (
 					echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
 				)
@@ -84,6 +85,7 @@ da_get() {
 		ep="$(echo "${EP_LIST_RANGE:-1-}"| num_unicode2ascii)"
 		tput cuu 2
 	fi
+	EP_LIST_RANGE="$(echo "$EP_LIST_RANGE"|sed 's/^[-,[:blank:]]*//g')"
 	if [[ $EP_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
 		ep_show="range($(ellipsis "$(($(tput cols) - 50))" "$(echo "$EP_LIST_RANGE"|tr -d \ )" ))"
 		dl_notify="Episodes in ${ep_show} are"

@@ -79,7 +79,7 @@ function fget() {
 					elif [ ! -e "$name_933be66d" ]; then
 						echo -e "Writing to '$name_933be66d'\nFile Size: $(byte_hr "$dlsize_933be66d")"
 					fi
-					wget "$@" --show-progress -qcO "$name_933be66d" "$url_933be66d" || ([ "$?" = "5" ] && wget "$@" --show-progress -qcO "$name_933be66d" --no-check-certificate "$url_933be66d" || exit $?)
+					wget "$@" --show-progress -qcO "$name_933be66d" "$url_933be66d" || ([ "$?" = "5" ] && wget "$@" --show-progress -qcO "$name_933be66d" --no-check-certificate "$url_933be66d" || (exit $?))
 				else
 					(exit 10)
 				fi

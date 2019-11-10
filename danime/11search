@@ -44,9 +44,12 @@ try:
 			'\''query[order]'\'': '\''date,asc'\'',
 			'\''query[search]'\'':'\'' '\''.join(argv[1:])
 		}
-		for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
-			if int(n['\''total'\''])>0:
-				print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
+		try:
+			for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
+				if int(n['\''total'\''])>0:
+					print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
+		except KeyError:
+			pass
 except KeyboardInterrupt:
 	pass' "$@"
 

@@ -154,7 +154,15 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				CONTINUE=true
 			;;
-			-n | --nobr)
+			-n | --no-continue)
+				#+option
+					#short: -n
+					#long: --no-continue
+					#text: Don't Reload previous episode selection.
+				#-option
+				CONTINUE=false
+			;;
+			-nb | --nobr)
 				#+option
 					#short: -n
 					#long: --nobr

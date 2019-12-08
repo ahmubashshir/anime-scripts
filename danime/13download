@@ -56,6 +56,9 @@ da_get_episede() {
 			else
 				local ep_number
 				ep_number=$(echo "$parse_episede_page" | jq -r '.number')
+				if [ "$ep_number" = "null" ];then
+					ep_number=$(echo "$parse_episede_page" | jq -r '.name.default'|rev|cut -d' ' -f1|rev)
+				fi
 				ep_title=${ep_title% *}
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"

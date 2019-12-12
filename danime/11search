@@ -100,11 +100,13 @@ da_search() {
 		cd "$base" || true
 		local dir
 		dir="$(echo "$target" | cut -d: -f2- | replace_invalid dir)"
-		if [ ! -d "$dir" ]; then
+		${SKIP_DOWNLOAD:-false} || if [ ! -d "$dir" ]; then
 			rm -f "$dir"
 			mkdir "$dir"
 		fi
-		cd "$dir" || continue
+		${SKIP_DOWNLOAD:-false} || {
+			cd "$dir" || continue
+		}
 		echo -e "Title: '$dir'"
 		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
 		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $NOBREAK; then

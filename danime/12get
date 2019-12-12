@@ -107,7 +107,7 @@ da_get() {
 		echo "$FORCE" > .type
 	fi
 	${DEBUG:-false} && set +x
-	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
+	${SKIP_DOWNLOAD:-false} || anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
 	if [ "$(echo $ep | tr \  \\n | wc -l)" -eq 2 ]; then
 		ep_show="file ${ep%% *} and ${ep##* } "
@@ -125,7 +125,7 @@ da_get() {
 		[[ $TYPE == cartoon ]] && vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc" || vbar "ID:$(echo "${1%%-*}" | cut -d/ -f2) Files:$epc Type:${tr:-dubbed}"
 	fi
 	total_pw=$(echo "$ep"|tr \  \\n|wc -l)
-	enqueue ".ep_queue" $ep
+	${SKIP_DOWNLOAD:-false} || enqueue ".ep_queue" $ep
 	${DEBUG:-false} && set -x
 	for k in $ep; do
 		let ep_progress+=1
@@ -135,7 +135,7 @@ da_get() {
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">$k</a>"
 			${BREAK:-true} && break
 		else
-			dequeue ".ep_queue"
+			${SKIP_DOWNLOAD:-false} || dequeue ".ep_queue"
 		fi
 	done
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"

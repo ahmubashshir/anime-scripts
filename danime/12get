@@ -24,6 +24,9 @@ da_get() {
 		exit 3
 	fi
 	local ep_progress total_pw
+	if [ -f ".type" ];then
+		FORCE="$(<.type)"
+	fi
 	start_spinner "Fetching \"${series#-*}\" info"
 	da_page=$(curl "https://ww5.dubbedanime.net/$series" 2> /dev/null)
 	if [[ $TYPE == anime ]]; then
@@ -65,6 +68,10 @@ da_get() {
 				tput setaf 1
 				tput dim
 			)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr}bed episode yet.$(tput sgr0)" 1>&2
+			if ! find . -name '*.mp4' |grep -q '\.mp4$';then
+				cd ..
+				rm -rf "$OLDPWD"
+			fi
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
@@ -95,6 +102,9 @@ da_get() {
 	elif [[ -n $EP_LIST_RANGE ]]; then
 		ep_show="file $EP_LIST_RANGE"
 		dl_notify="Episode ${ep_show:5} is"
+	fi
+	if [ -n "$FORCE" ];then
+		echo "$FORCE" > .type
 	fi
 	${DEBUG:-false} && set +x
 	anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"

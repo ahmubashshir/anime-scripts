@@ -46,9 +46,8 @@ try:
 		}
 		try:
 			for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
-				if int(n['\''total'\''])>0:
-					print("%s/%s-%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],refine(n['\''title'\''])))
-		except KeyError:
+				print("%s/%s-%s:%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],0 if not '\''total'\'' in n else n['\''total'\''],refine(n['\''title'\''])))
+		except:
 			pass
 except KeyboardInterrupt:
 	pass' "$@"
@@ -68,15 +67,15 @@ da_search() {
 	total_res=$(echo "$RES" | wc -l)
 	if ((total_res==1));then
 		RES_LIST='1'
-	elif [ -z "$RES_LIST" ] && ! $DOWNLOAD_ALL; then
+	elif [ -z "$RES_LIST" ] && ! ${DOWNLOAD_ALL:-false}; then
 		vbar
 		vbar "DubbedAnime.net Search Result" true
 		vbar
 		vbar "Select One or more to download"
 		vbar
-		echo "$RES" | cut -d: -f2- | awk '{print NR" ) "$0;}'
+		echo "$RES" | cut -d: -f2- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
 		read -rp$'Download: ' RES_LIST
-	elif $DOWNLOAD_ALL && [ -z "$RES_LIST" ]; then
+	elif ${DOWNLOAD_ALL:-false} && [ -z "$RES_LIST" ]; then
 		RES_LIST='1-'
 	fi
 	if [ -z "$RES_LIST" ];then
@@ -85,9 +84,10 @@ da_search() {
 		vbar
 		vbar "Select One or more to download"
 		vbar
-		echo "$RES" | cut -d: -f2- | awk '{print NR" ) "$0;}'
+		echo "$RES" | cut -d: -f2- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
 		read -rp$'Download: ' RES_LIST
 	fi
+	RES=$(echo "$RES"|cut -d: -f1,3-)
 	RES_LIST=$(expand_limit "$(echo "$RES_LIST"|num_unicode2ascii)" "$total_res")
 	for n in $RES_LIST; do
 		target=$(echo "$RES" | head -n "$n" | tail -1)

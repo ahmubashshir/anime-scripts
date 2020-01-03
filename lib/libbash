@@ -43,9 +43,10 @@ function fget() {
 	else
 		shift $#
 	fi
-	if echo "$url_933be66d" | grep -q 'google.com/uc?'; then
-		url_933be66d="https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?alt=media&key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ"
-		name_933be66d=$(curl "https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?key=AIzaSyD-EYQIKP9lkr38gMRrZTrISjNVV5Nf8JQ" 2> /dev/null | tr -d '\"' | grep '^[[:blank:]]name' | cut -d: -f2- | sed 's/,$//')
+	if echo "$url_933be66d" | grep -q 'google.com/uc?\|^d?id='; then
+		[ -z "$DRIVE_API_KEY" ] && echo 'No usable api key for google drive.' && return 1
+		url_933be66d="https://www.googleapis.com/drive/v3/files/$(echo "$url_933be66d" | tr '?&' '\n' | grep '^id=' | cut -d= -f2)?alt=media&key=$DRIVE_API_KEY"
+		name_933be66d="$(curl "https://www.googleapis.com/drive/v3/files/$(echo "${url_933be66d%%\?*}" | xargs basename)?key=$DRIVE_API_KEY" -s | jq '.name' -r)"
 	fi
 	S_933be66d=$(curl -skLI "$url_933be66d" 2>&1 | dos2unix | sed -n '/HTTP\/[12.]* 2../,/^$/{/^$/d;p}')
 	if (exit "$?"); then

@@ -11,9 +11,10 @@ parse_episede_id() {
 	local ep_file_host ep_file_id n
 	ep_file_host=$(echo "$@" | jq -r '.host'|tr '.' '_')
 	ep_file_id=$(echo "$@" | jq -r '.id')
+	ep_file_auth=$(echo "$@" | jq -r '.auth'|grep -v 'null'||true)
 	for n in $ep_file_id;do
 		if [ -n "$(type -t get_url_$ep_file_host)" ]; then
-			get_url_$ep_file_host "$n" 2> /dev/null
+			get_url_$ep_file_host "${n}$ep_file_auth" 2> /dev/null
 		else
 			echo "unimplemented:${ep_file_host/_/.}"
 			break

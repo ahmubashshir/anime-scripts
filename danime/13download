@@ -41,7 +41,7 @@ da_get_episede() {
 			unset d
 		fi
 		parse_episede_page="$(curl -s "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
-		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq ". + { \"auth\" : \"$(echo $parse_episede_page|tail -1|cut -d\' -f2)\"}")"
+		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo $parse_episede_page|tail -1|cut -d\' -f2)\"}")"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi
@@ -67,6 +67,8 @@ da_get_episede() {
 				ep_title=${ep_title% *}
 				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 					ep_title="$TITLE $ep_title"
+				elif [[ "${ep_title% *}" =~ ${ep_title##* }$ ]]; then
+					ep_title="$(echo "$ep_title"|tr ' ' $'\n'|head -n -1|xargs echo)"
 				fi
 				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi

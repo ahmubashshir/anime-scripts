@@ -30,7 +30,7 @@ da_get_episede() {
 		local tr="$tr"
 		IFS=$'\n'
 		tput sc
-		episode_type=$(echo "$1" | cut -d/ -f4)
+		episode_type=$(echo "$1" | xargs dirname |xargs basename)
 		start_spinner "Fetching info about episode[${episode_type:0:2}:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
@@ -41,7 +41,7 @@ da_get_episede() {
 			unset d
 		fi
 		parse_episede_page="$(curl -s "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
-		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo $parse_episede_page|tail -1|cut -d\' -f2)\"}")"
+		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo "$parse_episede_page"|tail -1|cut -d\' -f2)\"}")"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi

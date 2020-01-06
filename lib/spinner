@@ -67,18 +67,17 @@ function _spinner() {
        			sp='▁▂▃▄▅▆▇█▇▆▅▄▃▂▁'
        		fi
             delay=${SPINNER_DELAY:-0.15}
-            while :
-            do
+            while true;do
             	let column1=$(tput cols)-${#2}-8
             	if [ $column -ne $column1 ];then
-	            	for ((i=0;i<column;i++));do
+	            	for (( i=0; i<column; i++ ));do
 	            		printf "\b"
 	            	done
 	            	let column=$(tput cols)-${#2}-8
 	            	echo -ne "${2}"
 	            	printf "%${column}s"
 	            fi
-                printf '\b\b\b[%s]' "${sp:i++%${#sp}:1}"
+                printf '\b\b\b[%s]' "${sp:$((i++))%${#sp}:1}"
                 sleep "$delay"
             done
             ;;

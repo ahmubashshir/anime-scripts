@@ -70,8 +70,9 @@ da_get_episede() {
 				elif [[ "${ep_title% *}" =~ ${ep_title##* }$ ]]; then
 					ep_title="$(echo "$ep_title"|tr ' ' $'\n'|head -n -1|xargs echo)"
 				fi
-				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
+				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
+			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
 			ep_id_list=$(
 				echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 				curl "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" -s 2> /dev/null | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter

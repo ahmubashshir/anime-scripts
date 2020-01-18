@@ -37,12 +37,12 @@ def refine(Str):
 try:
 	if len(argv)>1:
 		data = {
-			'\''model'\'': '\'${TYPE:-anime}\''.title(),
-			'\''size'\'': 200,
-			'\''what'\'': '\''query'\'',
-			'\''letter'\'': '\''all'\'',
-			'\''query[order]'\'': '\''date,asc'\'',
-			'\''query[search]'\'':'\'' '\''.join(argv[1:])
+			'\''model'\''			:	'\'${TYPE:-anime}\''.title(),
+			'\''size'\''			:	200,
+			'\''what'\''			:	'\''query'\'',
+			'\''letter'\''			:	'\''all'\'',
+			'\''query[order]'\''	:	'\''date,asc'\'',
+			'\''query[search]'\''	:	str.join( '\'' '\'', argv[1:] )
 		}
 		try:
 			for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:

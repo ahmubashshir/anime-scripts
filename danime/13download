@@ -6,12 +6,13 @@
 # shellcheck disable=SC2154
 # shellcheck disable=SC2016
 # shellcheck disable=SC2143
+# shellcheck disable=SC2119
 source libbash
 source spinner
 sp=$sp31
 SPINNER_DELAY=0.04
-source "$(dirname "$0")"/14parse
-source "$(dirname "$0")"/01include
+. 14parse
+. 01include
 DEBUG=${DEBUG:-false}
 #start:code
 SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming'
@@ -29,7 +30,6 @@ da_get_episede() {
 		total_pw=$5
 		local tr="$tr"
 		IFS=$'\n'
-		tput sc
 		episode_type=$(echo "$1" | xargs dirname |xargs basename)
 		start_spinner "Fetching info about episode[${episode_type:0:2}:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
@@ -110,7 +110,6 @@ da_get_episede() {
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
-		echo $PREFERRED_HOSTS
 		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
 		set +x
 		if [ -n "$parse_episede_page" ] && [ -n "$ep_title" ]; then
@@ -120,7 +119,6 @@ da_get_episede() {
 			return 1
 		fi
 		ep_title=$(ellipsis $(($(tput cols) - 8)) "$ep_title")
-		tput rc
 		vbar
 		vbar "$ep_title" true
 		vbar "ID:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)$([ -n "$progress" ] && [ -n "$total_pw" ] && echo " - Progress:$progress/$total_pw")"
@@ -230,6 +228,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret tried
+
 	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }' | tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	tried=1
@@ -237,6 +236,10 @@ download() {
 		until fget "$2" "$1"; do
 			ret=$?
 			if ((tried <= ${MAX_TRY:-5})); then
+				tput cuu 2
+				((tried>1)) && (tput el1;tput el;tput cuu1)
+				tput el1
+				tput el
 				echo "Retrying...[$tried]"
 				let tried+=1
 			else
@@ -314,6 +317,6 @@ compare_episode() {
 	return 0
 }
 #end:code
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || ([[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]] ) && (return 0 2> /dev/null)); then
 	da_get_episede "$@"
 fi

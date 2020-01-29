@@ -9,10 +9,10 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 DEBUG=${DEBUG:-false}
-source libbash
-source spinner
-. "$(dirname "$0")"/01include
-. "$(dirname "$0")"/12get
+. libbash
+. spinner
+. 01include
+. 12get
 #start:code
 da_api_search() {
 	python3 -c '#!/usr/bin/python3

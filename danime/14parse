@@ -2,9 +2,9 @@
 # shellcheck disable=SC2086
 # shellcheck disable=SC1091
 # shellcheck disable=SC1090
-source libbash
-source spinner
-source "$(dirname "$0")"/01include
+. libbash
+. spinner
+. 01include
 DEBUG=${DEBUG:-false}
 #start:code
 parse_episede_id() {

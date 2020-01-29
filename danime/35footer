@@ -208,16 +208,16 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#text: select episodes to download
 				#-option
 				EP_LIST=true
-				if [[ ${2// /} =~ ^[[:digit:],-]+$ ]]; then
-					EP_LIST_RANGE=${2// /}
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					EP_LIST_RANGE=${2}
 					shift
 				fi
 				;;
-			-e[[:digit:],-\ ]* | --ep-list=[[:digit:],-\ ]*)
+			-e[[:digit:],-]* | --ep-list=[[:digit:],-]*)
 				EP_LIST=true
 				EP_LIST_RANGE=${1#*=}
-				EP_LIST_RANGE=${EP_LIST_RANGE// /}
-				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]]
+				# EP_LIST_RANGE=${EP_LIST_RANGE// /}
+				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || EP_LIST_RANGE=${1/-e/}
 				EP_LIST_RANGE=$(echo "$EP_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
 			-s | --select)
@@ -274,7 +274,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					echo Invalid argument.
 					exit 1
 				fi
-				shift
 				;;
 			-t | --try)
 				#+option
@@ -348,7 +347,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				SEARCHSTR="$(echo "$SEARCHSTR $1" | sed 's|^ *||g;s|* $||g')"
 				;;
 		esac
-		shift 1
+		shift
 	done
 	PREFERRED_HOSTS="${PREFERRED_HOSTS//null\\\|/}"
 	if [[ -n $TYPE_ANIME ]] && ([[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]]); then

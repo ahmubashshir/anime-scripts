@@ -8,13 +8,13 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 # shellcheck disable=SC2001
-source libbash
-source spinner
+. libbash
+. spinner
 DEBUG=${DEBUG:-false}
 sp=$sp31
 SPINNER_DELAY=0.04
-source "$(dirname "$0")"/13download
-source "$(dirname "$0")"/01include
+. 13download
+. 01include
 #start:code
 da_get() {
 	series="$1"

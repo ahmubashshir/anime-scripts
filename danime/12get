@@ -81,6 +81,7 @@ da_get() {
 			fi
 		done
 	fi
+	url="$(echo "$url" |sed 's/^\///g')"
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
 	if ${CONTINUE-false} && [[ -z $EP_LIST_RANGE ]] && [[ -f ".ep_queue" ]]; then

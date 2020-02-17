@@ -196,7 +196,7 @@ da_get_episede() {
 					fi
 				fi
 				ep_file_name="${ep_file_name//---/--}"
-				if ! ([[ $tr = dubbed ]] || [[ $tr = subbed ]]); then
+				if ! { [[ $tr = dubbed ]] || [[ $tr = subbed ]] ; }; then
 					tr=$(echo "$n" | jq -r '.type')
 				fi
 				if ${SKIP_DOWNLOAD:-false}; then
@@ -246,7 +246,7 @@ download() {
 				tput el1
 				tput el
 				echo "Retrying...[$tried]"
-				let tried+=1
+				((tried+=1))
 			else
 				break
 			fi
@@ -254,7 +254,7 @@ download() {
 	else
 		echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
 	fi
-	if ((ret == 0)) || ([ "$CHECK_FILE" == "false" ]); then
+	if ((ret == 0)) || [ "$CHECK_FILE" == "false" ]; then
 		return 0
 	fi
 	start_spinner "Checking $(ellipsis 40 "$1") integrity"
@@ -276,7 +276,7 @@ compare_episode() {
 	else
 		BS=524288
 	fi
-	if [ ! -e "$1" ] || ([ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]); then
+	if [ ! -e "$1" ] || { [ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]; }; then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
 		return 2
@@ -305,7 +305,7 @@ compare_episode() {
 	fi
 	${DEBUG:-false} && set +x
 	failed_tests=${TOTAL_CHECKS:-10}
-	offsets=($(srand 0 $((size - ${BS:-524288})) $((BS / 2)) ${TOTAL_CHECKS:-10}))
+	IFS=' ' read -ra offsets < <(srand 0 $((size - ${BS:-524288})) $((BS / 2)) "${TOTAL_CHECKS:-10}")
 	if [ "${#offsets}" = "0" ]; then
 		exit 1
 	fi
@@ -322,6 +322,6 @@ compare_episode() {
 	return 0
 }
 #end:code
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || ([[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]] ) && (return 0 2> /dev/null)); then
+if ! { [[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || { [[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]; } && { return 0 2> /dev/null ;};}; then
 	da_get_episede "$@"
 fi

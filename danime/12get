@@ -129,7 +129,7 @@ da_get() {
 	${SKIP_DOWNLOAD:-false} || enqueue ".ep_queue" $ep
 	${DEBUG:-false} && set -x
 	for k in $ep; do
-		let ep_progress+=1
+		(( ep_progress+=1 ))
 		da_get_episede "$(echo "$url" | head -n "$k" | tail -1)" "$k" "$epc" "$ep_progress" "$total_pw"
 		if ! (exit $?); then
 			echo "Failed to download $k"

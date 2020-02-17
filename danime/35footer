@@ -93,7 +93,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				BREAK=true
 				;;
-			--no-break | -nb)
+			-nb|--no-break)
 				#+option
 					#short: -nb
 					#long: --no-break
@@ -154,7 +154,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				CONTINUE=true
 			;;
-			-n | --no-continue)
+			-nc | --no-continue)
 				#+option
 					#short: -n
 					#long: --no-continue
@@ -162,15 +162,23 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				CONTINUE=false
 			;;
-			-nb | --nobr)
+			-n | --no-break-or-reset)
 				#+option
-					#short: -n
-					#long: --nobr
+					#short: -N
+					#long: --no-break-or-reset
 					#text: equivalent to -nb -nr.
 				#-option
 				NOBREAK=true
 				NORESET=true
 				;;
+			-R | --reset)
+				#+option
+					#short: -R
+					#long: --reset
+					#text: Clear screen on selection change.
+				#-option
+				NORESET=false
+			;;
 			-r | --replace)
 				#+option
 					#short: -r
@@ -238,15 +246,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			-s[[:digit:],-]* | --select=[[:digit:],-]*)
 				RES_LIST=${1#*=}
 				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || RES_LIST=${1/-s/}
-				;;
-			-nc | --no-clr)
-				#+option
-					#short: -nc
-					#long: --no-clr
-					#text: Don't clear screen on selection change.
-				#-option
-				NOBREAK=false
-				NORESET=true
 				;;
 			-h | --help)
 				#+option
@@ -339,7 +338,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				PREFERRED_TR=$(echo "$1" | tr -d - | cut -c1 | tr '[:upper:]' '[:lower:]')ub
 				;;
-			-* | --*)
+			-[[:alnum:]]?? | --[[:alnum:]]*)
 				echo "Invalid option -- $1" 1>&2
 				exit 1
 				;;
@@ -350,12 +349,12 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		shift
 	done
 	PREFERRED_HOSTS="${PREFERRED_HOSTS//null\\\|/}"
-	if [[ -n $TYPE_ANIME ]] && ([[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]]); then
+	if [[ -n $TYPE_ANIME ]] && { [[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]] ; }; then
 		tr=$TYPE_ANIME
 	else
 		tr="$(echo "$@" | sed 'y/০১২৩৪৫৬৭৮৯/0123456789/' | sed 's| |\n|g' | grep -E '^sub$' || echo dub)bed"
 	fi
-	if ([[ -n "$EP_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]]) && $DOWNLOAD_ALL; then
+	if { [[ -n "$EP_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]] ; } && $DOWNLOAD_ALL; then
 		DOWNLOAD_ALL=false
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
@@ -373,7 +372,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			exit $?
 		else
 			echo Request timed out
-			exit -2
+			exit 5
 		fi
 	else
 		danime_help

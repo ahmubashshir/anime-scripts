@@ -15,7 +15,7 @@ merge: check
 	sed -i 's/VERSION_INFO=/VERSION_INFO=$(VERSION_INFO)/g' "$(OUTPUT)"
 check:
 	@echo "Checking syntax."
-	shellcheck 00header 01include 02help 11search 12get 13download 14parse 35footer
+	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
 clean:
 	@echo "Cleaning"
 	rm -f $(OUTPUT)

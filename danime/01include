@@ -1,5 +1,4 @@
 #!/bin/bash
-# shellcheck disable=SC2015
 DEBUG=${DEBUG:-false}
 #start:code
 langs=(
@@ -62,8 +61,9 @@ pqueue()
 }
 expand_limit() {
 	${DEBUG:-false} && set -x
+	local i j n
 	if [[ $1 =~ ^[[:digit:]]+-$ ]]; then
-		local n=${1%%-*}
+		n=${1%%-*}
 		for ((i = n; i <= $2; i++)); do
 			((i <= $2)) && printf "%d " "$i"
 		done
@@ -72,7 +72,11 @@ expand_limit() {
 			if [[ $n =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
 				i=${n%%-*}
 				j=${n##*-}
-				((j <= $2)) && expand_limit "$i-" "$j" || expand_limit "$i-" "$2"
+				if ((j <= $2)) ;then
+					expand_limit "$i-" "$j"
+				else
+					expand_limit "$i-" "$2"
+				fi
 			elif [[ $n =~ ^[[:digit:]]+$ ]]; then
 				((n <= $2)) && printf "%d " "$n"
 			else
@@ -86,7 +90,7 @@ expand_limit() {
 contract_limit()
 {
 	local k
-	k=( $(echo "$@"|tr , ' ';echo) )
+	read -ra k < <(echo "$@"|tr , ' ')
 	set "${k[@]}"
 	unset k
 	${DEBUG:-false} && set -x
@@ -169,8 +173,7 @@ def random_spaced(low, high, delta, n, size=1):
 		x = empty_space * np.sort(u, axis=-1)
 	return low + x + delta * np.arange(n)
 try:
-	for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]:
-		print(int(n))
+		print(*(str(int(n)) for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]),sep=" ")
 except KeyboardInterrupt:
 	pass' "$@"
 

@@ -70,7 +70,7 @@ check_deps() {
 	a=0
 	for n in "$@"; do
 		if ! "check_deps_$( echo "$n"|cut -d: -f1)" "$( echo "$n"|cut -d: -f2-)"; then
-			let a=a+1
+			(( a=a+1 ))
 		fi
 	done
 	return $a

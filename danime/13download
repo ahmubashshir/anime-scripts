@@ -53,7 +53,7 @@ da_get_episede() {
 		if [ -z "$parse_episede_page" ];then
 			stop_spinner 1
 			echo Episode not available.
-			return 1
+			${NOBREAK:-false} && return 0 || return 1
 		fi
 		if [ "$episode_type" = "episode" ]; then
 

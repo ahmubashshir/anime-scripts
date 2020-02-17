@@ -4,3 +4,5 @@ danime
 !.gitigonre
 !.env_setup
 .*
+*~
+*.swp

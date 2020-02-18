@@ -183,7 +183,7 @@ anime_cover() {
 	anime_cover_img=$1
 	#ext=${anime_cover_img##*.}
 	if [ ! -e folder.jpg ]; then
-		wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg" &>/dev/null
+		wget -q --method HEAD "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg" &>/dev/null
 		if { ! grep -q cover.jpg .hidden &> /dev/null ; } && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi

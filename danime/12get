@@ -15,6 +15,7 @@ sp=$sp31
 SPINNER_DELAY=0.04
 . 13download
 . 01include
+. 01include
 #start:code
 da_get() {
 	series="$1"
@@ -108,7 +109,8 @@ da_get() {
 		echo "$FORCE" > .type
 	fi
 	${DEBUG:-false} && set +x
-	${SKIP_DOWNLOAD:-false} || anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg"
+	${SKIP_DOWNLOAD:-false} || anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg" &
+	${SKIP_DOWNLOAD:-false} || anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg" &
 	ep=$(expand_limit "${EP_LIST_RANGE:-1-}" "$epc")
 	if [ "$(echo $ep | tr \  \\n | wc -l)" -eq 2 ]; then
 		ep_show="file ${ep%% *} and ${ep##* } "

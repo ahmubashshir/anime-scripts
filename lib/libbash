@@ -241,28 +241,28 @@ function vbar() {
 		fi
 
 		for ((i = 0; i < len; i++)); do
-			printf "–"
+			printf "─"
 		done
 
 		if [ "$title" = "true" ]; then
 			echo -n "--- $print ---"
 			for ((i = 0; i < (w - (len * 2 + strlen + 8)); i++)); do
-				printf "–"
+				printf "─"
 			done
 		else
 			printf ' %s ' "$print"
 			for ((i = 0; i < (w - (len * 2 + strlen + 2)); i++)); do
-				printf "–"
+				printf "─"
 			done
 		fi
 
 		for ((i = 0; i < len; i++)); do
-			printf "–"
+			printf "─"
 		done
 
 	else
 		for ((i = 0; i < w; i++)); do
-			printf "–"
+			printf "─"
 		done
 	fi
 	printf "\n"

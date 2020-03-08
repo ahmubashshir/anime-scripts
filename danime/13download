@@ -25,13 +25,17 @@ da_get_episede() {
 	if (($# == 0)); then
 		return 1
 	else
-		local IFS file_num ret progress total_pw
+		local IFS file_num ret progress total_pw ep_number ep_title
 		progress=$4
 		total_pw=$5
 		local tr="$tr"
 		IFS=$'\n'
-		episode_type=$(echo "$1" | xargs dirname |xargs basename)
-		start_spinner "Fetching info about episode[${episode_type:0:2}:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
+		case ${1%%/*} in
+			episode) episode_type=episode;;
+			cartoon|c) episode_type=cartoon;;
+			*) echo ${1%%/*}:invalid;;
+		esac
+		start_spinner "Fetching info about episode[id:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -95,24 +99,10 @@ da_get_episede() {
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		elif [ "$episode_type" = "cartoon" ]; then
-
-			ep_title=$(basename "$1" | cut -d- -f2- --output-delimiter=' ' | sed 's/.*/\L&/; s/[a-z]*/\u&/g;s/\ba\b/a/i;s/\ban\b/an/i;s/\bis\b/is/i;s/\bthe\b/the/i;s/\bof\b/of/i;s/\band\b/and/i;s/\bbut\b/but/i;s/\bor\b/or/i')
-			if ! [[ ${ep_title##* } =~ ^[[:digit:]]+$ ]]; then
-				ep_title="${ep_title% *} $(if ((${3:-0} > 1)); then
-					echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]'
-				else
-					echo "${ep_title##* }" | tr '[:upper:]' '[:lower:]'
-				fi)"
-			else
-				local ep_number
-				ep_number=${ep_title##* }
-				ep_title=${ep_title% *}
-				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's| $||g;s|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
-			fi
+			ep_title="$TITLE"
+			ep_number="$(echo "$parse_episede_page" | jq -r '.number')"
+			ep_title="$ep_title ep $ep_number"
 			ep_id_list=$(echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
-			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
-				ep_title="${ep_title// ep / extra }"
-			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
 		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"

@@ -11,7 +11,7 @@ endif
 all: merge
 merge: check
 	@echo "Building executable \"$(OUTPUT)\""
-	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help  11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
+	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help 10db 11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
 	sed -i 's/VERSION_INFO=/VERSION_INFO=$(VERSION_INFO)/g' "$(OUTPUT)"
 check:
 	@echo "Checking syntax."

@@ -247,6 +247,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				RES_LIST=${1#*=}
 				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || RES_LIST=${1/-s/}
 				;;
+			-u|--update)
+				#+option
+					#short: -u
+					#long: --update
+					#text: Update and continue incomplete downloads.
+				#-option
+				DO_UPDATE=true
+			;;
 			-h | --help)
 				#+option
 					#short: -h
@@ -359,8 +367,12 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
-	if [[ $SEARCHSTR != '' ]]; then
+	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} ; then
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
+			if ${DO_UPDATE:-false};then
+				da_update
+				exit
+			fi
 			if [ -n "$EP_LIST_RANGE" ] && ! validate_limit "$EP_LIST_RANGE"; then
 				echo "$(
 					tput setaf 1

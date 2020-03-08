@@ -12,6 +12,7 @@ DEBUG=${DEBUG:-false}
 . libbash
 . spinner
 . 01include
+. 10db
 . 12get
 #start:code
 da_api_search() {
@@ -110,6 +111,27 @@ da_search() {
 		echo -e "Title: '$dir'"
 		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
 		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $NOBREAK; then
+			read -rsp$'Press Return to download next.'
+			printf '\n'
+		fi
+	done
+}
+da_update()
+{
+	local TYPE id dir
+	for n in $(da_db list);do
+		TYPE="$(dirname $n)"
+		id="$(basename $n)"
+		dir="$(da_db get path)"
+		if ! [ -d "$dir" ];then
+			mkdir -p "$dir"||continue
+		fi
+		cd "$dir"||continue
+		da_get "$(echo "$n-$(da_db get url)" | cut -d: -f1)" "$(basename "$dir")"
+		if [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
+			da_db del;
+		fi
+		if ! $NOBREAK; then
 			read -rsp$'Press Return to download next.'
 			printf '\n'
 		fi

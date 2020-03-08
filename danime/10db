@@ -1,0 +1,59 @@
+#!/bin/bash
+# shellcheck disable=SC2015
+DEBUG=${DEBUG:-false}
+. 00header
+#start:code
+da_db()
+{
+	CACHE_FILE="$MEDIA_ROOT/.danime_db.json"
+	local act=$1
+	shift
+	if ! { jq 'keys' "$CACHE_FILE" 2>/dev/null|grep -q '\[' ;};then
+		echo '{}' > "$CACHE_FILE"
+	fi
+	while [[ $1 =~ .*=.* ]];do
+		eval "local $1"
+		shift
+	done
+	"da_db_$act" "$@"
+}
+da_db_add()
+{
+
+	data="$(jq '. * { "'"$TYPE"'" : {"'"$id"'":{ "title":null ,"path":null,"url":null,"total":null,"saved":null}} }' "$CACHE_FILE")"
+	echo "$data" > "$CACHE_FILE"
+}
+da_db_list()
+{
+	for type in $(jq -r 'keys|@sh' "$CACHE_FILE"|tr -d \'\");do
+		for id in $(jq -r '.'"$type"'|keys|[ .[] | tonumber ] | @sh' "$CACHE_FILE");do
+			echo "$type/$id"
+		done
+	done
+}
+da_db_set()
+{
+	if da_db_has;then
+		data="$(jq '.'"$TYPE"'."'"$id"'".'"$1"'='"$2" "$CACHE_FILE")"
+		echo "$data" > "$CACHE_FILE"
+	fi
+}
+da_db_get()
+{
+	{ jq -re ".$TYPE.\"$id\".$*" "$CACHE_FILE"|| echo 0;}|tail -1
+}
+da_db_has(){
+	jq -e '.'"$TYPE"'."'"$id"'"' "$CACHE_FILE" &>/dev/null
+}
+da_db_del()
+{
+	if da_db_has;then
+		data="$(jq 'del(."'"$TYPE"'"."'"$id"'")' "$CACHE_FILE")"
+		echo "$data" > "$CACHE_FILE"
+	fi
+}
+#end:code
+
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	da_db "$@"
+fi

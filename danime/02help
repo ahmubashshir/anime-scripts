@@ -13,7 +13,21 @@ danime_help() {
 danime_help_options()
 {
 	echo Options:
-	echo $'\t'not yet implemented.
+	sed -n '/#+option/,/#-option/{s/^[[:blank:]]*//p}' "$0"|while read -r line;do
+		if [[ $line = \#+option ]];then
+			TAB=2
+			printf '\t'
+		elif [[ $line =~ ^#IDNT: ]];then
+			TAB=$(echo "$line "|cut -d' ' -f2)
+		elif [[ $line =~ ^#short: ]]||[[ $line =~ ^#long: ]];then
+			echo "$line "|cut -d' ' -f2-|tr -d '\n\r'
+		elif [[ $line =~ ^#text: ]];then
+			for (( i=0;i<TAB;i++));do
+				printf '\t'
+			done
+			echo -e "$line"|cut -d' ' -f2-
+		fi
+	done
 }
 danime_help_examples()
 {

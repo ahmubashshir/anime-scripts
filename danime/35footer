@@ -135,6 +135,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			-A)
 				#+option
 					#short: -A
+					#IDNT: 3
 					#text: Set search type to Anime(default).
 				#-option
 				TYPE=anime
@@ -142,6 +143,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			-C)
 				#+option
 					#short: -C
+					#IDNT: 3
 					#text: Set search type to Cartoon.
 				#-option
 				TYPE=cartoon
@@ -158,6 +160,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -n
 					#long: --no-continue
+					#IDNT: 1
 					#text: Don't Reload previous episode selection.
 				#-option
 				CONTINUE=false
@@ -166,6 +169,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -N
 					#long: --no-break-or-reset
+					#IDNT: 1
 					#text: equivalent to -nb -nr.
 				#-option
 				NOBREAK=true
@@ -340,8 +344,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				;;
 			-S | --sub | -D | --dub)
 				#+option
-					#short: -S,-D
-					#long: --sub,--dub
+					#short: -S
+					#short: -D
+					#long: --sub
+					#long: --dub
+					#IDNT: 1
 					#text: Prefer subbed/dubbed for downloading.
 				#-option
 				PREFERRED_TR=$(echo "$1" | tr -d - | cut -c1 | tr '[:upper:]' '[:lower:]')ub

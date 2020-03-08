@@ -230,7 +230,9 @@ download() {
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
 			ret=$?
-			if ((tried <= ${MAX_TRY:-5})); then
+			if [[ $ret = 10 ]];then
+				return
+			elif ((tried <= ${MAX_TRY:-5})); then
 				tput cuu 2
 				((tried>1)) && (tput el1;tput el;tput cuu1)
 				tput el1

@@ -83,6 +83,9 @@ da_get() {
 				cd ..
 				rm -rf "$OLDPWD"
 			fi
+			if da_db has;then
+				da_db del
+			fi
 			return 1
 		fi
 		url="$(echo "$url" | grep ^href | cut -d= -f2)"
@@ -96,8 +99,8 @@ da_get() {
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
 	da_db set total "$(echo "$da_page_json"|jq -re .total|awk '{print ($0 == "null" || $0 == "0")?"'$((epc+1))'":$0;}')"
-	if ${CONTINUE-false} && [[ -z $EP_LIST_RANGE ]] && [[ -f ".ep_queue" ]]; then
-		EP_LIST_RANGE="$(contract_limit $epc "$(pqueue ".ep_queue")")"
+	if ${CONTINUE-false} && [[ -z $EP_LIST_RANGE ]] && [[ -n "$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')" ]]; then
+		EP_LIST_RANGE="$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')"
 	fi
 	if ${EP_LIST:-false} && [[ -z $EP_LIST_RANGE ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
@@ -139,7 +142,6 @@ da_get() {
 		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Files:$epc Type:${tr:-dubbed}"
 	fi
 	total_pw=$(echo "$ep"|tr \  \\n|wc -l)
-	${SKIP_DOWNLOAD:-false} || enqueue ".ep_queue" $ep
 	${DEBUG:-false} && set -x
 	for k in $ep; do
 		(( ep_progress+=1 ))
@@ -149,12 +151,11 @@ da_get() {
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">file $k</a>"
 			${BREAK:-true} && break
 		else
-			${SKIP_DOWNLOAD:-false} || dequeue ".ep_queue"
-			da_db set saved "$k"
+			${SKIP_DOWNLOAD:-false} || da_db set saved "$k"
 		fi
 	done
-	if da_db_has && [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
-		da_db del;
+	if da_db has && [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
+		da_db del
 	fi
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"
 }

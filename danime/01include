@@ -25,40 +25,6 @@ clear_line() {
 	done
 	tput rc
 }
-enqueue()
-{
-	local queue_file
-	queue_file="$1"
-	if (($#<2));then
-		return 1
-	fi
-	shift
-	while [ -n "$1" ];do
-		echo "$1" >> "$queue_file"
-		shift
-	done
-	sort -bun --output="$queue_file" "$queue_file"
-	return 0
-}
-dequeue()
-{
-	local queue_file
-	queue_file="$1"
-	if (($#!=1))|| ! [ -f "$queue_file" ];then
-		return 1
-	fi
-	shift
-	tail +2 "$queue_file" > "$queue_file.bak"
-	if [ "$(stat -c%s "$queue_file.bak")" != "0" ];then
-		mv "$queue_file.bak" "$queue_file"
-	else
-		rm -f "$queue_file.bak" "$queue_file"
-	fi
-}
-pqueue()
-{
-	tr -s '\n' ',' < "$1" |sed 's/[[:punct:]]$/\n/g'
-}
 expand_limit() {
 	${DEBUG:-false} && set -x
 	local i j n

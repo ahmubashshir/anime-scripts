@@ -95,7 +95,7 @@ da_get() {
 	url="$(echo "$url" |sed 's/^\///g')"
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
-	da_db set total "$({ echo "$da_page_json"|jq -re .total|| echo $epc;}|tail -1)"
+	da_db set total "$(echo "$da_page_json"|jq -re .total|awk '{print ($0 == "null" || $0 == "0")?"'$((epc+1))'":$0;}')"
 	if ${CONTINUE-false} && [[ -z $EP_LIST_RANGE ]] && [[ -f ".ep_queue" ]]; then
 		EP_LIST_RANGE="$(contract_limit $epc "$(pqueue ".ep_queue")")"
 	fi

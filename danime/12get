@@ -17,6 +17,29 @@ SPINNER_DELAY=0.04
 . 10db
 . 01include
 #start:code
+da_get_len()
+{
+	local series TYPE id type
+	series="$1"
+	TYPE=${series%/*}
+	id=${series%%-*}
+	id=${id##*/}
+	if [ "$series" = "" ]; then
+		return 3
+	fi
+	type=$(da_db get type)
+	case $type in
+		null|0)
+			curl -sL "https://ww5.dubbedanime.net/$series" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/a/@href' - 2> /dev/null|wc -l
+		;;
+		subbed|dubbed)
+			curl -sL "https://ww5.dubbedanime.net/$series" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/li[@data-'$type'="true"]/a/@href' - 2> /dev/null|wc -l
+		;;
+		*)
+			return 1
+		;;
+	esac
+}
 da_get() {
 	local series TITLE TYPE id
 	series="$1"
@@ -25,19 +48,19 @@ da_get() {
 	id=${series%%-*}
 	id=${id##*/}
 	if [ "$series" = "" ]; then
-		exit 3
+		return 3
 	fi
 	local ep_progress total_pw
 	if [ -f ".type" ];then
 		FORCE="$(<.type)"
 	fi
 	start_spinner "Fetching \"${series#-*}\" info"
-	da_page=$(curl -L "https://ww5.dubbedanime.net/$series" 2> /dev/null)
+	da_page=$(curl -sL "https://ww5.dubbedanime.net/$series")
 	da_page_json=$(echo "$da_page"|grep 'var anime\|var cartoon'|cut -d= -f2-|cut -d\  -f2-|sed 's/\;$//g'|jq)
 	if [[ $TYPE == anime ]]; then
 		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | (while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true",";dubbed=",//li/@data-dubbed="true"," ")' -; done) | tr -s ' ' \\n | tac)
 	else
-		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/node()' - 2>&3 | (while read -rs xml_node; do echo "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href," ")' - 2> /dev/null; done) | tr -s ' ' '\n' | grep -v '=$' | tac)
+		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/node()' - 2> /dev/null | (while read -rs xml_node; do echo "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href," ")' - 2> /dev/null; done) | tr -s ' ' '\n' | grep -v '=$' | tac)
 	fi
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	if ! da_db has;then
@@ -73,6 +96,7 @@ da_get() {
 		elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
 			tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
 		fi
+		da_db set type "\"$tr\""
 		url="$(echo "$baseurl" | grep "$tr=true" |cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 		if ! (echo "$url" | grep -q "${tr}$"); then
 			echo "$(

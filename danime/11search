@@ -118,8 +118,20 @@ da_search() {
 }
 da_update()
 {
-	local TYPE id dir
+	local TYPE id dir updatable n
+	updatable=()
 	for n in $(da_db list);do
+		TYPE="$(dirname $n)"
+		id="$(basename $n)"
+		echo -n "Checking update [$n]..."
+		if [ "$(da_get_len "$n-$(da_db get url)")" -gt "$(da_db get saved)" ];then
+			updatable+=( "$n" )
+			echo -e "\rQueueing update [$n]."
+		else
+			echo
+		fi
+	done
+	for n in "${updatable[@]}";do
 		TYPE="$(dirname $n)"
 		id="$(basename $n)"
 		dir="$(da_db get path)"
@@ -128,7 +140,7 @@ da_update()
 		fi
 		cd "$dir"||continue
 		EP_LIST_RANGE=$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
-		da_get "$(echo "$n-$(da_db get url)" | cut -d: -f1)" "$(basename "$dir")"
+		da_get "$n-$(da_db get url)" "$(basename "$dir")"
 		if [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
 			da_db del;
 		fi

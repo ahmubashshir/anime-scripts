@@ -219,7 +219,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret tried
-	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }' | tail -1)
+	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk 'tolower($0) ~ /content-length/{ print $2 }' | tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
@@ -273,7 +273,7 @@ compare_episode() {
 	if ((${BS:-524288} >= size / 2)); then
 		BS=$(echo "$size/200" | bc | cut -d. -f1)
 	fi
-	wsize=$(curl -LksI "$2" | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | tr -s '\r' '\n' | awk '/Content-Length/ { print $2 }' | tr -d '[:blank:]')
+	wsize=$(curl -LksI "$2" | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | tr -s '\r' '\n' | awk 'tolower($0) ~ /content-length/{ print $2 }' | tr -d '[:blank:]')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then

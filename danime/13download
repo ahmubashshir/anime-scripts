@@ -15,7 +15,6 @@ SPINNER_DELAY=0.04
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
-SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming'
 da_add_auth()
 {
 	while read -r ep_id;do if echo "$ep_id"|jq -r '.host'|grep -q 'trollvid\|mp4\.sh';then echo "$ep_id"|jq -Mc ". + { \"auth\" : \"$(echo "$@"|jq -r '.auth')\"}";else echo "$ep_id";fi;done

@@ -2,16 +2,22 @@
 # shellcheck disable=SC2086
 # shellcheck disable=SC1091
 # shellcheck disable=SC1090
+
 . libbash
 . spinner
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
+SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming\|xstreamcdn'
 parse_episede_id() {
 	local ep_file_host ep_file_id n
 	ep_file_host=$(echo "$@" | jq -r '.host'|tr '.' '_')
 	ep_file_id=$(echo "$@" | jq -r '.id'|xargs basename -a )
 	ep_file_auth=$(echo "$@" | jq -r '.auth'|grep -v 'null'||true)
+	if ! { echo "$SUPPORTED_HOSTS"|grep -q "$ep_file_host"; };then
+		echo "unimplemented:${ep_file_host/_/.}"
+		return 1
+	fi
 	for n in $ep_file_id;do
 		if [ -n "$(type -t get_url_$ep_file_host)" ]; then
 			get_url_$ep_file_host "${n}$ep_file_auth"
@@ -28,14 +34,18 @@ get_url_mp4upload() {
 		echo "error:File is deleted."
 	fi
 }
+get_url_xstreamcdn()
+{
+	curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com'|jq -r '.data[0].file' 2>/dev/null)"| grep '^http'
+}
 get_url_trollvid() {
-	curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -so- -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1"| grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" | grep '^http' | cat
+	curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -so- -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1"| grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" | grep '^http'
 }
 get_url_mp4_sh() {
     local url
     url="$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' -so- "https://mp4.sh/embedc/$1" | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
     if ! echo "$url" | grep -q 'st=.*e=.*';then
-	    curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url"| grep '^http' | cat
+	    curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url"| grep '^http'
 	else
 	    echo "$url"
 	fi

@@ -118,15 +118,16 @@ da_search() {
 }
 da_update()
 {
-	local TYPE id dir updatable n
+	local TYPE id dir updatable n new_eps
 	updatable=()
 	for n in $(da_db list);do
 		TYPE="$(dirname $n)"
 		id="$(basename $n)"
-		echo -n "Checking update [$n]..."
-		if [ "$(da_get_len "$n-$(da_db get url)")" -gt "$(da_db get saved)" ];then
+		echo -n "[$n] Checking update..."
+		new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
+		if ((new_eps>0));then
 			updatable+=( "$n" )
-			echo -e "\rQueueing update [$n]."
+			echo -e "\r[$n] Queueing update($new_eps+)..."
 		else
 			echo
 		fi

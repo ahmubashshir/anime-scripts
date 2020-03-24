@@ -241,8 +241,8 @@ download() {
 	else
 		echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
 	fi
-	(( ret == 0 )) && da_db set saved "$current_ep"
 	if ((ret == 0)) || [ "$CHECK_FILE" == "false" ]; then
+		da_db set saved "$current_ep"
 		return 0
 	fi
 	start_spinner "Checking $(ellipsis 40 "$1") integrity"
@@ -253,6 +253,7 @@ download() {
 		return $((ret + 1))
 	else
 		stop_spinner 0
+		da_db set saved "$current_ep"
 		return $((ret + $?))
 	fi
 }

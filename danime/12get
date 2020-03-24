@@ -174,8 +174,6 @@ da_get() {
 			echo "Failed to download $k"
 			[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.error "Download Failed" "Failed to download <a href=\"$(echo "$url" | head -n "$k" | tail -1)\">file $k</a>"
 			${BREAK:-true} && break
-		else
-			${SKIP_DOWNLOAD:-false} || da_db set saved "$k"
 		fi
 	done
 	if da_db has && [ "$(da_db get saved)" -ge "$(da_db get total)" ];then

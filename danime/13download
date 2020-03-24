@@ -25,13 +25,14 @@ da_get_episede() {
 	if (($# == 0)); then
 		return 1
 	else
-		local IFS file_num ret progress total_pw ep_number ep_title
+		local IFS file_num ret progress total_pw ep_number ep_title current_ep
+		current_ep=$2
 		progress=$4
 		total_pw=$5
 		local tr="$tr"
 		IFS=$'\n'
 		case ${1%%/*} in
-			episode) episode_type=episode;;
+			episode|e) episode_type=episode;;
 			cartoon|c) episode_type=cartoon;;
 			*) echo ${1%%/*}:invalid;;
 		esac
@@ -212,21 +213,13 @@ da_get_episede() {
 			done
 			break
 		done
-		if [ -z "$ep_file_url" ]; then
-			if [ -n "$_sp_pid" ]; then
-				stop_spinner 1
-			fi
-			echo "Episode not available."
-		fi
 	fi
 }
 
 download() {
 	local s1 s2 ret tried
-
 	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk '/Content-Length/ { print $2 }' | tail -1)
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
-	tried=1
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
 			ret=$?
@@ -237,8 +230,8 @@ download() {
 				((tried>1)) && (tput el1;tput el;tput cuu1)
 				tput el1
 				tput el
-				echo "Retrying...[$tried]"
 				((tried+=1))
+				echo "Retrying...[$tried]"
 			else
 				break
 			fi
@@ -246,6 +239,7 @@ download() {
 	else
 		echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
 	fi
+	(( ret == 0 )) && da_db set saved "$current_ep"
 	if ((ret == 0)) || [ "$CHECK_FILE" == "false" ]; then
 		return 0
 	fi

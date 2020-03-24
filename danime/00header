@@ -33,8 +33,8 @@ fi
 if [ -n "$AP" ]; then
 	ANIME_PATH="$AP"
 fi
-if [[ $ANIME_PATH =~ @/* ]]; then
-	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#*/}"
+if [[ $ANIME_PATH = @* ]]; then
+	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#@*}"
 fi
 if [[ -z $ANIME_PATH ]]; then
 	readonly ANIME_PATH="$MEDIA_ROOT/Anime"

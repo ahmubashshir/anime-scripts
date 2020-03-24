@@ -14,7 +14,7 @@ parse_episede_id() {
 	ep_file_auth=$(echo "$@" | jq -r '.auth'|grep -v 'null'||true)
 	for n in $ep_file_id;do
 		if [ -n "$(type -t get_url_$ep_file_host)" ]; then
-			get_url_$ep_file_host "${n}$ep_file_auth" 2> /dev/null
+			get_url_$ep_file_host "${n}$ep_file_auth"
 		else
 			echo "unimplemented:${ep_file_host/_/.}"
 			break
@@ -23,22 +23,23 @@ parse_episede_id() {
 }
 
 get_url_mp4upload() {
-	curl "https://www.mp4upload.com/embed-$1.html" 2> /dev/null | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
+	curl -s "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
 	if [ "${PIPESTATUS[1]}" = "1" ];then
 		echo "error:File is deleted."
 	fi
 }
 get_url_trollvid() {
-	curl -H 'range: bytes=0-' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" 2> /dev/null | grep '^http' | cat
+	curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -so- -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1"| grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" | grep '^http' | cat
 }
 get_url_mp4_sh() {
     local url
-    url="$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embedc/$1" --output - 2> /dev/null | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
+    url="$(curl -H 'accept-encoding: identity' -H 'referer: https://localhost/' -so- "https://mp4.sh/embedc/$1" | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
     if ! echo "$url" | grep -q 'st=.*e=.*';then
-	    curl -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url" 2> /dev/null | grep '^http' | cat
+	    curl -so- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url"| grep '^http' | cat
 	else
 	    echo "$url"
 	fi
+	unset url
 }
 
 get_url_vidstreaming() {

@@ -23,8 +23,8 @@ parse_episede_id() {
 }
 
 get_url_mp4upload() {
-	curl -s "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand | tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
-	if [ "${PIPESTATUS[1]}" = "1" ];then
+	curl -s "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand - 2>/dev/null| tr -d \",\ \)\; |grep '^player\.src'|cut -d\( -f2-
+	if ! [[ "${PIPESTATUS[*]}" =~ ^[0\ ]*$ ]];then
 		echo "error:File is deleted."
 	fi
 }

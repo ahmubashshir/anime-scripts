@@ -54,7 +54,7 @@ da_get() {
 	if [ -f ".type" ];then
 		FORCE="$(<.type)"
 	fi
-	start_spinner "Fetching \"${series#-*}\" info"
+	start_spinner "Fetching \"$TYPE/$id\" info"
 	da_page=$(curl -sL "https://ww5.dubbedanime.net/$series")
 	da_page_json=$(echo "$da_page"|grep 'var anime\|var cartoon'|cut -d= -f2-|cut -d\  -f2-|sed 's/\;$//g'|jq)
 	if [[ $TYPE == anime ]]; then

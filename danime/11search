@@ -119,6 +119,7 @@ da_search() {
 da_update()
 {
 	local TYPE id dir updatable n new_eps
+	NORESET=true
 	updatable=()
 	for n in $(da_db list);do
 		TYPE="$(dirname $n)"

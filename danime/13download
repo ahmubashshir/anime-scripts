@@ -65,27 +65,26 @@ da_get_episede() {
 			${NOBREAK:-false} && return 0 || return 1
 		fi
 		if [ "$episode_type" = "episode" ]; then
-
 			ep_title=$(echo "$parse_episede_page" | jq -r '.name.default')
-			if ! [[ ${ep_title##* } =~ ^[[:digit:].-]+$ ]]; then
-				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
-					ep_title="$TITLE $ep_title"
+			local ep_number
+			ep_number=$(echo "$parse_episede_page" | jq -r '.number')
+			if [ "$ep_number" = "null" ]; then
+				ep_number=$(echo "$parse_episede_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
+				if ! [[ $ep_number =~ ^[[:digit:].]+$ ]];then
+					((null_ep_count+=1))
+					ep_number=${null_ep_count}n
+					# shellcheck disable=SC2001
+					ep_title="$(echo "$ep_title"|sed 's|episode|special|gI') ${ep_number}"
+					export null_ep_count
 				fi
-				ep_title="${ep_title% *} $(echo "${ep_title##* } $2" | tr '[:upper:]' '[:lower:]')"
-			else
-				local ep_number
-				ep_number=$(echo "$parse_episede_page" | jq -r '.number')
-				if [ "$ep_number" = "null" ]; then
-					ep_number=$(echo "$parse_episede_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
-				fi
-				ep_title=${ep_title% *}
-				if [ "${ep_title% *}" = "${ep_title##* }" ]; then
-					ep_title="$TITLE $ep_title"
-				elif [[ "${ep_title% *}" =~ ${ep_title##* }$ ]]; then
-					ep_title="$(echo "$ep_title"|tr ' ' $'\n'|head -n -1|xargs echo)"
-				fi
-				ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			fi
+			ep_title=${ep_title% *}
+			if [ "${ep_title% *}" = "${ep_title##* }" ]; then
+				ep_title="$TITLE $ep_title"
+			elif [[ "${ep_title% *}" =~ ${ep_title##* }$ ]]; then
+				ep_title="$(echo "$ep_title"|tr ' ' $'\n'|head -n -1|xargs echo)"
+			fi
+			ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
 			ep_id_list=$(
 				echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter

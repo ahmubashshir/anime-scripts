@@ -212,25 +212,25 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				eval "REPLACE_$REPLACE=true"
 				unset REPLACE
 				;;
-			-e | --ep-list)
+			-f | --file-list)
 				#+option
-					#short: -e
-					#long: --ep-list
-					#args: [ep-index-list]
-					#text: select episodes to download
+					#short: -f
+					#long: --file-list
+					#args: [file-index-list]
+					#text: select files to download
 				#-option
-				EP_LIST=true
+				FILE_LIST=true
 				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
-					EP_LIST_RANGE=${2}
+					FILE_LIST_RANGE=${2}
 					shift
 				fi
 				;;
-			-e[[:digit:],-]* | --ep-list=[[:digit:],-]*)
-				EP_LIST=true
-				EP_LIST_RANGE=${1#*=}
-				# EP_LIST_RANGE=${EP_LIST_RANGE// /}
-				[[ $EP_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || EP_LIST_RANGE=${1/-e/}
-				EP_LIST_RANGE=$(echo "$EP_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
+			-f[[:digit:],-]* | --file-list=[[:digit:],-]*)
+				FILE_LIST=true
+				FILE_LIST_RANGE=${1#*=}
+				# FILE_LIST_RANGE=${FILE_LIST_RANGE// /}
+				[[ $FILE_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || FILE_LIST_RANGE=${1/-e/}
+				FILE_LIST_RANGE=$(echo "$FILE_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
 			-s | --select)
 				#+option
@@ -312,7 +312,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#text: Download all results.
 				#-option
 				DOWNLOAD_ALL=true
-				unset RES_LIST EP_LIST_RANGE
+				unset RES_LIST FILE_LIST_RANGE
 				;;
 			-nr | --no-reset)
 				#+option
@@ -322,17 +322,17 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				NORESET=true
 				;;
-			-f[[:alpha:]]* | --force=*)
+			-F[[:alpha:]]* | --force=*)
 				#+option
-					#short: -f
+					#short: -F
 					#long: --force
 					#args: sub, dub
 					#text: Force subbed or dubbed.
 				#-option
 				FORCE=${1##*=}
-				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=${1/-f/}
+				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=${1/-F/}
 				;;
-			-f | --force)
+			-F | --force)
 				FORCE=$2
 				shift 1
 				if [ -z "$FORCE" ]; then
@@ -369,7 +369,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	else
 		tr="$(echo "$@" | sed 'y/০১২৩৪৫৬৭৮৯/0123456789/' | sed 's| |\n|g' | grep -E '^sub$' || echo dub)bed"
 	fi
-	if { [[ -n "$EP_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]] ; } && $DOWNLOAD_ALL; then
+	if { [[ -n "$FILE_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]] ; } && $DOWNLOAD_ALL; then
 		DOWNLOAD_ALL=false
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
@@ -380,11 +380,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				da_update
 				exit
 			fi
-			if [ -n "$EP_LIST_RANGE" ] && ! validate_limit "$EP_LIST_RANGE"; then
+			if [ -n "$FILE_LIST_RANGE" ] && ! validate_limit "$FILE_LIST_RANGE"; then
 				echo "$(
 					tput setaf 1
 					tput dim
-				)Invalid limit:$EP_LIST_RANGE$(tput sgr0)" > /dev/stderr
+				)Invalid limit:$FILE_LIST_RANGE$(tput sgr0)" > /dev/stderr
 				exit 1
 			fi
 			da_search "$SEARCHSTR"

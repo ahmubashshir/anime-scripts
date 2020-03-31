@@ -141,7 +141,7 @@ da_update()
 			mkdir -p "$dir"||continue
 		fi
 		cd "$dir"||continue
-		EP_LIST_RANGE=$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
+		FILE_LIST_RANGE=$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
 		da_get "$n-$(da_db get url)" "$(basename "$dir")"
 		if [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
 			da_db del;

@@ -19,7 +19,7 @@ NORESET=false
 #Get all search results.
 DOWNLOAD_ALL=false
 #Show episode list always
-EP_LIST=false
+FILE_LIST=false
 #Timeout for dns resolving.
 RSOLV=3
 #default search mode

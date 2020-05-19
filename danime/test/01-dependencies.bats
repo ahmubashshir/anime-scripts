@@ -1,6 +1,5 @@
 #!/usr/bin/env bats
 
-source "$BATS_TEST_DIRNAME/../14parse"
 load "00-load"
 regex="(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]"
 if [[ $(realpath /usr/bin/python) =~ python3 ]];then

@@ -96,22 +96,30 @@ byte_mr() {
 	' < /dev/stdin | bc | sed 's/\..*$//'
 }
 validate_limit() {
-	if ! echo "$1" | grep -q '^[[:digit:],-]*$'; then
+	${DEBUG:-false} && set -x
+	if ! [[ $1 =~ ^[[:digit:],-]+$ ]]; then
 		return 1
 	fi
-	if [[ $1 =~ ^[[:digit:]]-$ ]]; then
+	if [[ $1 =~ ^[[:digit:]]+-$ ]]; then
 		return 0
-	elif [[ $1 =~ [[:digit:]]+-[[:digit:]]+ ]]; then
-		local i=${1%%-*}
-		local j=${1##*-}
-		if ((i < j)); then
-			return 0
-		else
-			return 1
-		fi
 	else
-		return 0
+		local ret
+		ret=0
+		for n in $(echo "$1" | cut -d, -f1- --output-delimiter=' '); do
+			if [[ $n =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
+				i=${n%%-*}
+				j=${n#*-}
+				if ((j <= i)) ;then
+					((ret++))
+				fi
+			elif ! { [[ $n =~ ^[[:digit:]]+-$ ]]||[[ $n =~ ^[[:digit:]]+$ ]]; };then
+				((ret++))
+			fi
+		done
+		return "$ret"
 	fi
+	${DEBUG:-false} && set +x
+	return 0
 }
 num_unicode2ascii()
 {
@@ -149,7 +157,7 @@ anime_cover() {
 	anime_cover_img=$1
 	#ext=${anime_cover_img##*.}
 	if [ ! -e folder.jpg ]; then
-		wget -q --method HEAD "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg" &>/dev/null
+		{ curl -kLsI "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"; } &>/dev/null
 		if { ! grep -q cover.jpg .hidden &> /dev/null ; } && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi
@@ -157,16 +165,16 @@ anime_cover() {
 }
 replace_invalid() {
 	if [[ $1 == dir ]]; then
-		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||⫿|g;s|\*|🞵|g;s|\.$|.'$'\342\200\213|g'
+		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||ǀ|g;s|\*|🞵|g;s|\.$|.'$'\342\200\213|g'
 	else
-		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||⫿|g;s|\*|🞵|g;s| |-|g'
+		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||ǀ|g;s|\*|🞵|g;s| |-|g'
 	fi
 }
 remote_exist()
 {
 	if echo "$@" | grep -q http
 	then
-		if [[ $(wget -S --spider --no-check-certificate -q "$@" 2>&1 |awk '/HTTP\// {print $2}'|tail -1) =~ 2[[:digit:]]. ]]
+		if [[ $(curl -kLsI "$@" |awk '/HTTP\// {print $2}'|tail -1) =~ 2[[:digit:]]. ]]
 		then
 			return 0
 		else

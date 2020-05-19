@@ -45,9 +45,9 @@ da_get_episede() {
 			page_url="https://ww5.dubbedanime.net/${d%%-*}"
 			unset d
 		fi
-		parse_episede_page="$(curl -s "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
+		parse_episede_page="$(curl -ks "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
 		if [ -z "$parse_episede_page" ];then
-			parse_episede_page="$(curl -s "$page_url" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
+			parse_episede_page="$(curl -ks "$page_url" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
 		fi
 		unset page_url
 		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo "$parse_episede_page"|tail -1|cut -d\' -f2)\"}")"
@@ -88,14 +88,14 @@ da_get_episede() {
 			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
 			ep_id_list=$(
 				echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-				curl -s "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+				curl -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
 					echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-					curl -s "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug')" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+					curl -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
@@ -141,42 +141,34 @@ da_get_episede() {
 			if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ]; then
 				while [ -z "$ep_file_url" ]; do
 					sleep 1
-					ep_file_url=$(parse_episede_id "$n")
+					ep_file_url=$(get_url "$n")
 				done
 			else
-				ep_file_url=$(parse_episede_id "$n")
+				ep_file_url=$(get_url "$n")
 			fi
 			for ep_file_url_current in $ep_file_url; do
 				if [[ $ep_file_url_current =~ error:* ]]; then
-					ep_file_url=
-					stop_spinner 1
-					echo "[Error] ${ep_file_url_current#*:}"
-					continue
+					msg="[Error] ${ep_file_url_current#*:}"
 				elif [[ $ep_file_url_current =~ unimplemented:[:alnum:]* ]]; then
-					ep_file_url=
-					stop_spinner 1
-					echo "[Error] URL extractor not implemented for ${ep_file_url##*:}"
-					continue 2
+					msg="[Error] URL extractor not implemented for ${ep_file_url##*:}"
 				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
-					ep_file_url=
-					stop_spinner 1
-					echo "[Warn] HLS video downloader is not implemented." 1>&2
-					echo -e "Please run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
-					continue 2
+					msg="[Warn] HLS video downloader is not implemented.\nPlease run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
 				elif remote_exist "$ep_file_url_current"; then
 					continue
 				else
-					ep_file_url=
-					stop_spinner 1
-					echo "[Error] 404 not found."
-					continue 2
+					msg="[Error] 404 not found."
 				fi
+				ep_file_url=
+				stop_spinner 1
+				echo -e "$msg"
+				unset msg
+				continue 2
 			done
-			if [ -n "$ep_file_url" ]; then
-				stop_spinner 0
-			else
+			if [ -z "$ep_file_url" ]; then
+				stop_spinner 1
 				continue
 			fi
+			stop_spinner 0
 			if [[ $(echo "$ep_file_url" | wc -l) -gt 1 ]]; then
 				file_num=0
 			fi
@@ -221,7 +213,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret tried
-	s1=$(wget --spider --no-check-certificate -qS "$2" 2>&1 | awk 'tolower($0) ~ /content-length/{ print $2 }' | tail -1)
+	s1=$(curl -kLsI "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
@@ -259,6 +251,7 @@ download() {
 	fi
 }
 compare_episode() {
+	return 0;
 	${DEBUG:-false} && set -x
 	local size wsize BS="$BS" hash1 hash2
 	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
@@ -275,7 +268,7 @@ compare_episode() {
 	if ((${BS:-524288} >= size / 2)); then
 		BS=$(echo "$size/200" | bc | cut -d. -f1)
 	fi
-	wsize=$(curl -LksI "$2" | sed -E '/^HTTP\/[12.]+ 3[0-9][0-9]/,/^\r$/d' | tr -s '\r' '\n' | awk 'tolower($0) ~ /content-length/{ print $2 }' | tr -d '[:blank:]')
+	wsize=$(curl -LksI "$2" |awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then

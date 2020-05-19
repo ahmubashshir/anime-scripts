@@ -2,20 +2,29 @@ ifeq ($(OUTPUT),)
 	OUTPUT=danime
 endif
 id:= $(shell id -u)
+bats:=
 VERSION_INFO:= $(shell git rev-parse HEAD|cut -c 1-6)
 ifeq ($(id),0)
 	prefix=/usr
 else
 	prefix=$(HOME)/bin
 endif
-all: $(OUTPUT)
-$(OUTPUT): check
+
+.PHONY: test
+all:check test $(OUTPUT)
+$(OUTPUT):
 	@echo "Building executable \"$(OUTPUT)\""
 	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help 10db 11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
 	sed -i 's/VERSION_INFO=/VERSION_INFO=$(VERSION_INFO)/g' "$(OUTPUT)"
+
 check:
 	@echo "Checking syntax."
 	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
+test:
+	@type bats 1>/dev/null||echo -e "BATS not found.\n Can't run tests."
+	@type bats 1>/dev/null||exit 0
+	@echo Running tests.
+	@bats $(bats) -r test
 clean:
 	@echo "Cleaning"
 	rm -f $(OUTPUT)

@@ -3,6 +3,11 @@ ifeq ($(OUTPUT),)
 endif
 id:= $(shell id -u)
 bats:=
+ifeq ($(bats),skip)
+	BATS=-skip
+else
+	BATS=
+endif
 VERSION_INFO:= $(shell git rev-parse HEAD|cut -c 1-6)
 ifeq ($(id),0)
 	prefix=/usr
@@ -10,8 +15,8 @@ else
 	prefix=$(HOME)/bin
 endif
 
-.PHONY: test
-all:check test $(OUTPUT)
+.PHONY: test$(BATS)
+all:check test$(BATS) $(OUTPUT)
 $(OUTPUT):
 	@echo "Building executable \"$(OUTPUT)\""
 	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help 10db 11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
@@ -20,7 +25,10 @@ $(OUTPUT):
 check:
 	@echo "Checking syntax."
 	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
+test-skip:
+	@echo Skipping tests.
 test:
+	if [ "$(bats)" = "skip" ];then exit 0;fi
 	@type bats 1>/dev/null||echo -e "BATS not found.\n Can't run tests."
 	@type bats 1>/dev/null||exit 0
 	@echo Running tests.

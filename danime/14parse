@@ -11,7 +11,7 @@ DEBUG=${DEBUG:-false}
 SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming\|xstreamcdn'
 get_effective_url()
 {
-	xargs curl -o /dev/null -ILksw '%{url_effective}\n' -H 'referer: https://localhost/' | grep '^http'
+	xargs curl -o /dev/null -ILksw '%{url_effective}\n' -H 'referer: https://localhost/' 2>/dev/null| grep '^http'
 }
 get_url() {
 	local ep_file_host ep_file_id n
@@ -34,12 +34,6 @@ get_url() {
 
 mp4upload:get_url() {
 	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null | tr -d \",\ \)\; | grep '^src' | cut -d: -f2-
-	if ! [[ "$(
-		IFS=+
-		echo "$((${PIPESTATUS[*]}))"
-	)" = "0" ]]; then
-		echo "error:File is deleted."
-	fi
 }
 
 xstreamcdn:get_url() {
@@ -55,7 +49,7 @@ mp4.sh:get_url() {
 }
 
 vidstreaming:get_url() {
-	curl -s "https://vidstreaming.io/streaming.php?id=$1" | sed -n '/data-video=".*\/v\//{s/.*data-video="\(.*\)\/v\/\(.*\)".*/\1\/api\/source\/\2/;p}' | xargs curl -X POST -s | jq -r 'select(.success == true).data[0].file'|get_effective_url
+	curl -s "https://vidstreaming.io/streaming.php?id=$1" | sed -n '/data-video=".*\/v\//{s/.*data-video="\(.*\)\/v\/\(.*\)".*/\1\/api\/source\/\2/;p}' | xargs curl -X POST -s 2>/dev/null| jq -r 'select(.success == true).data[0].file'|get_effective_url
 }
 
 #end:code

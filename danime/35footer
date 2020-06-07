@@ -309,9 +309,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -a
 					#long: --all
-					#text: Download all results.
+					#text: Download all results. implies -n
 				#-option
 				DOWNLOAD_ALL=true
+				NOBREAK=true
+				NORESET=true
 				unset RES_LIST FILE_LIST_RANGE
 				;;
 			-nr | --no-reset)

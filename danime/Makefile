@@ -5,6 +5,7 @@ ifeq ($(bats),skip)
 	BATS=-skip
 else
 	BATS=
+	bats+=-r
 endif
 VERSION_INFO:= $(shell git rev-parse HEAD|cut -c 1-6)
 ifeq ($(id),0)
@@ -29,7 +30,7 @@ test:
 	@type bats 1>/dev/null||echo -e "BATS not found.\n Can't run tests."
 	@type bats 1>/dev/null||exit 0
 	@echo Running tests.
-	bats $(bats) -r test
+	./test/bats/bats $(bats) test
 clean:
 	@echo "Cleaning"
 	rm -f $(OUTPUT)

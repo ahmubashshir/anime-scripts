@@ -42,7 +42,7 @@ da_get_len()
 }
 da_get() {
 	local series TITLE TYPE id
-	unset null_ep_count
+	unset null_ep_count da_page da_page_json baseurl url epc ep
 	series="$1"
 	TITLE="$2"
 	TYPE=${series%/*}

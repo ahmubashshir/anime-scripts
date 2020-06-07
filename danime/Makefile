@@ -28,7 +28,6 @@ check:
 test-skip:
 	@echo Skipping tests.
 test:
-	if [ "$(bats)" = "skip" ];then exit 0;fi
 	@type bats 1>/dev/null||echo -e "BATS not found.\n Can't run tests."
 	@type bats 1>/dev/null||exit 0
 	@echo Running tests.

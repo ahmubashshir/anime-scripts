@@ -9,17 +9,21 @@
 DEBUG=${DEBUG:-false}
 #start:code
 SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming\|xstreamcdn'
+get_effective_url()
+{
+	xargs curl -o /dev/null -ILksw '%{url_effective}\n' -H 'referer: https://localhost/' | grep '^http'
+}
 get_url() {
 	local ep_file_host ep_file_id n
 	ep_file_host=$(echo "$@" | jq -r '.host')
-	ep_file_id=$(echo "$@" | jq -r '.id'|xargs basename -a )
-	ep_file_auth=$(echo "$@" | jq -r '.auth'|grep -v 'null'||true)
-	if ! { echo "$SUPPORTED_HOSTS"|grep -q "$ep_file_host"; };then
+	ep_file_id=$(echo "$@" | jq -r '.id' | xargs basename -a)
+	ep_file_auth=$(echo "$@" | jq -r '.auth' | grep -v 'null' || true)
+	if ! { echo "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"; }; then
 		echo "unimplemented:$ep_file_host"
 		return 1
 	fi
-	for n in $ep_file_id;do
-		if [ -n "$(type -t ${ep_file_host}:get_url||type -w ${ep_file_host}:get_url)" ]; then
+	for n in $ep_file_id; do
+		if [ -n "$(type -t ${ep_file_host}:get_url || type -w ${ep_file_host}:get_url)" ]; then
 			${ep_file_host}:get_url "${n}$ep_file_auth"
 		else
 			echo "unimplemented:${ep_file_host/_/.}"
@@ -29,30 +33,29 @@ get_url() {
 }
 
 mp4upload:get_url() {
-	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand - 2>/dev/null| tr -d \",\ \)\; |grep '^src'|cut -d: -f2-
-	if ! [[ "$(IFS=+;echo "$((${PIPESTATUS[*]}))")" = "0" ]];then
+	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null | tr -d \",\ \)\; | grep '^src' | cut -d: -f2-
+	if ! [[ "$(
+		IFS=+
+		echo "$((${PIPESTATUS[*]}))"
+	)" = "0" ]]; then
 		echo "error:File is deleted."
 	fi
 }
-xstreamcdn:get_url()
-{
-	curl -kso- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com'|jq -r '.data[0].file' 2>/dev/null)"| grep '^http'
+
+xstreamcdn:get_url() {
+	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r '.data[0].file' 2> /dev/null|get_effective_url
 }
+
 trollvid:get_url() {
-	curl -kso- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$(curl -so- -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed/$1"| grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)" | grep '^http'
+	curl -so- -H 'accept-encoding: identity' -H 'referer: https://localhost/' "https://mp4.sh/embed${CALLED_FROM_MP4_SH:+c}/$1" | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-|get_effective_url
 }
+
 mp4.sh:get_url() {
-    local url
-    url="$(curl -kH 'accept-encoding: identity' -H 'referer: https://localhost/' -so- "https://mp4.sh/embedc/$1" | grep source | tr -d \" | tr \  \\n | grep '^src' | cut -d= -f2-)"
-    if ! echo "$url" | grep -q 'st=.*e=.*';then
-	    curl -kso- -H 'range: bytes=0-0' -H 'referer: https://localhost/' -w '%{redirect_url}' "$url"| grep '^http'
-	else
-	    echo "$url"
-	fi
-	unset url
+	CALLED_FROM_MP4_SH=true trollvid:get_url "$@"
 }
 
 vidstreaming:get_url() {
-	curl -ks "https://vidstreaming.io/download?id=$1" |grep 'http'|grep 'download'|tr -d '[:blank:]'|cut -d\" -f2|sed 's|amp\;||g'|tail -2|head -1
+	curl -s "https://vidstreaming.io/streaming.php?id=$1" | sed -n '/data-video=".*\/v\//{s/.*data-video="\(.*\)\/v\/\(.*\)".*/\1\/api\/source\/\2/;p}' | xargs curl -X POST -s | jq -r '.data[0].file'|get_effective_url
 }
+
 #end:code

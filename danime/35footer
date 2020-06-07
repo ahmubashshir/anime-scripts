@@ -167,7 +167,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			;;
 			-n | --no-break-or-reset)
 				#+option
-					#short: -N
+					#short: -n
 					#long: --no-break-or-reset
 					#IDNT: 1
 					#text: equivalent to -nb -nr.

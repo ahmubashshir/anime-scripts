@@ -251,7 +251,7 @@ download() {
 	fi
 }
 compare_episode() {
-	return 0;
+	${SKIP_COMPARE:-false} && return 0
 	${DEBUG:-false} && set -x
 	local size wsize BS="$BS" hash1 hash2
 	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then

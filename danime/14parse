@@ -11,7 +11,7 @@ DEBUG=${DEBUG:-false}
 SUPPORTED_HOSTS='mp4upload\|mp4.sh\|trollvid\|vidstreaming\|xstreamcdn'
 get_effective_url()
 {
-	xargs curl -o /dev/null -ILksw '%{url_effective}\n' -H 'referer: https://localhost/' 2>/dev/null| grep '^http'
+	xargs curl -ILksXGET -o /dev/null -w '%{url_effective}\n' 2>/dev/null| grep '^http'
 }
 get_url() {
 	local ep_file_host ep_file_id n

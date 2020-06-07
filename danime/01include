@@ -157,7 +157,7 @@ anime_cover() {
 	anime_cover_img=$1
 	#ext=${anime_cover_img##*.}
 	if [ ! -e folder.jpg ]; then
-		{ curl -kLsI "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"; } &>/dev/null
+		{ curl -kLsIXGET "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"; } &>/dev/null
 		if { ! grep -q cover.jpg .hidden &> /dev/null ; } && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi
@@ -174,7 +174,7 @@ remote_exist()
 {
 	if echo "$@" | grep -q http
 	then
-		if [[ $(curl -kLsI "$@" |awk '/HTTP\// {print $2}'|tail -1) =~ 2[[:digit:]]. ]]
+		if [[ $(curl -kLsIXGET "$@" |awk '/HTTP\// {print $2}'|tail -1) =~ 2[[:digit:]]. ]]
 		then
 			return 0
 		else

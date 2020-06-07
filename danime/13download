@@ -204,7 +204,7 @@ da_get_episede() {
 
 download() {
 	local s1 s2 ret tried
-	s1=$(curl -kLsI "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
+	s1=$(curl -kLsIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
 	s2=$(stat -c%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
@@ -259,7 +259,7 @@ compare_episode() {
 	if ((${BS:-524288} >= size / 2)); then
 		BS=$(echo "$size/200" | bc | cut -d. -f1)
 	fi
-	wsize=$(curl -LksI "$2" |awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
+	wsize=$(curl -LksIXGET "$2" |awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then

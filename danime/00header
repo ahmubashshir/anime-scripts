@@ -11,7 +11,7 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 #VERSION_INFO=
-if [ -e ~/.config/danime.cfg ]; then
+if [ -f ~/.config/danime.cfg ]; then
 	source ~/.config/danime.cfg
 else
 	readonly MEDIA_ROOT='/mnt/Multimedia'

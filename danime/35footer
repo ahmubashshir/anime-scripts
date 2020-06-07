@@ -46,8 +46,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -i
 					#long: --id
-					#args: id1[,id2[,...]]
 					#text: Prefer these ids to download if available.
+					#args: id1[,id2[,...]]
 				#-option
 				PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${2//,/|}"
 				shift
@@ -70,8 +70,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -m
 					#long: --mirror
-					#args: mirror1[,mirror2[,...]]
 					#text: select preferred mirrors.
+					#args: mirror1[,mirror2[,...]]
 				#-option
 				if echo "${SUPPORTED_HOSTS//\\|/$'\n'}" | grep -q "${2//,/\\|}"; then
 					PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${2//,/|}"
@@ -105,8 +105,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -B
 					#long: --block
-					#args: <block size>
 					#text: set block size for testing.(allowed suffixes: kM)
+					#args: <block size>
 				#-option
 				BS=${1#*=}
 				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}
@@ -187,8 +187,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -r
 					#long: --replace
-					#args: manual, fail
 					#text: Replace unmatched episode.
+					#args: manual, fail
 				#-option
 				if echo "$2" | grep -q 'manual\|fail'; then
 					eval "REPLACE_$(echo "$2" | tr '[:lower:]' '[:upper:]')=true"
@@ -216,8 +216,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -f
 					#long: --file-list
+					#text: select files to download or prompt for a list.
 					#args: [file-index-list]
-					#text: select files to download
 				#-option
 				FILE_LIST=true
 				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
@@ -236,8 +236,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -s
 					#long: --select
-					#args: [result-index]
 					#text: Select search results.
+					#args: <result-index-list>
 				#-option
 				if [[ $2 =~ ^[[:digit:],-]+$ ]]; then
 					RES_LIST=$2
@@ -290,8 +290,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -t
 					#long: --try
-					#args: n
 					#text: set retry attempts
+					#args: <retry>
 				#-option
 				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
 					MAX_TRY=${2}
@@ -326,8 +326,8 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -F
 					#long: --force
-					#args: sub, dub
 					#text: Force subbed or dubbed.
+					#args: sub, dub
 				#-option
 				FORCE=${1##*=}
 				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=${1/-F/}

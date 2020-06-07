@@ -26,6 +26,12 @@ danime_help_options()
 				printf '\t'
 			done
 			echo -e "$line"|cut -d' ' -f2-
+		elif [[ $line =~ ^#args: ]];then
+			for (( i=0;i<TAB+2;i++));do
+				printf '\t'
+			done
+			echo -n "Argument: "
+			echo -e "$line"|cut -d' ' -f2-
 		fi
 	done
 }

@@ -43,7 +43,7 @@ mp4upload:get_url() {
 }
 
 xstreamcdn:get_url() {
-	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r '.data[0].file' 2> /dev/null|get_effective_url
+	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r 'select(.success == true).data[0].file' 2> /dev/null|get_effective_url
 }
 
 trollvid:get_url() {
@@ -55,7 +55,7 @@ mp4.sh:get_url() {
 }
 
 vidstreaming:get_url() {
-	curl -s "https://vidstreaming.io/streaming.php?id=$1" | sed -n '/data-video=".*\/v\//{s/.*data-video="\(.*\)\/v\/\(.*\)".*/\1\/api\/source\/\2/;p}' | xargs curl -X POST -s | jq -r '.data[0].file'|get_effective_url
+	curl -s "https://vidstreaming.io/streaming.php?id=$1" | sed -n '/data-video=".*\/v\//{s/.*data-video="\(.*\)\/v\/\(.*\)".*/\1\/api\/source\/\2/;p}' | xargs curl -X POST -s | jq -r 'select(.success == true).data[0].file'|get_effective_url
 }
 
 #end:code

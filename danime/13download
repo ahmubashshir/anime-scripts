@@ -147,21 +147,12 @@ da_get_episede() {
 				ep_file_url=$(get_url "$n")
 			fi
 			for ep_file_url_current in $ep_file_url; do
-				if [[ $ep_file_url_current =~ error:* ]]; then
-					msg="[Error] ${ep_file_url_current#*:}"
-				elif [[ $ep_file_url_current =~ unimplemented:[:alnum:]* ]]; then
-					msg="[Error] URL extractor not implemented for ${ep_file_url##*:}"
-				elif [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
-					msg="[Warn] HLS video downloader is not implemented.\nPlease run \n  \`ffmpeg -i \"$ep_file_url_current\" -c copy \"$PWD/$ep_file_name\"\`"
-				elif remote_exist "$ep_file_url_current"; then
+				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&\
+					remote_exist "$ep_file_url_current"; then
 					continue
-				else
-					msg="[Error] 404 not found."
 				fi
 				ep_file_url=
 				stop_spinner 1
-				echo -e "$msg"
-				unset msg
 				continue 2
 			done
 			if [ -z "$ep_file_url" ]; then

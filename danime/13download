@@ -256,8 +256,8 @@ compare_episode() {
 		return 2
 	fi
 	size=$(stat -c%s "$1")
-	if ((${BS:-524288} >= size / 2)); then
-		BS=$(echo "$size/200" | bc | cut -d. -f1)
+	if ((${BS:-524288} > size)); then
+		BS=$size
 	fi
 	wsize=$(curl -LksIXGET "$2" |awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($0) ~ /content-length/){ print $2 }}')
 	if ((size > wsize)); then
@@ -283,7 +283,7 @@ compare_episode() {
 	if [ "${#offsets}" = "0" ]; then
 		exit 1
 	fi
-	for ((i = 0; i < ${TOTAL_CHECKS:-10}; i++)); do
+	for ((i = 0; i < ${TOTAL_CHECKS:-${#offsets}}; i++)); do
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
 		start=${offsets[$i]}
 		hash1="$(dd bs=1 count="${BS:-524288}" status=none if="$1" skip="$start" | sha256sum | cut -d\  -f1)"
@@ -292,7 +292,7 @@ compare_episode() {
 		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
 		test "$hash1" = "$hash2" || return 4
 	done
-	echo -e "\rComparing episode[test:1-${TOTAL_CHECKS:-10}:pass]"
+	echo -e "\rComparing episode[test:1-${TOTAL_CHECKS:-${#offsets}}:pass]"
 	return 0
 }
 #end:code

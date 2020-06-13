@@ -139,7 +139,7 @@ def random_spaced(low, high, delta, n, size=1):
 	"""
 	empty_space = high - low - (n-1)*delta
 	if empty_space < 0:
-		raise ValueError("not possible")
+		return [low, high - delta]
 	if size is None:
 		u = np.random.rand(n)
 	else:

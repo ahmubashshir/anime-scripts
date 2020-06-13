@@ -6,7 +6,7 @@
 ```
 cp danime.cfg.example ~/.config/danime.cfg
 make  prefix=~/bin install install-libbash install-spinner
-$EDITOR ~/.config/danime.cfg
+${EDITOR:-nano} ~/.config/danime.cfg
 ```
 
 # Update

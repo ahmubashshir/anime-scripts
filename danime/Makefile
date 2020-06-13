@@ -50,4 +50,4 @@ install-spinner:
 	install -C ../lib/spinner $(prefix)/spinner
 update:
 	@git pull
-upgrade: update install
+upgrade: update install install-spinner install-libbash

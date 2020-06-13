@@ -51,9 +51,6 @@ fi
 @test "Checking for jq..." {
     assert_dep_exec jq
 }
-@test "Checking for libbash..." {
-    assert_dep_exec libbash
-}
 @test "Checking for lsof..." {
     assert_dep_exec lsof
 }
@@ -86,9 +83,6 @@ fi
 }
 @test "Checking for sort..." {
     assert_dep_exec sort
-}
-@test "Checking for spinner..." {
-    assert_dep_exec spinner
 }
 @test "Checking for stat..." {
     assert_dep_exec stat

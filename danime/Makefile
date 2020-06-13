@@ -14,7 +14,7 @@ else
 	prefix=$(HOME)/bin
 endif
 
-ifeq (, $(shell which shellchec 2>/dev/null))
+ifeq (, $(shell which shellcheck 2>/dev/null))
 	CHECK=no
 endif
 .PHONY: test test-skip check update upgrade debug install install-libbash install-spinner check nocheck

@@ -124,6 +124,10 @@ da_update()
 	for n in $(da_db list);do
 		TYPE="$(dirname $n)"
 		id="$(basename $n)"
+		if ! [ -d "$(da_db get path)" ];then
+			da_db del
+			continue
+		fi
 		echo -n "[$n] Checking update..."
 		new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
 		if ((new_eps>0));then

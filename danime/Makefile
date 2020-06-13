@@ -33,8 +33,6 @@ nocheck:
 test-skip:
 	@echo Skipping tests.
 test:
-	@type bats 1>/dev/null||echo -e "BATS not found.\n Can't run tests."
-	@type bats 1>/dev/null||exit 0
 	@echo Running tests.
 	./test/bats/bats $(bats) test
 clean:

@@ -14,9 +14,12 @@ else
 	prefix=$(HOME)/bin
 endif
 
-.PHONY: test test-skip check update upgrade debug install install-libbash install-spinner
+ifeq (, $(shell which shellchec 2>/dev/null))
+	CHECK=no
+endif
+.PHONY: test test-skip check update upgrade debug install install-libbash install-spinner check nocheck
 all: $(OUTPUT)
-$(OUTPUT): check test$(BATS)
+$(OUTPUT): $(CHECK)check test$(BATS)
 	@echo "Building executable \"$(OUTPUT)\""
 	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help 10db 11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
 	sed -i 's/VERSION_INFO=/VERSION_INFO=$(VERSION_INFO)/g' "$(OUTPUT)"
@@ -24,6 +27,9 @@ $(OUTPUT): check test$(BATS)
 check:
 	@echo "Checking syntax."
 	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
+nocheck:
+	@echo "Checking syntax."
+	@echo skipping: shellcheck not found.
 test-skip:
 	@echo Skipping tests.
 test:

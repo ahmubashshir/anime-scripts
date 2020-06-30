@@ -220,6 +220,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#args: [file-index-list]
 				#-option
 				FILE_LIST=true
+				unset FILE_LIST_RANGE
 				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
 					FILE_LIST_RANGE=${2}
 					shift

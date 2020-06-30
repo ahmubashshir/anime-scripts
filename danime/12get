@@ -64,7 +64,7 @@ da_get() {
 		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/node()' - 2> /dev/null | (while read -rs xml_node; do echo "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href," ")' - 2> /dev/null; done) | tr -s ' ' '\n' | grep -v '=$' | tac)
 	fi
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
-	if ! da_db has;then
+	if ! { da_db has && ${FILE_LIST:-false} ;} && [ -z "$FILE_LIST_RANGE" ];then
 		da_db add
 	fi
 	da_db set path "\"$PWD\""
@@ -124,14 +124,14 @@ da_get() {
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
 	da_db set total "$(echo "$da_page_json"|jq -re .total|awk '{print ($0 == "null" || $0 == "0")?"'$((epc+1))'":$0;}')"
-	if ${CONTINUE-false} && [[ -z $FILE_LIST_RANGE ]] && [[ -n "$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')" ]]; then
-		FILE_LIST_RANGE="$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')"
-	fi
 	if ${FILE_LIST:-false} && [[ -z $FILE_LIST_RANGE ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
 		read -eri "1-$epc" -p$'Episode list: '  FILE_LIST_RANGE
 		ep="$(echo "${FILE_LIST_RANGE:-1-}"| num_unicode2ascii)"
 		tput cuu 2
+	fi
+	if ${CONTINUE-false} && [[ -z $FILE_LIST_RANGE ]] && [[ -n "$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')" ]]; then
+		FILE_LIST_RANGE="$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')"
 	fi
 	FILE_LIST_RANGE="$(echo "$FILE_LIST_RANGE"|sed 's/^[-,[:blank:]]*//g')"
 	if [[ $FILE_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then

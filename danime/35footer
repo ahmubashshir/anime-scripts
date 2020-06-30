@@ -229,7 +229,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				FILE_LIST=true
 				FILE_LIST_RANGE=${1#*=}
 				# FILE_LIST_RANGE=${FILE_LIST_RANGE// /}
-				[[ $FILE_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || FILE_LIST_RANGE=${1/-e/}
+				[[ $FILE_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || FILE_LIST_RANGE=${1/-f/}
 				FILE_LIST_RANGE=$(echo "$FILE_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
 			-s | --select)

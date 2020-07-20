@@ -20,6 +20,31 @@ da_api_search() {
 import requests
 import json
 from sys import argv
+import os
+from urllib.parse import quote_plus
+from http.cookiejar import MozillaCookieJar as MCJ
+cookiesFile = "'$HOME'/.da-cookies.txt"
+cj = MCJ(cookiesFile)
+if os.path.exists(cookiesFile):
+	cj.load(ignore_discard=True, ignore_expires=True)
+r = requests.Session()
+
+r.headers = {
+    "authority"			: "ww5.dubbedanime.net",
+    "pragma"			: "no-cache",
+    "cache-control"		: "no-cache",
+    "accept"			: "application/json",
+    "x-requested-with"	: "XMLHttpRequest",
+    "user-agent"		: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
+    "origin"			: "https://ww5.dubbedanime.net",
+    "sec-fetch-site"	: "same-origin",
+    "sec-fetch-mode"	: "cors",
+    "sec-fetch-dest"	: "empty",
+    "referer"			: "https://ww5.dubbedanime.net/browse-anime?search=%s"%quote_plus(" ".join(argv[1:]))
+}
+
+r.cookies = cj
+
 def refine(Str):
 	d={
 		'\''<'\'':'\''＜'\'',
@@ -38,15 +63,15 @@ def refine(Str):
 try:
 	if len(argv)>1:
 		data = {
-			'\''model'\''			:	'\'${TYPE:-anime}\''.title(),
-			'\''size'\''			:	200,
-			'\''what'\''			:	'\''query'\'',
-			'\''letter'\''			:	'\''all'\'',
-			'\''query[order]'\''	:	'\''date,asc'\'',
-			'\''query[search]'\''	:	str.join( '\'' '\'', argv[1:] )
+			"model"			:	"'${TYPE:-anime}'".title(),
+			"size"			:	200,
+			"what"			:	"query",
+			"letter"		:	"all",
+			"query[order]"	:	"date,asc",
+			"query[search]"	:	str.join(" ", argv[1:])
 		}
 		try:
-			for n in requests.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
+			for n in r.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
 				print("%s/%s-%s:%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],0 if not '\''total'\'' in n else n['\''total'\''],refine(n['\''title'\''])))
 		except:
 			pass

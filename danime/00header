@@ -93,4 +93,18 @@ FILE_LIST=${FILE_LIST:-false}
 FORCE=
 SEARCHSTR=
 PREFERRED_TR=${PREFERRED_TR:-dub}
+CURL_OPTIONS=(
+	-H 'authority: ww5.dubbedanime.net'
+	-H 'pragma: no-cache'
+	-H 'cache-control: no-cache'
+	-H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36'
+	-H 'origin: https://ww5.dubbedanime.net'
+	-H 'sec-fetch-site: same-origin'
+	-H 'sec-fetch-mode: cors'
+	-H 'sec-fetch-dest: empty'
+	-H 'referer: https://ww5.dubbedanime.net/browse-anime'
+)
+if [ -e ~/.da-cookies.txt ];then
+	CURL_OPTIONS+=( --cookie ~/.da-cookies.txt )
+fi
 #end:code

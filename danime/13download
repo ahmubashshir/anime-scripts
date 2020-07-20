@@ -7,6 +7,7 @@
 # shellcheck disable=SC2016
 # shellcheck disable=SC2143
 # shellcheck disable=SC2119
+# shellcheck disable=SC2032
 source libbash
 source spinner
 sp=$sp31
@@ -45,9 +46,9 @@ da_get_episede() {
 			page_url="https://ww5.dubbedanime.net/${d%%-*}"
 			unset d
 		fi
-		parse_episede_page="$(curl -ks "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
+		parse_episede_page="$(curl "${CURL_OPTIONS[@]}" -ks "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
 		if [ -z "$parse_episede_page" ];then
-			parse_episede_page="$(curl -ks "$page_url" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
+			parse_episede_page="$(curl "${CURL_OPTIONS[@]}" -ks "$page_url" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
 		fi
 		unset page_url
 		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo "$parse_episede_page"|tail -1|cut -d\' -f2)\"}")"
@@ -88,14 +89,14 @@ da_get_episede() {
 			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
 			ep_id_list=$(
 				echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-				curl -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+				curl "${CURL_OPTIONS[@]}" -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
 					echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-					curl -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+					curl "${CURL_OPTIONS[@]}" -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then

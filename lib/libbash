@@ -60,7 +60,7 @@ function fget() {
 			pid_933be66d=$(echo "$lsof_933be66d" | awk '/[[:digit:]]+[w:W:u]/ {print $2}' | tail -1)
 			perm_933be66d=$(echo "$lsof_933be66d" | awk '/[[:digit:]]+[w:W:u]/ {print $4}' | tail -1)
 			process_933be66d=$(echo "$lsof_933be66d" | awk '/[[:digit:]]+[w:W:u]/ {print $1}' | tail -1)
-			size_933be66d=$(stat -c%s "$name_933be66d")
+			size_933be66d=$(stat -Lc%s "$name_933be66d")
 		else
 			size_933be66d=0
 			pid_933be66d=""

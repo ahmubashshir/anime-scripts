@@ -158,7 +158,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 			;;
 			-nc | --no-continue)
 				#+option
-					#short: -n
+					#short: -nc
 					#long: --no-continue
 					#IDNT: 1
 					#text: Don't Reload previous episode selection.

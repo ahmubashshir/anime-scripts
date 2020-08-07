@@ -133,6 +133,7 @@ da_search() {
 		${SKIP_DOWNLOAD:-false} || {
 			cd "$dir" || continue
 		}
+		${UPDATE_QUEUE:-false} && vbar
 		echo -e "Title: '$dir'"
 		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
 		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $NOBREAK; then

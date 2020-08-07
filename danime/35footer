@@ -11,7 +11,7 @@ DEBUG=${DEBUG:-false}
 if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	while [ -n "$1" ]; do
 		case $1 in
-			-v | --version)
+			(-v | --version)
 				#+option
 					#short: -v
 					#long: --version
@@ -27,7 +27,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				da_get_license
 				exit 0
 				;;
-			-l | --license)
+			(-l | --license)
 				#+option
 					#short: -l
 					#long: --license
@@ -42,7 +42,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				fi
 				exit 0
 				;;
-			-i| --id)
+			(-i| --id)
 				#+option
 					#short: -i
 					#long: --id
@@ -52,12 +52,12 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${2//,/|}"
 				shift
 			;;
-			--id=[[:alnum:].,]*)
+			(--id=[[:alnum:].,]*)
 				tmp="${1##*=}"
 				PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${tmp//,/|}"
 				unset tmp
 			;;
-			--list-mirror)
+			(--list-mirror)
 				#+option
 					#long: --list-mirror
 					#text: List supported mirrors
@@ -66,7 +66,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				echo -e "\t${SUPPORTED_HOSTS//\\|/ }"
 				exit 0
 				;;
-			-m | --mirror)
+			(-m | --mirror)
 				#+option
 					#short: -m
 					#long: --mirror
@@ -78,14 +78,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				fi
 				shift
 				;;
-			--mirror=[[:alnum:].,]*)
+			(--mirror=[[:alnum:].,]*)
 				tmp="${1##*=}"
 				if echo "${SUPPORTED_HOSTS//\\|/$'\n'}" | grep -q "${tmp//,/\\|}"; then
 					PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${tmp//,/|}"
 				fi
 				unset tmp
 				;;
-			--break | -b)
+			(--break | -b)
 				#+option
 					#short: -b
 					#long: --break
@@ -93,7 +93,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				BREAK=true
 				;;
-			-nb|--no-break)
+			(-nb|--no-break)
 				#+option
 					#short: -nb
 					#long: --no-break
@@ -101,7 +101,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				BREAK=false
 				;;
-			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
+			(-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
 				#+option
 					#short: -B
 					#long: --block
@@ -112,11 +112,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}
 				BS=$(echo "$BS" | byte_mr)
 				;;
-			-B[[:digit:].]* | --block=[[:digit:].]*)
+			(-B[[:digit:].]* | --block=[[:digit:].]*)
 				BS=${1#*=}
 				[[ $BS =~ ^[[:digit:].]+$ ]] || BS=${1/-B/}
 				;;
-			-B | --block)
+			(-B | --block)
 				BS=$2
 				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
 					BS=$(echo "$BS" | byte_mr)
@@ -125,14 +125,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					echo "Invalid block size." 1>&2
 				fi
 				;;
-			--debug)
+			(--debug)
 				#+option
 					#long: --debug
 					#text: enable debug mode
 				#-option
 				DEBUG=true
 				;;
-			-A)
+			(-A)
 				#+option
 					#short: -A
 					#IDNT: 3
@@ -140,7 +140,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				TYPE=anime
 				;;
-			-C)
+			(-C)
 				#+option
 					#short: -C
 					#IDNT: 3
@@ -148,7 +148,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				TYPE=cartoon
 				;;
-			-c | --continue)
+			(-c | --continue)
 				#+option
 					#short: -c
 					#long: --continue
@@ -156,7 +156,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				CONTINUE=true
 			;;
-			-nc | --no-continue)
+			(-nc | --no-continue)
 				#+option
 					#short: -nc
 					#long: --no-continue
@@ -165,7 +165,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				CONTINUE=false
 			;;
-			-n | --no-break-or-reset)
+			(-n | --no-break-or-reset)
 				#+option
 					#short: -n
 					#long: --no-break-or-reset
@@ -175,7 +175,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				NOBREAK=true
 				NORESET=true
 				;;
-			-R | --reset)
+			(-R | --reset)
 				#+option
 					#short: -R
 					#long: --reset
@@ -183,7 +183,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				NORESET=false
 			;;
-			-r | --replace)
+			(-r | --replace)
 				#+option
 					#short: -r
 					#long: --replace
@@ -198,7 +198,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					REPLACE_MANUAL=true
 				fi
 				;;
-			-r[fm] | --replace=fail | --replace=manual)
+			(-r[fm] | --replace=fail | --replace=manual)
 				REPLACE="$(echo "${1#*=}" | tr '[:lower:]' '[:upper:]')"
 				if ! echo "$REPLACE" | grep -qi 'manual\|fail'; then
 					REPLACE="$(
@@ -212,7 +212,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				eval "REPLACE_$REPLACE=true"
 				unset REPLACE
 				;;
-			-f | --file-list)
+			(-f | --file-list)
 				#+option
 					#short: -f
 					#long: --file-list
@@ -226,14 +226,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					shift
 				fi
 				;;
-			-f[[:digit:],-]* | --file-list=[[:digit:],-]*)
+			(-f[[:digit:],-]* | --file-list=[[:digit:],-]*)
 				FILE_LIST=true
 				FILE_LIST_RANGE=${1#*=}
 				# FILE_LIST_RANGE=${FILE_LIST_RANGE// /}
 				[[ $FILE_LIST_RANGE =~ ^[[:digit:],-]+$ ]] || FILE_LIST_RANGE=${1/-f/}
 				FILE_LIST_RANGE=$(echo "$FILE_LIST_RANGE" | grep -o . | grep '^[[:digit:],-]*$' | tr -d \\n | sed 's/,$//')
 				;;
-			-s | --select)
+			(-s | --select)
 				#+option
 					#short: -s
 					#long: --select
@@ -248,11 +248,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					exit 1
 				fi
 				;;
-			-s[[:digit:],-]* | --select=[[:digit:],-]*)
+			(-s[[:digit:],-]* | --select=[[:digit:],-]*)
 				RES_LIST=${1#*=}
 				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || RES_LIST=${1/-s/}
 				;;
-			-u|--update)
+			(-u|--update)
 				#+option
 					#short: -u
 					#long: --update
@@ -260,7 +260,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				DO_UPDATE=true
 			;;
-			-h | --help)
+			(-h | --help)
 				#+option
 					#short: -h
 					#long: --help
@@ -269,11 +269,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				danime_help
 				exit 0
 				;;
-			-T[[:digit:]]* | --timeout=[[:digit:]]*)
+			(-T[[:digit:]]* | --timeout=[[:digit:]]*)
 				RSOLV=${1#*=}
 				[[ $RSOLV =~ ^[[:digit:]]+$ ]] || RSOLV=${1/-T/}
 				;;
-			-T | --timeout)
+			(-T | --timeout)
 				#+option
 					#short: -T
 					#long: --timeout
@@ -287,7 +287,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					exit 1
 				fi
 				;;
-			-t | --try)
+			(-t | --try)
 				#+option
 					#short: -t
 					#long: --try
@@ -302,11 +302,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					exit 1
 				fi
 			;;
-			-t[[:digit:]]* | --try=[[:digit:]]* )
+			(-t[[:digit:]]* | --try=[[:digit:]]*)
 				MAX_TRY=${1#*=}
 				[[ $MAX_TRY =~ ^[[:digit:]]+$ ]] || MAX_TRY=${1/-t/}
 			;;
-			-a | --all)
+			(-a | --all)
 				#+option
 					#short: -a
 					#long: --all
@@ -317,7 +317,17 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				NORESET=true
 				unset RES_LIST FILE_LIST_RANGE
 				;;
-			-nr | --no-reset)
+			(-q | --queue)
+				#+option
+					#short: -q
+					#long: --queue
+					#text: Add selected results to download queue. implies -n
+				#-option
+				NOBREAK=true
+				NORESET=true
+				UPDATE_QUEUE=true
+				;;
+			(-nr | --no-reset)
 				#+option
 					#short: -nr
 					#long: --no-reset
@@ -325,7 +335,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				NORESET=true
 				;;
-			-F[[:alpha:]]* | --force=*)
+			(-F[[:alpha:]]* | --force=*)
 				#+option
 					#short: -F
 					#long: --force
@@ -335,17 +345,17 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				FORCE=${1##*=}
 				[[ $FORCE =~ ^[ds]ub$ ]] || FORCE=${1/-F/}
 				;;
-			-F | --force)
+			(-F | --force)
 				FORCE=$2
 				shift 1
 				if [ -z "$FORCE" ]; then
 					FORCE=${TYPE_ANIME:0:3}
 				fi
 				;;
-			-d | --dry-run)
+			(-d | --dry-run)
 				SKIP_DOWNLOAD=true
 				;;
-			-S | --sub | -D | --dub)
+			(-S | --sub | -D | --dub)
 				#+option
 					#short: -S
 					#short: -D
@@ -356,11 +366,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#-option
 				PREFERRED_TR=$(echo "$1" | tr -d - | cut -c1 | tr '[:upper:]' '[:lower:]')ub
 				;;
-			-[[:alnum:]]?? | --[[:alnum:]]*)
+			(-[[:alnum:]]?? | --[[:alnum:]]*)
 				echo "Invalid option -- $1" 1>&2
 				exit 1
 				;;
-			*)
+			(*)
 				SEARCHSTR="$(echo "$SEARCHSTR $1" | sed 's|^ *||g;s|* $||g')"
 				;;
 		esac

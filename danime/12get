@@ -124,6 +124,10 @@ da_get() {
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
 	da_db set total "$(echo "$da_page_json"|jq -re .total|awk '{print ($0 == "null" || $0 == "0")?"'$((epc+1))'":$0;}')"
+	${UPDATE_QUEUE:-false} && {
+		echo "Appending to queue."
+		return 0
+	}
 	if ${FILE_LIST:-false} && [[ -z $FILE_LIST_RANGE ]]; then
 		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
 		read -eri "1-$epc" -p$'Episode list: '  FILE_LIST_RANGE

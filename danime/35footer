@@ -388,6 +388,25 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	fi
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
 	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} ; then
+		python3 -c 'from sys import argv, stdout
+import requests, os
+from http.cookiejar import MozillaCookieJar as MCJ
+from lxml import html
+
+cookiesFile = os.environ["HOME"] + "/.da-cookies.txt"
+
+try:
+	cj = MCJ(cookiesFile)
+	if os.path.exists(cookiesFile):
+		cj.load(ignore_discard=True, ignore_expires=True)
+
+	r = requests.Session()
+	r.cookies = cj
+	r.headers = {"user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36"}
+	html.fromstring(r.get("https://ww5.dubbedanime.net/").text).get_element_by_id("logo")
+except:
+	print("Update hijacked cookies in \"~/.da-cookies.txt\"")
+	exit(1)' || exit
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
 			if ${DO_UPDATE:-false};then
 				da_update
@@ -410,9 +429,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		danime_help
 		exit 1
 	fi
-elif [[ $1 == latest ]]; then
-	#fetch_letest
-	true
 else
 	danime_help
 	exit 1

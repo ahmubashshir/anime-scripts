@@ -9,7 +9,7 @@ assert_dep_py3()
 }
 assert_dep_py2()
 {
-	run bash -c "python2 -c 'import $1' &>/dev/null||(echo python3 module $1 not found. && return 1)"
+	run bash -c "python2 -c 'import $1' &>/dev/null||(echo python2 module $1 not found. && return 1)"
 	assert_success;
 }
 assert_dep_exec()

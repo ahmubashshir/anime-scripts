@@ -18,11 +18,16 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#text: Show version and license.
 				#-option
 				if [ "${0##*/}" = "35footer" ]; then
-					echo " danime  master-$(git rev-parse HEAD | cut -c 1-6)"
+					printf "danime master-r%d.%s" \
+						"$(git rev-list --count HEAD)" \
+						"$(git rev-parse --short HEAD)"
+					(( $(printf '%d' "$(git diff --shortstat|cut -d' ' -f2)" ) )) && {
+						printf '-'
+						git diff --shortstat|cut -d' ' -f2
+					}
 				else
-					echo " danime  dist-$(grep '^#VERSION_INFO=' "$0" | cut -d= -f2)"
+					echo "danime $(grep '^#VERSION_INFO=' "$0" | cut -d= -f2)"
 				fi
-				echo
 				echo
 				da_get_license
 				exit 0

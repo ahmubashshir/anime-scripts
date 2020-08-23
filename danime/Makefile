@@ -7,11 +7,15 @@ else
 	BATS=
 	bats+=-r
 endif
-VERSION_INFO:= $(shell git rev-parse HEAD|cut -c 1-6)
+VERSION_INFO:=
 ifeq ($(id),0)
 	prefix=/usr
 else
 	prefix=$(HOME)/bin
+endif
+
+ifeq ($(VERSION_INFO),)
+	VERSION_INFO=r$(shell git rev-list --count HEAD).$(shell git rev-parse --short HEAD)
 endif
 
 ifeq (, $(shell which shellcheck 2>/dev/null))

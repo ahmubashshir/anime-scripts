@@ -176,13 +176,36 @@ da_update()
 			fi
 		done
 	elif (( "${#DO_UPDATE_ONLY[@]}" )); then
-		for n in "${DO_UPDATE_ONLY[@]}";do
-			TYPE="$(dirname $n)"
-			id="$(basename $n)"
-			if da_db has;then
-				updatable+=( "$n" )
-			fi
-		done
+		if (( "${#DO_UPDATE_ONLY[@]}" > 1 )) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
+			DO_UPDATE_ONLY=("$(echo "${DO_UPDATE_ONLY[@]}" | cut -d' ' -f2-|tr -s ' ' '|')")
+			for n in $(da_db list);do
+				TYPE="$(dirname $n)"
+				id="$(basename $n)"
+				if echo "$n"|grep -qE "${DO_UPDATE_ONLY[0]}";then
+					continue
+				fi
+				if ! [ -d "$(da_db get path)" ];then
+					da_db del
+					continue
+				fi
+				echo -n "[$n] Checking update..."
+				new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
+				if ((new_eps>0));then
+					updatable+=( "$n" )
+					echo -e "\r[$n] Queueing update($new_eps+)..."
+				else
+					echo
+				fi
+			done
+		else
+			for n in "${DO_UPDATE_ONLY[@]}";do
+				TYPE="$(dirname $n)"
+				id="$(basename $n)"
+				if da_db has;then
+					updatable+=( "$n" )
+				fi
+			done
+		fi
 	fi
 	for n in "${updatable[@]}";do
 		TYPE="$(dirname $n)"

@@ -25,7 +25,7 @@ da_db_add()
 {
 
 	data="$(jq '. * { "'"$TYPE"'" : {"'"$id"'":{ "title":null ,"path":null,"url":null,"total":null,"saved":null}} }' "$CACHE_FILE")"
-	echo "$data" > "$CACHE_FILE"
+	da_db write "$data"
 }
 da_db_list()
 {
@@ -39,7 +39,7 @@ da_db_set()
 {
 	if da_db_has;then
 		data="$(jq '.'"$TYPE"'."'"$id"'".'"$1"'='"$2" "$CACHE_FILE")"
-		echo "$data" > "$CACHE_FILE"
+		da_db write "$data"
 	fi
 }
 da_db_get()
@@ -53,7 +53,13 @@ da_db_del()
 {
 	if da_db has;then
 		data="$(jq 'del(."'"$TYPE"'"."'"$id"'")' "$CACHE_FILE")"
-		echo "$data" > "$CACHE_FILE"
+		da_db write "$data"
+	fi
+}
+da_db_write()
+{
+	if [ -n "$@" ];then
+		echo "$@" > "$CACHE_FILE"
 	fi
 }
 #end:code

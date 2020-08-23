@@ -261,8 +261,11 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#+option
 					#short: -u
 					#long: --update
-					#text: Update and continue incomplete downloads.
-					#args: [id1[ id2[ ...]]]
+					#text: Update and continue incomplete downloads,
+					#IDNT: 4
+					#text: adding '!' as first arg inverts match.
+					#IDNT: 2
+					#args: [! ][id1[ id2[ ...]]]
 				#-option
 				DO_UPDATE=true
 				if (($#>1));then

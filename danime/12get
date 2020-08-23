@@ -57,7 +57,7 @@ da_get() {
 	fi
 	start_spinner "Fetching \"$TYPE/$id\" info"
 	da_page=$(curl "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/$series")
-	da_page_json=$(echo "$da_page"|grep -E 'var (anime|cartoon)'|cut -d= -f2-|cut -d\  -f2-|sed 's/\;$//g'|jq)
+	da_page_json=$(echo "$da_page"|grep -E '(let|var) (anime|cartoon)'|cut -d= -f2-|cut -d\  -f2-|sed 's/\;$//g'|jq)
 	if [[ $TYPE == anime ]]; then
 		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true" or //li/@data-sub="true",";dubbed=",//li/@data-dubbed="true" or //li/@data-dub="true"," ")' -; done| tr -s ' ' \\n | tac)
 	else

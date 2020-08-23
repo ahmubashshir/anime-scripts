@@ -176,7 +176,7 @@ da_update()
 			fi
 		done
 	elif (( "${#DO_UPDATE_ONLY[@]}" )); then
-		for n in "${DO_UPDATE_ONLY[@]}"
+		for n in "${DO_UPDATE_ONLY[@]}";do
 			TYPE="$(dirname $n)"
 			id="$(basename $n)"
 			if da_db has;then

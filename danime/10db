@@ -51,7 +51,7 @@ da_db_has(){
 }
 da_db_del()
 {
-	if da_db_has;then
+	if da_db has;then
 		data="$(jq 'del(."'"$TYPE"'"."'"$id"'")' "$CACHE_FILE")"
 		echo "$data" > "$CACHE_FILE"
 	fi

@@ -146,6 +146,7 @@ da_update()
 {
 	local TYPE id dir updatable n new_eps
 	NORESET=true
+	updatable=()
 	if ${DO_UPDATE_LIST:-false};then
 		for n in $(da_db list);do
 			TYPE="$(dirname $n)"
@@ -158,7 +159,6 @@ da_update()
 		done
 		return 0
 	elif (( "${#DO_UPDATE_ONLY[@]}" == 0 ));then
-		updatable=()
 		for n in $(da_db list);do
 			TYPE="$(dirname $n)"
 			id="$(basename $n)"
@@ -176,7 +176,13 @@ da_update()
 			fi
 		done
 	elif (( "${#DO_UPDATE_ONLY[@]}" )); then
-		updatable=( "${DO_UPDATE_ONLY[@]}" )
+		for n in "${DO_UPDATE_ONLY[@]}"
+			TYPE="$(dirname $n)"
+			id="$(basename $n)"
+			if da_db has;then
+				updatable+=( "$n" )
+			fi
+		done
 	fi
 	for n in "${updatable[@]}";do
 		TYPE="$(dirname $n)"

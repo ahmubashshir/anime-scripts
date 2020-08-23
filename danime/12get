@@ -33,7 +33,7 @@ da_get_len()
 			xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/a/@href' - 2> /dev/null|wc -l
 		;;
 		subbed|dubbed)
-			xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/li[@data-'$type'="true"]/a/@href' - 2> /dev/null|wc -l
+			xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/li[@data-'$type'="true" or @data-'${type:0:3}'="true"]/a/@href' - 2> /dev/null|wc -l
 		;;
 		*)
 			return 1

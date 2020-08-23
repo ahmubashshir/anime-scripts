@@ -402,7 +402,7 @@ try:
 
 	r = requests.Session()
 	r.cookies = cj
-	r.headers = {"user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36"}
+	r.headers.update({"user-agent": "'"$USER_AGENT"'"})
 	html.fromstring(r.get("https://ww5.dubbedanime.net/").text).get_element_by_id("logo")
 except:
 	print("Update hijacked cookies in \"~/.da-cookies.txt\"")

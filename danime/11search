@@ -157,7 +157,7 @@ da_update()
 			echo "[$n] $(da_db get title)"
 		done
 		return 0
-	elif [ -z "${DO_UPDATE_ONLY}" ];then
+	elif (( "${#DO_UPDATE_ONLY[@]}" == 0 ));then
 		updatable=()
 		for n in $(da_db list);do
 			TYPE="$(dirname $n)"
@@ -175,8 +175,8 @@ da_update()
 				echo
 			fi
 		done
-	elif [[ ${DO_UPDATE_ONLY} =~ ^[[:digit:],]*$ ]]; then
-		read -r -a updatable < <(echo "${DO_UPDATE_ONLY//,/ }")
+	elif (( "${#DO_UPDATE_ONLY[@]}" )); then
+		updatable=( "${DO_UPDATE_ONLY[@]}" )
 	fi
 	for n in "${updatable[@]}";do
 		TYPE="$(dirname $n)"

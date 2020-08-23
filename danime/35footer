@@ -257,12 +257,12 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#short: -u
 					#long: --update
 					#text: Update and continue incomplete downloads.
-					#args: [id1[,...]]
+					#args: [id1[ id2[ ...]]]
 				#-option
 				DO_UPDATE=true
-				if [[ "$2" =~ ^[[:digit:],]*$ ]];then
+				if (($#>1));then
 					shift
-					DO_UPDATE_ONLY="$1"
+					DO_UPDATE_ONLY=("$@")
 				fi
 			;;
 			(-l|--list)

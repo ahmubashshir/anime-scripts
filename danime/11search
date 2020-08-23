@@ -146,23 +146,38 @@ da_update()
 {
 	local TYPE id dir updatable n new_eps
 	NORESET=true
-	updatable=()
-	for n in $(da_db list);do
-		TYPE="$(dirname $n)"
-		id="$(basename $n)"
-		if ! [ -d "$(da_db get path)" ];then
-			da_db del
-			continue
-		fi
-		echo -n "[$n] Checking update..."
-		new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
-		if ((new_eps>0));then
-			updatable+=( "$n" )
-			echo -e "\r[$n] Queueing update($new_eps+)..."
-		else
-			echo
-		fi
-	done
+	if ${DO_UPDATE_LIST:-false};then
+		for n in $(da_db list);do
+			TYPE="$(dirname $n)"
+			id="$(basename $n)"
+			if ! [ -d "$(da_db get path)" ];then
+				da_db del
+				continue
+			fi
+			echo "[$n] $(da_db get title)"
+		done
+		return 0
+	elif [ -z "${DO_UPDATE_ONLY}" ];then
+		updatable=()
+		for n in $(da_db list);do
+			TYPE="$(dirname $n)"
+			id="$(basename $n)"
+			if ! [ -d "$(da_db get path)" ];then
+				da_db del
+				continue
+			fi
+			echo -n "[$n] Checking update..."
+			new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
+			if ((new_eps>0));then
+				updatable+=( "$n" )
+				echo -e "\r[$n] Queueing update($new_eps+)..."
+			else
+				echo
+			fi
+		done
+	elif [[ ${DO_UPDATE_ONLY} =~ ^[[:digit:],]*$ ]]; then
+		read -r -a updatable < <(echo "${DO_UPDATE_ONLY//,/ }")
+	fi
 	for n in "${updatable[@]}";do
 		TYPE="$(dirname $n)"
 		id="$(basename $n)"

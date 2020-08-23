@@ -27,9 +27,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				da_get_license
 				exit 0
 				;;
-			(-l | --license)
+			(-L | --license)
 				#+option
-					#short: -l
+					#short: -L
 					#long: --license
 					#text: Show license.
 				#-option
@@ -257,8 +257,21 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#short: -u
 					#long: --update
 					#text: Update and continue incomplete downloads.
+					#args: [id1[,...]]
 				#-option
 				DO_UPDATE=true
+				if [[ "$2" =~ ^[[:digit:],]*$ ]];then
+					shift
+					DO_UPDATE_ONLY="$1"
+				fi
+			;;
+			(-l|--list)
+				#+option
+					#short: -l
+					#long: --list
+					#text: List updatable/interrupted series.
+				#-option
+				DO_UPDATE_LIST=true
 			;;
 			(-h | --help)
 				#+option
@@ -387,7 +400,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
-	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} ; then
+	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false} ; then
 		python3 -c 'from sys import argv, stdout
 import requests, os
 from http.cookiejar import MozillaCookieJar as MCJ
@@ -408,7 +421,7 @@ except:
 	print("Update hijacked cookies in \"~/.da-cookies.txt\"")
 	exit(1)' || exit
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
-			if ${DO_UPDATE:-false};then
+			if ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false};then
 				da_update
 				exit
 			fi

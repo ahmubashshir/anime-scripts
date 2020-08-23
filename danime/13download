@@ -46,12 +46,12 @@ da_get_episede() {
 			page_url="https://ww5.dubbedanime.net/${d%%-*}"
 			unset d
 		fi
-		parse_episede_page="$(curl "${CURL_OPTIONS[@]}" -ks "$1" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
-		if [ -z "$parse_episede_page" ];then
-			parse_episede_page="$(curl "${CURL_OPTIONS[@]}" -ks "$page_url" | sed 's|\;$||g' | grep 'var\ episode\|var\ xuath' | cut -d= -f2-)"
+		parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$1" | grep -E '(var|let) (episode|xToken|xuath)')"
+		if [ -z "$parse_episode_page" ];then
+			parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$page_url" | grep -E '(var|let) (episode|xToken|xuath)')"
 		fi
 		unset page_url
-		parse_episede_page="$(echo "$parse_episede_page" | head -1|jq -c ". + { \"auth\" : \"$(echo "$parse_episede_page"|tail -1|cut -d\' -f2)\"}")"
+		parse_episode_page="$(echo "$parse_episode_page" | cut -d= -f2- | sed 's/\;$//g;s/^[[:blank:]]*//g' | head -1|jq -c ". + { \"auth\" : \"$(echo "$parse_episode_page"|tail -1|cut -d\' -f2)\"}")"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi
@@ -60,17 +60,17 @@ da_get_episede() {
 		else
 			filter="cat"
 		fi
-		if [ -z "$parse_episede_page" ];then
+		if [ -z "$parse_episode_page" ];then
 			stop_spinner 1
 			echo Episode not available.
 			${NOBREAK:-false} && return 0 || return 1
 		fi
 		if [ "$episode_type" = "episode" ]; then
-			ep_title=$(echo "$parse_episede_page" | jq -r '.name.default')
+			ep_title=$(echo "$parse_episode_page" | jq -r '.name.default')
 			local ep_number
-			ep_number=$(echo "$parse_episede_page" | jq -r '.number')
+			ep_number=$(echo "$parse_episode_page" | jq -r '.number')
 			if [ "$ep_number" = "null" ]; then
-				ep_number=$(echo "$parse_episede_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
+				ep_number=$(echo "$parse_episode_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
 				if ! [[ $ep_number =~ ^[[:digit:].]+$ ]];then
 					((null_ep_count+=1))
 					ep_number=${null_ep_count}n
@@ -88,15 +88,15 @@ da_get_episede() {
 			ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
 			ep_id_list=$(
-				echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-				curl "${CURL_OPTIONS[@]}" -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+				echo "$parse_episode_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episode_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+				curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 			)
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				ep_id_list=$(
-					echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-					curl "${CURL_OPTIONS[@]}" -ks "https://vid.xngine.com/api/episode/$(echo "$parse_episede_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+					echo "$parse_episode_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episode_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
+					curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
 				)
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
@@ -105,14 +105,14 @@ da_get_episede() {
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		elif [ "$episode_type" = "cartoon" ]; then
 			ep_title="$TITLE"
-			ep_number="$(echo "$parse_episede_page" | jq -r '.number')"
+			ep_number="$(echo "$parse_episode_page" | jq -r '.number')"
 			ep_title="$ep_title ep $ep_number"
-			ep_id_list=$(echo "$parse_episede_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episede_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
+			ep_id_list=$(echo "$parse_episode_page" | jq --tab -r '.videos' | grep -v '"date"' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | tr -d \\t | sed 's/,},/}/;s/,}/}/' |da_add_auth "$parse_episode_page"| jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
 		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
 		set +x
-		if [ -n "$parse_episede_page" ] && [ -n "$ep_title" ]; then
+		if [ -n "$parse_episode_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0
 		else
 			stop_spinner 1
@@ -288,7 +288,7 @@ compare_episode() {
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
 		start=${offsets[$i]}
 		hash1="$(dd bs=1 count="${BS:-524288}" status=none if="$1" skip="$start" | sha256sum | cut -d\  -f1)"
-		hash2="$(curl -skr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
+		hash2="$(curl -Lskr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
 		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
 		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
 		test "$hash1" = "$hash2" || return 4

@@ -49,7 +49,7 @@ trollvid:get_url() {
 }
 
 vidstreaming:get_url() {
-	curl -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") then .source_bk.file else .source.file end' | get_effective_url
+	curl -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
 }
 
 gogo+server:get_url() {

@@ -8,6 +8,7 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 # shellcheck disable=SC2001
+((def_get)) && return 0 || def_get=1
 . libbash
 . spinner
 DEBUG=${DEBUG:-false}

@@ -1,4 +1,5 @@
 #!/bin/bash
+((def_footer)) && return 0 || def_footer=1
 . 00header
 . 01include
 . 02help

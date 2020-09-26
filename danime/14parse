@@ -2,7 +2,7 @@
 # shellcheck disable=SC2086
 # shellcheck disable=SC1091
 # shellcheck disable=SC1090
-
+((def_parse)) && return 0 || def_parse=1
 . libbash
 . spinner
 . 01include

@@ -16,9 +16,12 @@ SPINNER_DELAY=0.04
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
-da_add_auth()
+da_read_ep_json()
 {
-	while read -r ep_id;do if echo "$ep_id"|jq -r '.host'|grep -q 'trollvid\|mp4\.sh';then echo "$ep_id"|jq -Mc ". + { \"auth\" : \"$(echo "$@"|jq -r '.auth')\"}";else echo "$ep_id";fi;done
+	cat | {
+		jq -Mc '.videos[]|del(.date)|if (.host|test("'$SUPPORTED_HOSTS'")) then .ep = "'"$2"'" else . end'
+		curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$3" | jq -Mc '.[]'
+	} |jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )'| eval "$1"
 }
 da_get_episede() {
 	tr=${1##*-}
@@ -36,7 +39,7 @@ da_get_episede() {
 			cartoon|c) episode_type=cartoon;;
 			*) echo ${1%%/*}:invalid;;
 		esac
-		start_spinner "Fetching info about episode[id:$(echo "$1" | rev | cut -d/ -f1 | rev | cut -d- -f1)]"
+		start_spinner "Fetching info about episode[id:$(echo "${1%%-*}"|xargs basename)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -53,7 +56,7 @@ da_get_episede() {
 			set "$page_url" "$@"
 		fi
 		unset page_url
-		parse_episode_page="$(echo "$parse_episode_page" | cut -d= -f2- | sed 's/\;$//g;s/^[[:blank:]]*//g' | head -1|jq -c ". + { \"url\" : \"$1\"}")"
+		parse_episode_page="$(echo "$parse_episode_page" | cut -d= -f2- | sed 's/\;$//g;s/^[[:blank:]]*//g' | head -1)"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi
@@ -89,17 +92,11 @@ da_get_episede() {
 			fi
 			ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
-			ep_id_list=$(
-				echo "$parse_episode_page" | jq -Mc ".videos[]|del(.date) + { \"url\" : \"$1\"}" | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-				curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-			)
+			ep_id_list=$( echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}"|xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
-				ep_id_list=$(
-					echo "$parse_episode_page" | jq -Mc ".videos[]|del(.date) + { \"url\" : \"$1\"}" | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-					curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")" | jq '.' | tail +2 | head -n -1 | awk '!match($0,"}"){printf $0};match($0,"}")' | grep -v status | sed 's/,$//' | jq -Mc . | grep '"id"' | grep $SUPPORTED_HOSTS | eval $filter
-				)
+				ep_id_list=$( echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}"|xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
 				ep_title="${ep_title// ep / extra }"
@@ -109,7 +106,7 @@ da_get_episede() {
 			ep_title="$TITLE"
 			ep_number="$(echo "$parse_episode_page" | jq -r '.number')"
 			ep_title="$ep_title ep $ep_number"
-			ep_id_list=$(echo "$parse_episode_page" | jq -Mc ".videos[]|del(.date) + { \"url\" : \"$1\"}" | grep '"id"' | grep $SUPPORTED_HOSTS | awk -e '!seen[$0]++')
+			ep_id_list=$(echo "$parse_episode_page" | jq -Mc '.videos[]|del(.date)|select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | awk -e '!seen[$0]++')
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
 		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"

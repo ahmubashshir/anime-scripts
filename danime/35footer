@@ -68,7 +68,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#text: List supported mirrors
 				#-option
 				echo Supported Mirrors
-				echo -e "\t${SUPPORTED_HOSTS//\\|/ }"
+				echo -e "${SUPPORTED_HOSTS//|/$'\n  '}"
 				exit 0
 				;;
 			(-m | --mirror)
@@ -78,14 +78,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					#text: select preferred mirrors.
 					#args: mirror1[,mirror2[,...]]
 				#-option
-				if echo "${SUPPORTED_HOSTS//\\|/$'\n'}" | grep -q "${2//,/\\|}"; then
+				if echo "${SUPPORTED_HOSTS//|/$'\n'}" | grep -q "${2//,/|}"; then
 					PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${2//,/|}"
 				fi
 				shift
 				;;
 			(--mirror=[[:alnum:].,]*)
 				tmp="${1##*=}"
-				if echo "${SUPPORTED_HOSTS//\\|/$'\n'}" | grep -q "${tmp//,/\\|}"; then
+				if echo "${SUPPORTED_HOSTS//|/$'\n'}" | grep -q "${tmp//,/|}"; then
 					PREFERRED_HOSTS="${PREFERRED_HOSTS:-null}\|${tmp//,/|}"
 				fi
 				unset tmp
@@ -397,7 +397,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		esac
 		shift
 	done
-	PREFERRED_HOSTS="${PREFERRED_HOSTS//null\\\|/}"
+	PREFERRED_HOSTS="${PREFERRED_HOSTS//null\|/}"
 	if [[ -n $TYPE_ANIME ]] && { [[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]] ; }; then
 		tr=$TYPE_ANIME
 	else

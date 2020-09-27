@@ -4,7 +4,8 @@ source "$BATS_TEST_DIRNAME/../01include"
 load "00-load"
 regex="(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]"
 @test "Checking 'remote_exist()'" {
-    run remote_exist http://localhost:631/
+	${CONNECTED:-false} || skip
+    run remote_exist http://google.com/
     assert_success
 }
 @test "Checking 'replace_invalid()'" {

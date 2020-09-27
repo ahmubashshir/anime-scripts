@@ -111,14 +111,15 @@ fi
 @test "Checking for xmllint..." {
     assert_dep_exec xmllint
 }
-@test "Checking for js-beautify..." {
-    assert_dep_exec js-beautify
-}
 @test "Checking for tee..." {
     assert_dep_exec tee
 }
 @test "Checking for python3..." {
     assert_dep_exec python3
+}
+@test "Checking for $py3-jsbeautifier..." {
+	assert_dep_py3 jsbeautifier
+    assert_dep_exec js-beautify
 }
 @test "Checking for $py3-json..." {
     assert_dep_py3 json

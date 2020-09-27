@@ -11,7 +11,7 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 ((def_header)) && return 0 || def_header=1
-#VERSION_INFO=
+# VERSION
 if [ -f ~/.config/danime.cfg ]; then
 	source ~/.config/danime.cfg
 else

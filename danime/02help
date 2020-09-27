@@ -54,10 +54,11 @@ da_get_license()
 	echo " it under the terms of the GNU General Public License as published by"
 	echo " the Free Software Foundation; either version 2 of the License, or"
 	echo " (at your option) any later version."
-	if ${1:-false};then
+	echo
+	if [ -e "LICENSE" ] && [ "$(head -1 LICENSE | tr -d '[:blank:]')" = "GNUGENERALPUBLICLICENSE" ]; then
+		echo "See 'LICENSE' for more details."
 		return 0
 	fi
-	echo
 	echo " 'danime' is distributed in the hope that it will be useful,"
 	echo " but WITHOUT ANY WARRANTY; without even the implied warranty of"
 	echo " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"

@@ -1,10 +1,9 @@
 #!/usr/bin/env bats
 load 'support/load'
 load 'assert/load'
-source "$BATS_TEST_DIRNAME/../.env_setup"
 chrome_apparent="$(chromium --version 2>/dev/null | awk "{print \$2}")"
 export USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chrome_apparent:-85.0.4183.102} Safari/537.36"
-
+export PATH="$PATH:$(realpath "$BATS_TEST_DIRNAME/.."):$(realpath "$BATS_TEST_DIRNAME/../../lib")"
 if curl -I google.com &>/dev/null;then
     export CONNECTED=true
 fi

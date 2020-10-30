@@ -27,10 +27,10 @@ get_url() {
 	fi
 	for n in $ep_file_id; do
 		if [ -n "$(type -t ${ep_file_host// /+}:get_url || type -w ${ep_file_host// /+}:get_url)" ]; then
-			url=""
-			until [[ -n $url ]] && (( try++<5 ));do
+			url="";try=0
+			while [[ -z $url ]] && (( try++<5 ));do
+				((try > 1)) && sleep 2
 				url="$(${ep_file_host// /+}:get_url "${n}" "$ep_id")"
-				((try < 2)) || sleep 2
 			done
 			echo "$url"
 		else

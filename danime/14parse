@@ -39,9 +39,12 @@ get_url() {
 		fi
 	done
 }
+beautify_js() {
+	js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null
+}
 
 mp4upload:get_url() {
-	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
+	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
 }
 
 xstreamcdn:get_url() {
@@ -62,7 +65,7 @@ gogo+server:get_url() {
 }
 
 mixdrop:get_url() {
-	curl -s "https://mixdrop.to/e/$1"|grep '^eval'|js-beautify -|grep MDCore.wurl|sed -E 's@.* = "//(.*)".*@https://\1@'
+	curl -s "https://mixdrop.to/e/$1"|grep '^eval'|beautify_js|grep MDCore.wurl|sed -E 's@.* = "//(.*)".*@https://\1@'
 }
 
 cloud9:get_url() {

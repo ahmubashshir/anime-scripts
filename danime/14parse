@@ -11,6 +11,7 @@ DEBUG=${DEBUG:-false}
 SUPPORTED_HOSTS='mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
 if curl -s "${CURL_OPTIONS[@]}" 'https://ww5.dubbedanime.net/user/info' -X 'POST'|jq --exit-status '. != null' &>/dev/null;then
 	SUPPORTED_HOSTS="trollvid${SUPPORTED_HOSTS:+|}${SUPPORTED_HOSTS}"
+	export LOGGED_IN=true
 fi
 get_effective_url()
 {

@@ -445,6 +445,16 @@ except:
 	print("Update hijacked cookies in \"~/.da-cookies.txt\"")
 	exit(1)' || exit
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
+			if [ -x "${0%/*}/dubbedanime.scrap" ] && ${LOGGED_IN:-false};then
+				"${0%/*}/dubbedanime.scrap"
+				trap 'close_bus' SIGINT SIGTERM ERR EXIT
+				close_bus()
+				{
+					ret=$?
+					gdbus call --session --dest local.dubbedanime --object-path /scrapper --method local.this.scrapper.quit &>/dev/null
+					exit $ret
+				}
+			fi
 			if ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false};then
 				da_update
 				exit

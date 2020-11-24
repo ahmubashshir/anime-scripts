@@ -130,3 +130,6 @@ fi
 @test "Checking for $py3-requests..." {
     assert_dep_py3 requests
 }
+@test "Checking for $py3-yaml..." {
+    assert_dep_py3 yaml
+}

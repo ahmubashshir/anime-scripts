@@ -24,6 +24,29 @@ da_read_ep_json()
 		curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$3" | jq -Mc '.[]'
 	} |jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )'| eval "$1"
 }
+get_mapped() {
+	python3 -c 'import yaml
+import requests as r
+from sys import argv, exit
+try:
+	with open("maps.yml") as file:
+		maps = yaml.load(file, Loader=yaml.FullLoader)
+except FileNotFoundError:
+	exit(0)
+
+if len(argv) == 2:
+	ep=int(argv[1])
+	if ep in maps["eps"].keys():
+		data = r.get(maps["api"]%maps["eps"][ep])
+		if data.ok:
+			json = data.json()
+		else:
+			exit(0)
+		for n in ["source", "source_bk"]:
+			if n in json.keys():
+				print(next(k["file"] for k in json[n]))
+				exit(0)' "$@"
+}
 da_get_episede() {
 	tr=${1##*-}
 	if (($# == 0)); then
@@ -140,6 +163,9 @@ da_get_episede() {
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
 			ep_file_url=$(get_url "$n")
+			if [ -z "$ep_file_url" ] && [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -f maps.yml ];then
+				ep_file_url=$(get_mapped "$ep_number")
+			fi
 			for ep_file_url_current in $ep_file_url; do
 				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&\
 					remote_exist "$ep_file_url_current"; then

@@ -139,14 +139,7 @@ da_get_episede() {
 			set +x
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
-			if [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ]; then
-				while [ -z "$ep_file_url" ]; do
-					sleep 1
-					ep_file_url=$(get_url "$n")
-				done
-			else
-				ep_file_url=$(get_url "$n")
-			fi
+			ep_file_url=$(get_url "$n")
 			for ep_file_url_current in $ep_file_url; do
 				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&\
 					remote_exist "$ep_file_url_current"; then

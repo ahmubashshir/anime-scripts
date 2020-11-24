@@ -54,6 +54,7 @@ debug: check
 install: all
 	@echo Installing $(OUTPUT)
 	install -C $(OUTPUT) $(prefix)/$(OUTPUT)
+	install -C getmap.py $(prefix)/$(OUTPUT)_getmap
 	install -C dubbedanime.scrap $(prefix)/dubbedanime.scrap
 install-libbash:
 	@echo Installing libbash

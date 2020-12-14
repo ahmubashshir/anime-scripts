@@ -6,17 +6,19 @@ DEBUG=${DEBUG:-false}
 #start:code
 da_db()
 {
-	if [ -n "$AP" ];then
+	if [ -n "$AP" ]; then
 		CACHE_FILE="$ANIME_PATH/.danime_db.json"
 	else
 		CACHE_FILE="$MEDIA_ROOT/.danime_db.json"
 	fi
 	local act=$1
 	shift
-	if ! { jq 'keys' "$CACHE_FILE" 2>/dev/null|grep -q '\[' ;};then
+	if ! {
+		jq   'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
+	}; then
 		echo '{}' > "$CACHE_FILE"
 	fi
-	while [[ $1 =~ .*=.* ]];do
+	while [[ $1 =~ .*=.* ]]; do
 		eval "local $1"
 		shift
 	done
@@ -26,41 +28,49 @@ da_db_add()
 {
 
 	data="$(jq '. * { "'"$TYPE"'" : {"'"$id"'":{ "title":null ,"path":null,"url":null,"total":null,"saved":null}} }' "$CACHE_FILE")"
-	da_db write "$data"
+	da_db_write "$data"
 }
 da_db_list()
 {
-	for type in $(jq -r 'keys|@sh' "$CACHE_FILE"|tr -d \'\");do
-		for id in $(jq -r '.'"$type"'|keys|[ .[] | tonumber ] | @sh' "$CACHE_FILE");do
+	for type in $(jq -r 'keys|@sh' "$CACHE_FILE" | tr -d \'\"); do
+		for id in $(jq -r '.'"$type"'|keys|[ .[] | tonumber ] | @sh' "$CACHE_FILE"); do
 			echo "$type/$id"
 		done
 	done
 }
 da_db_set()
 {
-	if da_db_has;then
+	if da_db_has; then
 		data="$(jq '.'"$TYPE"'."'"$id"'".'"$1"'='"$2" "$CACHE_FILE")"
-		da_db write "$data"
+		da_db_write "$data"
 	fi
 }
 da_db_get()
 {
-	{ jq -re ".$TYPE.\"$id\".$*" "$CACHE_FILE"|| echo 0;}|tail -1
+	{
+		jq -re ".$TYPE.\"$id\".$*" "$CACHE_FILE" || echo 0
+	}                                                | tail -1
 }
-da_db_has(){
-	jq -e '.'"$TYPE"'."'"$id"'"' "$CACHE_FILE" &>/dev/null
+da_db_has()
+{
+	jq -e '.'"$TYPE"'."'"$id"'"' "$CACHE_FILE" &> /dev/null
 }
 da_db_del()
 {
-	if da_db has;then
+	if da_db_has; then
 		data="$(jq 'del(."'"$TYPE"'"."'"$id"'")' "$CACHE_FILE")"
-		da_db write "$data"
+		da_db_write "$data"
 	fi
 }
 da_db_write()
 {
-	if [ -n "$@" ];then
-		echo "$@" > "$CACHE_FILE"
+	if [ -n "$@" ]; then
+		echo "$@" > "$CACHE_FILE~"
+		if jq . "$CACHE_FILE~" 2>&1 > /dev/null; then
+			mv "$CACHE_FILE~" "$CACHE_FILE"
+		else
+			rm "$CACHE_FILE~"
+		fi
 	fi
 }
 #end:code

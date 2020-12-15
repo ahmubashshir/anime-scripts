@@ -22,9 +22,10 @@ da_read_ep_json()
 	cat | {
 		jq -Mc '.videos[]|del(.date)|if (.host|test("'$SUPPORTED_HOSTS'")) then .ep = "'"$2"'" else . end'
 		curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$3" | jq -Mc '.[]'
-	} |jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )'| eval "$1"
+	} | jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | eval "$1"
 }
-get_mapped() {
+get_mapped()
+{
 	python3 -c 'import yaml
 import requests as r
 from sys import argv, exit
@@ -47,7 +48,8 @@ if len(argv) == 2:
 				print(next(k["file"] for k in json[n]))
 				exit(0)' "$@"
 }
-da_get_episede() {
+da_get_episede()
+{
 	tr=${1##*-}
 	if (($# == 0)); then
 		return 1
@@ -59,11 +61,11 @@ da_get_episede() {
 		local tr="$tr"
 		IFS=$'\n'
 		case ${1%%/*} in
-			episode|e) episode_type=episode;;
-			cartoon|c) episode_type=cartoon;;
-			*) echo ${1%%/*}:invalid;;
+			episode | e) episode_type=episode ;;
+			cartoon | c) episode_type=cartoon ;;
+			*) echo ${1%%/*}:invalid ;;
 		esac
-		start_spinner "Fetching info about episode[id:$(echo "${1%%-*}"|xargs basename)]"
+		start_spinner "Fetching info about episode[id:$(echo "${1%%-*}" | xargs basename)]"
 		${DEBUG:-false} && set -x
 		if ! [[ $1 =~ ^http* ]]; then
 			local d
@@ -74,7 +76,7 @@ da_get_episede() {
 			unset d
 		fi
 		parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$1" | grep -E '(var|let) episode')"
-		if [ -z "$parse_episode_page" ];then
+		if [ -z "$parse_episode_page" ]; then
 			parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$page_url" | grep -E '(var|let) episode')"
 			shift
 			set "$page_url" "$@"
@@ -89,7 +91,7 @@ da_get_episede() {
 		else
 			filter="cat"
 		fi
-		if [ -z "$parse_episode_page" ];then
+		if [ -z "$parse_episode_page" ]; then
 			stop_spinner 1
 			echo Episode not available.
 			${NOBREAK:-false} && return 0 || return 1
@@ -100,11 +102,11 @@ da_get_episede() {
 			ep_number=$(echo "$parse_episode_page" | jq -r '.number')
 			if [ "$ep_number" = "null" ]; then
 				ep_number=$(echo "$parse_episode_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
-				if ! [[ $ep_number =~ ^[[:digit:].]+$ ]];then
-					((null_ep_count+=1))
+				if ! [[ $ep_number =~ ^[[:digit:].]+$ ]]; then
+					((null_ep_count += 1))
 					ep_number=${null_ep_count}n
 					# shellcheck disable=SC2001
-					ep_title="$(echo "$ep_title"|sed 's|episode|special|gI') ${ep_number}"
+					ep_title="$(echo "$ep_title" | sed 's|episode|special|gI') ${ep_number}"
 					export null_ep_count
 				fi
 			fi
@@ -112,15 +114,15 @@ da_get_episede() {
 			if [ "${ep_title% *}" = "${ep_title##* }" ]; then
 				ep_title="$TITLE $ep_title"
 			elif [[ "${ep_title% *}" =~ ${ep_title##* }$ ]]; then
-				ep_title="$(echo "$ep_title"|tr ' ' $'\n'|head -n -1|xargs echo)"
+				ep_title="$(echo "$ep_title" | tr ' ' $'\n' | head -n -1 | xargs echo)"
 			fi
 			ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
-			ep_title="$(echo "$ep_title"|sed 's| *$||g;s|^ *||g')"
-			ep_id_list=$( echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}"|xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
+			ep_title="$(echo "$ep_title" | sed 's| *$||g;s|^ *||g')"
+			ep_id_list=$(echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}" | xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug' | sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
 
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
-				ep_id_list=$( echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}"|xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug'|sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
+				ep_id_list=$(echo "$parse_episode_page" | da_read_ep_json "$filter" "$(echo "${1%%-*}" | xargs basename)" "$(echo "$parse_episode_page" | jq -r '.slug' | sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/")")
 			fi
 			if echo "$1" | grep -q "-extra-[[:digit:]]*-english-subbed$"; then
 				ep_title="${ep_title// ep / extra }"
@@ -133,7 +135,7 @@ da_get_episede() {
 			ep_id_list=$(echo "$parse_episode_page" | jq -Mc '.videos[]|del(.date)|select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | awk -e '!seen[$0]++')
 			ep_file_name="$(echo "$ep_title" | replace_invalid).mp4"
 		fi
-		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/\\\|}"'/{print};!/'"${PREFERRED_HOSTS//,/\\|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
+		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/|}"'/{print};!/'"${PREFERRED_HOSTS//,/|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
 		set +x
 		if [ -n "$parse_episode_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0
@@ -158,16 +160,16 @@ da_get_episede() {
 			fi
 			ep_file_url=
 			ep_file_host=$(echo "$n" | jq -r '.host')
-			ep_file_id=$(echo "$n" | jq -r '.id'|xargs basename -a)
+			ep_file_id=$(echo "$n" | jq -r '.id' | xargs basename -a)
 			set +x
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
 			ep_file_url=$(get_url "$n")
-			if [ -z "$ep_file_url" ] && [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -f maps.yml ];then
+			if [ -z "$ep_file_url" ] && [ "$(echo "$ep_id_list" | wc -l)" -eq 1 ] && [ -f maps.yml ]; then
 				ep_file_url=$(get_mapped "$ep_number")
 			fi
 			for ep_file_url_current in $ep_file_url; do
-				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&\
+				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&
 					remote_exist "$ep_file_url_current"; then
 					continue
 				fi
@@ -193,7 +195,9 @@ da_get_episede() {
 					fi
 				fi
 				ep_file_name="${ep_file_name//---/--}"
-				if ! { [[ $tr = dubbed ]] || [[ $tr = subbed ]] ; }; then
+				if ! {
+					[[ $tr = dubbed     ]] || [[ $tr = subbed ]]
+				}; then
 					tr=$(echo "$n" | jq -r '.type')
 				fi
 				if ${SKIP_DOWNLOAD:-false}; then
@@ -203,9 +207,9 @@ da_get_episede() {
 				ret=$?
 				if ((ret == 0)); then
 					download "$ep_file_name" "$ep_file_url_current"
-				elif (
-					((ret == 4)) \
-						&& (
+				elif ( 
+					((ret == 4)) &&
+						(
 							${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
 						) && ! ${NO_REPLACE:-false}
 				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
@@ -222,21 +226,26 @@ da_get_episede() {
 	fi
 }
 
-download() {
+download()
+{
 	local s1 s2 ret tried
 	s1=$(curl -kLsIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
 	s2=$(stat -Lc%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
 			ret=$?
-			if [[ $ret = 10 ]];then
+			if [[ $ret = 10 ]]; then
 				return
 			elif ((tried <= ${MAX_TRY:-5})); then
 				tput cuu 2
-				((tried>1)) && (tput el1;tput el;tput cuu1)
+				((tried > 1)) && (
+					tput              el1
+					tput                       el
+					tput                               cuu1
+				)
 				tput el1
 				tput el
-				((tried+=1))
+				((tried += 1))
 				echo "Retrying...[$tried]"
 			else
 				break
@@ -261,7 +270,8 @@ download() {
 		return $((ret + $?))
 	fi
 }
-compare_episode() {
+compare_episode()
+{
 	${SKIP_COMPARE:-false} && return 0
 	${DEBUG:-false} && set -x
 	local size wsize BS="$BS" hash1 hash2
@@ -270,7 +280,9 @@ compare_episode() {
 	else
 		BS=524288
 	fi
-	if [ ! -e "$1" ] || { [ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]; }; then
+	if [ ! -e "$1" ] || {
+		[                    -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
+	}; then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
 		return 2
@@ -279,7 +291,7 @@ compare_episode() {
 	if ((${BS:-524288} > size)); then
 		BS=$size
 	fi
-	wsize=$(curl -LksIXGET "$2" |awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
+	wsize=$(curl -LksIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then
@@ -316,6 +328,12 @@ compare_episode() {
 	return 0
 }
 #end:code
-if ! { [[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || { [[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]; } && { return 0 2> /dev/null ;};}; then
+if ! {
+	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$     ]] || {
+		[[ -n $BASH_VERSION                                                                   ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                                       && {
+		return                                                                                                                             0 2> /dev/null
+	}
+}; then
 	da_get_episede "$@"
 fi

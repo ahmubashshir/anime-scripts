@@ -1,7 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2086
-# shellcheck disable=SC1091
-# shellcheck disable=SC1090
+# shellcheck disable=SC2086,SC1091,SC1090,SC2154
 ((def_parse)) && return 0 || def_parse=1
 . libbash
 . spinner
@@ -9,29 +7,28 @@
 DEBUG=${DEBUG:-false}
 #start:code
 SUPPORTED_HOSTS='mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
-if curl -s "${CURL_OPTIONS[@]}" 'https://ww5.dubbedanime.net/user/info' -X 'POST'|jq --exit-status '. != null' &>/dev/null;then
-	SUPPORTED_HOSTS="trollvid${SUPPORTED_HOSTS:+|}${SUPPORTED_HOSTS}"
-	export LOGGED_IN=true
-fi
 get_effective_url()
 {
-	xargs curl -ILksXGET -o /dev/null -w '%{url_effective}\n' 2>/dev/null| grep '^http'
+	xargs curl -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
 }
-get_url() {
+get_url()
+{
 	local ep_file_host ep_file_id n try=0 url
 	ep_file_host=$(echo "$@" | jq -r '.host')
 	ep_file_id=$(echo "$@" | jq -r '.id' | xargs basename -a)
-	ep_id=$(echo "$@" | jq -r '.ep' | grep -wv 'null')
-	if ! { echo "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"; }; then
+	if ! {
+		echo   "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"
+	}; then
 		echo "unimplemented:$ep_file_host"
 		return 1
 	fi
 	for n in $ep_file_id; do
 		if [ -n "$(type -t ${ep_file_host// /+}:get_url || type -w ${ep_file_host// /+}:get_url)" ]; then
-			url="";try=0
-			while [[ -z $url ]] && (( try++<5 ));do
+			url=""
+			try=0
+			while [[ -z $url ]] && ((try++ < 5)); do
 				((try > 1)) && sleep 2
-				url="$(${ep_file_host// /+}:get_url "${n}" "$ep_id")"
+				url="$(${ep_file_host// /+}:get_url "${n}")"
 			done
 			echo "$url"
 		else
@@ -40,41 +37,69 @@ get_url() {
 		fi
 	done
 }
-beautify_js() {
+beautify_js()
+{
 	js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null
 }
 
-mp4upload:get_url() {
+mp4upload:get_url()
+{
 	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
 }
 
-xstreamcdn:get_url() {
-	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r 'select(.success == true).data[0].file' 2> /dev/null|get_effective_url
+xstreamcdn:get_url()
+{
+	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r 'select(.success == true).data[0].file' 2> /dev/null | get_effective_url
 }
 
-trollvid:get_url() {
+trollvid:get_url()
+{
 	#exec 2>/tmp/out.${CALLED_FROM_MP4_SH:-false}
-	curl -o /dev/null -w '%{url_effective}\n' -sLIXGET "${CURL_OPTIONS[@]}" "https://ww5.dubbedanime.net/download/$2/$1"
+	local token
+	token=$(
+		scrapper_call org.freedesktop.DBus.Properties.Get local.scrapper token |
+			sed "s/.*'\(.*\)'.*/\1/"
+	)
+	[ "$token" ] &&
+		token=$(curl -s "https://mp4.sh/embed/$1?x=$token" --compressed \
+			-H "Referer: https://ww5.dubbedanime.net/" | sed -n 's/.*data-token="\(.*\)" style.*/\1/p')
+
+	[ "$token" ] &&
+		curl -XPOST -s "https://mp4.sh/v/$1" --compressed \
+			-H "Referer: https://mp4.sh/embed/$1?x=$token" \
+			-H 'Origin: https://mp4.sh' \
+			--data-raw "token=$token" | jq -r 'select(.success == true).data'
 }
 
-vidstreaming:get_url() {
+vidstreaming:get_url()
+{
 	curl -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
 }
 
-gogo+server:get_url() {
-	curl -s "https://vid.xngine.com/api/gogo/$1"|jq -r 'if has("backup") then .backup.file else .source.file end' | get_effective_url
+gogo+server:get_url()
+{
+	curl -s "https://vid.xngine.com/api/gogo/$1" | jq -r 'if has("backup") then .backup.file else .source.file end' | get_effective_url
 }
 
-mixdrop:get_url() {
-	curl -s "https://mixdrop.to/e/$1"|grep '^eval'|beautify_js|grep MDCore.wurl|sed -E 's@.* = "//(.*)".*@https://\1@'
+mixdrop:get_url()
+{
+	curl -s "https://mixdrop.to/e/$1" | grep '^eval' | beautify_js | grep MDCore.wurl | sed -E 's@.* = "//(.*)".*@https://\1@'
 }
 
-cloud9:get_url() {
-	curl -s "https://api.cloud9.to/stream/$1"|jq -r 'select(.success == true).data.sources|[.[]|select(.height<=720)][0].file'
+cloud9:get_url()
+{
+	curl -s "https://api.cloud9.to/stream/$1" | jq -r 'select(.success == true).data.sources|[.[]|select(.height<=720)][0].file'
 }
 #end:code
-if ! { [[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || { [[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]; } && { return 0 2> /dev/null ;};}; then
-	(($#==3)) || exit
-	remote=$1;shift
+if ! {
+	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$   ]] || {
+		[[ -n $BASH_VERSION                                                                 ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                                     && {
+		return                                                                                                                           0 2> /dev/null
+	}
+}; then
+	(($# == 3)) || exit
+	remote=$1
+	shift
 	$remote:get_url "$@"
 fi

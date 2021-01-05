@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 ((def_include)) && return 0 || def_include=1
 DEBUG=${DEBUG:-false}
 #start:code
@@ -14,15 +15,13 @@ CURL_OPTIONS=(
 	-H 'sec-fetch-mode: cors'
 	-H 'sec-fetch-dest: empty'
 )
-if [ -e ~/.da-cookies.txt ];then
-	CURL_OPTIONS+=( --cookie ~/.da-cookies.txt )
-fi
 langs=(
 	'০১২৩৪৫৬৭৮৯'
 	'〇一二三四五六七八九'
 	'０１２３４５６７８９'
 )
-ellipsis() {
+ellipsis()
+{
 	python3 -c "try:
 	from sys import argv
 	l=int(int(argv[1])/2)
@@ -34,14 +33,16 @@ except KeyboardInterrupt:
 	pass" "$@"
 
 }
-clear_line() {
+clear_line()
+{
 	tput sc
 	for ((i = 0; i <= $1; i++)); do
 		printf "\r%-${COLUMNS}s"
 	done
 	tput rc
 }
-expand_limit() {
+expand_limit()
+{
 	${DEBUG:-false} && set -x
 	local i j n
 	if [[ $1 =~ ^[[:digit:]]+-$ ]]; then
@@ -54,7 +55,7 @@ expand_limit() {
 			if [[ $n =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
 				i=${n%%-*}
 				j=${n##*-}
-				if ((j <= $2)) ;then
+				if ((j <= $2)); then
 					expand_limit "$i-" "$j"
 				else
 					expand_limit "$i-" "$2"
@@ -72,7 +73,7 @@ expand_limit() {
 contract_limit()
 {
 	local k
-	read -ra k < <(echo "$@"|tr , ' ')
+	read -ra k < <(echo "$@" | tr , ' ')
 	set "${k[@]}"
 	unset k
 	${DEBUG:-false} && set -x
@@ -80,38 +81,40 @@ contract_limit()
 	max=$1
 	k=0
 	shift
-	for ((i=2;i<=$#;i++));do
+	for ((i = 2; i <= $#; i++)); do
 		m=${*:i-2:1}
 		n=${*:i-1:1}
 		o=${*:i:1}
-		k=$((${o:-0}-${n:-0}))
-		if ((k>=2)) && ((n-m<2)) && ((m!=n))&&((o<max));then
+		k=$((${o:-0} - ${n:-0}))
+		if ((k >= 2)) && ((n - m < 2)) && ((m != n)) && ((o < max)); then
 			printf -- '-%d,%d' "$n" "$o"
-		elif ((i==2));then
+		elif ((i == 2)); then
 			printf '%d' "$n"
-		elif (((n-m)>1))&&(((o-n)>1)) || ((m==n));then
+		elif (((n - m) > 1)) && (((o - n) > 1)) || ((m == n)); then
 			printf ',%d' "$o"
-		elif ((i==$#))&&((o>=max));then
+		elif ((i == $#)) && ((o >= max)); then
 			printf -- '-\n'
 			break
-		elif ((i==$#))&&((o<max));then
+		elif ((i == $#)) && ((o < max)); then
 			printf -- '-%d\n' "$o"
 			break
 		fi
-		if ((o>max));then
+		if ((o > max)); then
 			break
 		fi
 	done
 	${DEBUG:-false} && set +x
 	return 0
 }
-byte_mr() {
+byte_mr()
+{
 	sed '
 	s/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[kK]/\1*1000/g;
 	s/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g
 	' < /dev/stdin | bc | sed 's/\..*$//'
 }
-validate_limit() {
+validate_limit()
+{
 	${DEBUG:-false} && set -x
 	if ! [[ $1 =~ ^[[:digit:],-]+$ ]]; then
 		return 1
@@ -125,10 +128,12 @@ validate_limit() {
 			if [[ $n =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
 				i=${n%%-*}
 				j=${n#*-}
-				if ((j <= i)) ;then
+				if ((j <= i)); then
 					((ret++))
 				fi
-			elif ! { [[ $n =~ ^[[:digit:]]+-$ ]]||[[ $n =~ ^[[:digit:]]+$ ]]; };then
+			elif ! {
+				[[ $n =~ ^[[:digit:]]+-$     ]] || [[ $n =~ ^[[:digit:]]+$ ]]
+			}; then
 				((ret++))
 			fi
 		done
@@ -139,11 +144,11 @@ validate_limit() {
 }
 num_unicode2ascii()
 {
-	sed "$(for n in "${langs[@]}";do echo "y/$n/0123456789/;";done)"
+	sed "$(for n in "${langs[@]}"; do echo "y/$n/0123456789/;"; done)"
 }
 srand()
 {
-python3 -c 'import numpy as np
+	python3 -c 'import numpy as np
 from sys import argv
 def random_spaced(low, high, delta, n, size=1):
 	"""
@@ -168,18 +173,24 @@ except KeyboardInterrupt:
 	pass' "$@"
 
 }
-anime_cover() {
+anime_cover()
+{
 	local anime_cover_img
 	anime_cover_img=$1
 	#ext=${anime_cover_img##*.}
 	if [ ! -e folder.jpg ]; then
-		{ curl -kLsIXGET "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"; } &>/dev/null
-		if { ! grep -q cover.jpg .hidden &> /dev/null ; } && [ -f cover.jpg ]; then
+		{
+			curl -kLsIXGET "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"
+		}                                                                                                       &> /dev/null
+		if {
+			! grep -q cover.jpg .hidden &> /dev/null
+		}                                             && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi
 	fi
 }
-replace_invalid() {
+replace_invalid()
+{
 	if [[ $1 == dir ]]; then
 		sed 's|<|＜|g;s|>|＞|g;s|:|꞉|g;s|\"|＂|g;s|/|⧸|g;s|\\|⧹|g;s|?|？|g;s|\||ǀ|g;s|\*|🞵|g;s|\.$|.'$'\342\200\213|g'
 	else
@@ -188,10 +199,8 @@ replace_invalid() {
 }
 remote_exist()
 {
-	if echo "$@" | grep -q http
-	then
-		if [[ $(curl -kLsIXGET "$@" |awk '/HTTP\// {print $2}'|tail -1) =~ 2[[:digit:]]. ]]
-		then
+	if echo "$@" | grep -q http; then
+		if [[ $(curl -kLsIXGET "$@" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
 			return 0
 		else
 			return 1

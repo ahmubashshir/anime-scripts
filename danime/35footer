@@ -393,7 +393,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		shift
 	done
 	if [[ -n $TYPE_ANIME ]] && {
-		[[ $TYPE_ANIME = subbed                       ]] || [[ $TYPE_ANIME = dubbed ]]
+		[[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]]
 	}; then
 		tr=$TYPE_ANIME
 	else
@@ -401,14 +401,13 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	fi
 	if {
 		[[ -n "$FILE_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]]
-	}                                                      && $DOWNLOAD_ALL; then
+	} && $DOWNLOAD_ALL; then
 		DOWNLOAD_ALL=false
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
 	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false}; then
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
-			set -x
 			if [ -x "${0%/*}/dubbedanime.scrap" ] && [ -x "$CHROMEDRIVER_PATH" ]; then
 				scrapper_bus=$(
 					export CHROMEDRIVER_PATH
@@ -433,7 +432,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method "$method" "$@"
 				fi
 			}
-			set +x
 			if ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false}; then
 				da_update
 				exit

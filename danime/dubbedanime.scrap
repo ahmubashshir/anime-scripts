@@ -56,7 +56,7 @@ class BThread(Thread):
 
     def run(self):
         options = webdriver.ChromeOptions()
-        options.headless = False
+        options.headless = True
         self.browser = webdriver.Chrome(
             options=options, executable_path=environ['CHROMEDRIVER_PATH'])
 

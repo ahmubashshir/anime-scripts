@@ -131,6 +131,9 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#text: enable debug mode
 				#-option
 				DEBUG=true
+				alias start_spinner=echo
+				alias vbar=echo
+				alias stop_spinner=true
 				;;
 			-A)
 				#+option

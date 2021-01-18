@@ -68,7 +68,7 @@ da_get()
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	if ! {
 		da_db has && ${FILE_LIST:-false}
-	}                                  && [ -z "$FILE_LIST_RANGE" ]; then
+	}                                && [ -z "$FILE_LIST_RANGE" ]; then
 		da_db add
 	fi
 	da_db set path "\"$PWD\""
@@ -184,7 +184,7 @@ da_get()
 		((ep_progress += 1))
 		(
 			echo ":$DA_IGNORE_EP:" |
-				grep ":$(
+				grep -q ":$(
 					echo "$ep_slug" |
 						cut -d- -f1 |
 						xargs basename

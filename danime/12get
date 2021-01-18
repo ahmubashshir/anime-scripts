@@ -68,7 +68,7 @@ da_get()
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	if ! {
 		da_db has && ${FILE_LIST:-false}
-	}                                    && [ -z "$FILE_LIST_RANGE" ]; then
+	}                                  && [ -z "$FILE_LIST_RANGE" ]; then
 		da_db add
 	fi
 	da_db set path "\"$PWD\""
@@ -181,6 +181,7 @@ da_get()
 				head -n "$k" |
 				tail -1
 		)"
+		((ep_progress += 1))
 		(
 			echo ":$DA_IGNORE_EP:" |
 				grep ":$(
@@ -188,8 +189,10 @@ da_get()
 						cut -d- -f1 |
 						xargs basename
 				):"
-		) && continue
-		((ep_progress += 1))
+		) && {
+			vbar "skipping $(echo "$ep_slug" | cut -d- -f1)"
+			continue
+		}
 		scrapper_call local.scrapper.load "https://ww5.dubbedanime.net/$ep_slug" &> /dev/null
 		da_get_episede "$ep_slug" "$k" "$epc" "$ep_progress" "$total_pw"
 		if ! (exit $?); then

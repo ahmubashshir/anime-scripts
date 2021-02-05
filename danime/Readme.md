@@ -4,12 +4,17 @@
 
 # Dependencies
 ## Executables
-> awk bash dos2unix cd curl cut dd echo false ffmpeg ffprobe grep head jq lsof mkdir mv printf read readonly rm sed sha256sum sleep sort stat tac tail tput tr true wc wget xmllint js-beautify tee python3
+> awk bash dos2unix cd curl cut dd echo false ffmpeg ffprobe grep head jq lsof
+> mkdir mv printf read readonly rm sed sha256sum sleep sort stat tac tail tput tr
+> true wc wget xmllint js-beautify tee python3 gdbus chromedriver chromium
 ## Python 3 modules
-> json numpy requests
+> json numpy requests pydbus selenium
 ## Arch based distro
 ```
-sudo pacman -Syu curl dos2unix ffmpeg gawk grep jq libxml2 lsof ncurses python python-jsbeautifier sed wget python-json python-numpy python-requests
+sudo pacman -Syu \
+	curl dos2unix ffmpeg gawk grep jq libxml2 lsof ncurses \
+	python python-jsbeautifier sed wget python-json python-numpy \
+	python-requests chromium chromedriver python-selenium
 ```
 
 # Install

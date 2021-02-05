@@ -22,7 +22,7 @@ da_read_ep_json()
 {
 	cat | {
 		jq -Mc '.videos[]|del(.date)'
-		curl -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$2" 2> /dev/null | jq -Mc '.[]' 2> /dev/null
+		curl --config /dev/null -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$2" 2> /dev/null | jq -Mc '.[]' 2> /dev/null
 	} | jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | eval "$1"
 }
 get_mapped()
@@ -76,9 +76,9 @@ da_get_episede()
 			page_url="https://ww5.dubbedanime.net/${d%%-*}"
 			unset d
 		fi
-		parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$1" | grep -E '(var|let) episode')"
+		parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$1" | grep -E '(var|let) episode')"
 		if [ -z "$parse_episode_page" ]; then
-			parse_episode_page="$(curl -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$page_url" | grep -E '(var|let) episode')"
+			parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net/$TYPE/$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$page_url" | grep -E '(var|let) episode')"
 			shift
 			set "$page_url" "$@"
 		fi
@@ -235,7 +235,7 @@ da_get_episede()
 download()
 {
 	local s1 s2 ret tried
-	s1=$(curl -kLsIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
+	s1=$(curl --config /dev/null -kLsIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
 	s2=$(stat -Lc%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
@@ -245,9 +245,9 @@ download()
 			elif ((tried <= ${MAX_TRY:-5})); then
 				tput cuu 2
 				((tried > 1)) && (
-					tput        el1
-					tput                 el
-					tput                         cuu1
+					tput      el1
+					tput               el
+					tput                       cuu1
 				)
 				tput el1
 				tput el
@@ -287,7 +287,7 @@ compare_episode()
 		BS=524288
 	fi
 	if [ ! -e "$1" ] || {
-		[              -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
+		[            -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
 	}; then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
@@ -297,7 +297,7 @@ compare_episode()
 	if ((${BS:-524288} > size)); then
 		BS=$size
 	fi
-	wsize=$(curl -LksIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
+	wsize=$(curl --config /dev/null -LksIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then
@@ -325,7 +325,7 @@ compare_episode()
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
 		start=${offsets[$i]}
 		hash1="$(dd bs=1 count="${BS:-524288}" status=none if="$1" skip="$start" | sha256sum | cut -d\  -f1)"
-		hash2="$(curl -Lskr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
+		hash2="$(curl --config /dev/null -Lskr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
 		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
 		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
 		test "$hash1" = "$hash2" || return 4
@@ -336,9 +336,9 @@ compare_episode()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                             ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                                 && {
-		return                                                                                                                       0 2> /dev/null
+		[[ -n $BASH_VERSION                                                           ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                               && {
+		return                                                                                                                     0 2> /dev/null
 	}
 }; then
 	da_get_episede "$@"

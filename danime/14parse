@@ -9,7 +9,7 @@ DEBUG=${DEBUG:-false}
 SUPPORTED_HOSTS='mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
 get_effective_url()
 {
-	xargs curl -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
+	xargs curl --config /dev/null -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
 }
 get_url()
 {
@@ -17,7 +17,7 @@ get_url()
 	ep_file_host=$(echo "$@" | jq -r '.host')
 	ep_file_id=$(echo "$@" | jq -r '.id' | xargs basename -a)
 	if ! {
-		echo   "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"
+		echo "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"
 	}; then
 		echo "unimplemented:$ep_file_host"
 		return 1
@@ -44,12 +44,12 @@ beautify_js()
 
 mp4upload:get_url()
 {
-	curl -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
+	curl --config /dev/null -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
 }
 
 xstreamcdn:get_url()
 {
-	curl -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r 'select(.success == true).data[0].file' 2> /dev/null | get_effective_url
+	curl --config /dev/null -sX POST "https://www.xstreamcdn.com/api/source/$1" --data "r=https://www.xstreamcdn.com/f/$1" --data 'd=www.xstreamcdn.com' | jq -r 'select(.success == true).data[0].file' 2> /dev/null | get_effective_url
 }
 
 trollvid:get_url()
@@ -61,11 +61,11 @@ trollvid:get_url()
 			sed "s/.*'\(.*\)'.*/\1/"
 	)
 	[ "$token" ] &&
-		token=$(curl -s "https://mp4.sh/embed/$1?x=$token" --compressed \
+		token=$(curl --config /dev/null -s "https://mp4.sh/embed/$1?x=$token" --compressed \
 			-H "Referer: https://ww5.dubbedanime.net/" | sed -n 's/.*data-token="\(.*\)" style.*/\1/p')
 
 	[ "$token" ] &&
-		curl -XPOST -s "https://mp4.sh/v/$1" --compressed \
+		curl --config /dev/null -XPOST -s "https://mp4.sh/v/$1" --compressed \
 			-H "Referer: https://mp4.sh/embed/$1?x=$token" \
 			-H 'Origin: https://mp4.sh' \
 			--data-raw "token=$token" | jq -r 'select(.success == true).data'
@@ -73,29 +73,29 @@ trollvid:get_url()
 
 vidstreaming:get_url()
 {
-	curl -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
+	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
 }
 
 gogo+server:get_url()
 {
-	curl -s "https://vid.xngine.com/api/gogo/$1" | jq -r 'if has("backup") then .backup.file else .source.file end' | get_effective_url
+	curl --config /dev/null -s "https://vid.xngine.com/api/gogo/$1" | jq -r 'if has("backup") then .backup.file else .source.file end' | get_effective_url
 }
 
 mixdrop:get_url()
 {
-	curl -s "https://mixdrop.to/e/$1" | grep '^eval' | beautify_js | grep MDCore.wurl | sed -E 's@.* = "//(.*)".*@https://\1@'
+	curl --config /dev/null -s "https://mixdrop.to/e/$1" | grep '^eval' | beautify_js | grep MDCore.wurl | sed -E 's@.* = "//(.*)".*@https://\1@'
 }
 
 cloud9:get_url()
 {
-	curl -s "https://api.cloud9.to/stream/$1" | jq -r 'select(.success == true).data.sources|[.[]|select(.height<=720)][0].file'
+	curl --config /dev/null -s "https://api.cloud9.to/stream/$1" | jq -r 'select(.success == true).data.sources|[.[]|select(.height<=720)][0].file'
 }
 #end:code
 if ! {
-	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$   ]] || {
-		[[ -n $BASH_VERSION                                                                 ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                                     && {
-		return                                                                                                                           0 2> /dev/null
+	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
+		[[ -n $BASH_VERSION                                                               ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                                   && {
+		return                                                                                                                         0 2> /dev/null
 	}
 }; then
 	(($# == 3)) || exit

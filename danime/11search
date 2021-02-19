@@ -16,7 +16,8 @@ DEBUG=${DEBUG:-false}
 . 10db
 . 12get
 #start:code
-da_api_search() {
+da_api_search()
+{
 	python3 -c '#!/usr/bin/python3
 import requests
 import json
@@ -24,7 +25,7 @@ from sys import argv
 import os
 from urllib.parse import quote_plus
 from http.cookiejar import MozillaCookieJar as MCJ
-cookiesFile = "'$HOME'/.da-cookies.txt"
+cookiesFile = "'$HOME'/.local/share/danime/cookies.txt"
 cj = MCJ(cookiesFile)
 if os.path.exists(cookiesFile):
 	cj.load(ignore_discard=True, ignore_expires=True)
@@ -80,7 +81,8 @@ except KeyboardInterrupt:
 	pass' "$@"
 
 }
-da_search() {
+da_search()
+{
 	start_spinner "Searching for $*"
 	RES=$(da_api_search "$@")
 	if [ -z "$(echo "$RES" | tr -d '[:space:]')" ]; then
@@ -92,7 +94,7 @@ da_search() {
 		return 4
 	fi
 	total_res=$(echo "$RES" | wc -l)
-	if ((total_res==1));then
+	if ((total_res == 1)); then
 		RES_LIST='1'
 	elif [ -z "$RES_LIST" ] && ! ${DOWNLOAD_ALL:-false}; then
 		vbar
@@ -105,7 +107,7 @@ da_search() {
 	elif ${DOWNLOAD_ALL:-false} && [ -z "$RES_LIST" ]; then
 		RES_LIST='1-'
 	fi
-	if [ -z "$RES_LIST" ];then
+	if [ -z "$RES_LIST" ]; then
 		vbar
 		vbar "DubbedAnime.net Search Result" true
 		vbar
@@ -114,8 +116,8 @@ da_search() {
 		echo "$RES" | cut -d: -f2- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
 		read -rp$'Download: ' RES_LIST
 	fi
-	RES=$(echo "$RES"|cut -d: -f1,3-)
-	RES_LIST=$(expand_limit "$(echo "$RES_LIST"|num_unicode2ascii)" "$total_res")
+	RES=$(echo "$RES" | cut -d: -f1,3-)
+	RES_LIST=$(expand_limit "$(echo "$RES_LIST" | num_unicode2ascii)" "$total_res")
 	for n in $RES_LIST; do
 		target=$(echo "$RES" | head -n "$n" | tail -1)
 		local base
@@ -148,78 +150,78 @@ da_update()
 	local TYPE id dir updatable n new_eps
 	NORESET=true
 	updatable=()
-	if ${DO_UPDATE_LIST:-false};then
-		for n in $(da_db list);do
+	if ${DO_UPDATE_LIST:-false}; then
+		for n in $(da_db list); do
 			TYPE="$(dirname $n)"
 			id="$(basename $n)"
-			if ! [ -d "$(da_db get path)" ];then
+			if ! [ -d "$(da_db get path)" ]; then
 				da_db del
 				continue
 			fi
 			echo "[$n] $(da_db get title)"
 		done
 		return 0
-	elif (( "${#DO_UPDATE_ONLY[@]}" == 0 ));then
-		for n in $(da_db list);do
+	elif (("${#DO_UPDATE_ONLY[@]}" == 0)); then
+		for n in $(da_db list); do
 			TYPE="$(dirname $n)"
 			id="$(basename $n)"
-			if ! [ -d "$(da_db get path)" ];then
+			if ! [ -d "$(da_db get path)" ]; then
 				da_db del
 				continue
 			fi
 			echo -n "[$n] Checking update..."
-			new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
-			if ((new_eps>0));then
-				updatable+=( "$n" )
+			new_eps=$(($(da_get_len "$n-$(da_db get url)") - $(da_db get saved)))
+			if ((new_eps > 0)); then
+				updatable+=("$n")
 				echo -e "\r[$n] Queueing update($new_eps+)..."
 			else
 				echo
 			fi
 		done
-	elif (( "${#DO_UPDATE_ONLY[@]}" )); then
-		if (( "${#DO_UPDATE_ONLY[@]}" > 1 )) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
-			DO_UPDATE_ONLY=("$(echo "${DO_UPDATE_ONLY[@]}" | cut -d' ' -f2-|tr -s ' ' '|')")
-			for n in $(da_db list);do
+	elif (("${#DO_UPDATE_ONLY[@]}")); then
+		if (("${#DO_UPDATE_ONLY[@]}" > 1)) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
+			DO_UPDATE_ONLY=("$(echo "${DO_UPDATE_ONLY[@]}" | cut -d' ' -f2- | tr -s ' ' '|')")
+			for n in $(da_db list); do
 				TYPE="$(dirname $n)"
 				id="$(basename $n)"
-				if echo "$n"|grep -qE "${DO_UPDATE_ONLY[0]}";then
+				if echo "$n" | grep -qE "${DO_UPDATE_ONLY[0]}"; then
 					continue
 				fi
-				if ! [ -d "$(da_db get path)" ];then
+				if ! [ -d "$(da_db get path)" ]; then
 					da_db del
 					continue
 				fi
 				echo -n "[$n] Checking update..."
-				new_eps=$(( $(da_get_len "$n-$(da_db get url)") - $(da_db get saved) ))
-				if ((new_eps>0));then
-					updatable+=( "$n" )
+				new_eps=$(($(da_get_len "$n-$(da_db get url)") - $(da_db get saved)))
+				if ((new_eps > 0)); then
+					updatable+=("$n")
 					echo -e "\r[$n] Queueing update($new_eps+)..."
 				else
 					echo
 				fi
 			done
 		else
-			for n in "${DO_UPDATE_ONLY[@]}";do
+			for n in "${DO_UPDATE_ONLY[@]}"; do
 				TYPE="$(dirname $n)"
 				id="$(basename $n)"
-				if da_db has;then
-					updatable+=( "$n" )
+				if da_db has; then
+					updatable+=("$n")
 				fi
 			done
 		fi
 	fi
-	for n in "${updatable[@]}";do
+	for n in "${updatable[@]}"; do
 		TYPE="$(dirname $n)"
 		id="$(basename $n)"
 		dir="$(da_db get path)"
-		if ! [ -d "$dir" ];then
-			mkdir -p "$dir"||continue
+		if ! [ -d "$dir" ]; then
+			mkdir -p "$dir" || continue
 		fi
-		cd "$dir"||continue
-		FILE_LIST_RANGE=$(da_db get saved|awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
+		cd "$dir" || continue
+		FILE_LIST_RANGE=$(da_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
 		da_get "$n-$(da_db get url)" "$(basename "$dir")"
-		if [ "$(da_db get saved)" -ge "$(da_db get total)" ];then
-			da_db del;
+		if [ "$(da_db get saved)" -ge "$(da_db get total)" ]; then
+			da_db del
 		fi
 		if ! $NOBREAK; then
 			read -rsp$'Press Return to download next.'
@@ -227,11 +229,12 @@ da_update()
 		fi
 	done
 }
-set_basedir() {
+set_basedir()
+{
 	case $1 in
 		*-avatar-the-legend-of-korra-* | *-avatar-the-last-airbender-*)
 			echo "$CARTOON_PATH/Avatar"
-		;;
+			;;
 		anime/*) echo "$ANIME_PATH" ;;
 		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
 		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;
@@ -240,7 +243,7 @@ set_basedir() {
 	esac
 }
 #end:code
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
-	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] ||
+	[[ -n $BASH_VERSION  ]] && (return 0 2> /dev/null)); then
 	da_search "$@"
 fi

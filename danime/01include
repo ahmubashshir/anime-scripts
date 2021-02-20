@@ -3,7 +3,7 @@
 ((def_include)) && return 0 || def_include=1
 DEBUG=${DEBUG:-false}
 #start:code
-USER_AGENT="${USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36}"
+export USER_AGENT="${USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36}"
 CURL_OPTIONS=(
 	--compressed
 	-H 'authority: ww5.dubbedanime.net'
@@ -186,10 +186,10 @@ anime_cover()
 	if [ ! -e folder.jpg ]; then
 		{
 			curl --config /dev/null -kLsIXGET "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"
-		}                                                                                                   &> /dev/null
+		}                                                                                                 &> /dev/null
 		if {
 			! grep -q cover.jpg .hidden &> /dev/null
-		}                                         && [ -f cover.jpg ]; then
+		}                                       && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi
 	fi

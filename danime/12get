@@ -20,11 +20,8 @@ SPINNER_DELAY=0.04
 #start:code
 da_get_len()
 {
-	local series TYPE id type
+	local series type
 	series="$1"
-	TYPE=${series%/*}
-	id=${series%%-*}
-	id=${id##*/}
 	if [ "$series" = "" ]; then
 		return 3
 	fi
@@ -43,37 +40,37 @@ da_get_len()
 }
 da_get()
 {
-	local series TITLE TYPE id ep_slug
+	local series TITLE id ep_slug query
 	unset null_ep_count da_page da_page_json baseurl url epc ep
 	series="$1"
 	TITLE="$2"
-	TYPE=${series%/*}
-	id=${series%%-*}
-	id=${id##*/}
+	id="$3"
 	if [ "$series" = "" ]; then
 		return 3
 	fi
+	query="$4"
 	local ep_progress total_pw
 	if [ -f ".type" ]; then
 		FORCE="$(< .type)"
 	fi
-	start_spinner "Fetching \"$TYPE/$id\" info"
-	da_page=$(curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/${series%%-*}")
-	da_page_json=$(echo "$da_page" | grep -E '(let|var) (anime|cartoon)' | cut -d= -f2- | cut -d\  -f2- | sed 's/\;$//g' | jq)
-	if [[ $TYPE == anime ]]; then
-		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true" or //li/@data-sub="true",";dubbed=",//li/@data-dubbed="true" or //li/@data-dub="true"," ")' -; done | tr -s ' ' \\n | tac)
-	else
-		baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/node()' - 2> /dev/null | (while read -rs xml_node; do echo "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href," ")' - 2> /dev/null; done) | tr -s ' ' '\n' | grep -v '=$' | tac)
-	fi
+	start_spinner "Fetching \"$id\" info"
+	da_page=$(curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/$series")
+	da_page_json=$(echo "$da_page" | grep -E '(let|var) anime' | cut -d= -f2- | cut -d\  -f2- | sed 's/\;$//g' | jq)
+	baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true" or //li/@data-sub="true",";dubbed=",//li/@data-dubbed="true" or //li/@data-dub="true"," ")' -; done | tr -s ' ' \\n | tac)
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
 	if ! {
 		da_db has && ${FILE_LIST:-false}
-	}                            && [ -z "$FILE_LIST_RANGE" ]; then
+	} && [ -z "$FILE_LIST_RANGE" ]; then
 		da_db add
 	fi
 	da_db set path "\"$PWD\""
-	da_db set url "\"$(echo "$da_page_json" | jq -r '.slug')\""
+	da_db set url "\"$series\""
 	da_db set title "\"$TITLE\""
+
+	if [[ -n $query ]]; then
+		da_db set query "\"$query\""
+	fi
+
 	$NORESET || reset
 	${DEBUG:-false} && set -x
 	vbar "$(ellipsis $(($(tput cols) - 10)) "$TITLE")" true
@@ -81,49 +78,45 @@ da_get()
 		tput setaf 1
 		tput dim
 	)No episode is available to download yet.$(tput sgr0)" 1>&2 && exit 1
-	if [[ $TYPE == cartoon ]]; then
-		url="$(echo "$baseurl" | cut -d= -f2-)"
-	else
-		if [[ -n ${PREFERRED_TR:-dub} ]] && [[ -z $FORCE ]]; then
-			tr="$(
-				(
-					echo "$baseurl" | grep -q "${PREFERRED_TR:-dub}bed=true" && echo ${PREFERRED_TR:-dub}
-				) || (
-					echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub' | grep -v ${PREFERRED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
-				) || (
-					echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
-				)
-			)bed"
-		elif [[ -n $FORCE ]]; then
-			tr=${FORCE:0:3}bed
-		elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ]; then
-			tr=dubbed
-		elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
-			tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
-		fi
-		da_db set type "\"$tr\""
-		url="$(echo "$baseurl" | grep "$tr=true" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
-		if ! (echo "$url" | grep -q "${tr}$"); then
-			echo "$(
-				tput setaf 1
-				tput dim
-			)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr} episode yet.$(tput sgr0)" 1>&2
-			if ! find . -name '*.mp4' | grep -q '\.mp4$'; then
-				cd ..
-				rm -rf "$OLDPWD"
-			fi
-			if da_db has; then
-				da_db del
-			fi
-			return 1
-		fi
-		url="$(echo "$url" | grep ^href | cut -d= -f2)"
-		for k in $url; do
-			if [ "$(echo "${k##*/}" | cut -d- -f1)" -gt "$(echo "$url" | grep "${k#*-}" | head -1 | xargs basename | cut -d- -f1)" ]; then
-				url="${url//$k/${k//-episode-/-extra-}}"
-			fi
-		done
+	if [[ -n ${PREFERRED_TR:-dub} ]] && [[ -z $FORCE ]]; then
+		tr="$(
+			(
+				echo "$baseurl" | grep -q "${PREFERRED_TR:-dub}bed=true" && echo ${PREFERRED_TR:-dub}
+			) || (
+				echo "$baseurl" | tr \; \\n | grep "$(echo -e 'dub\nsub' | grep -v ${PREFERRED_TR:-dub})bed=true$" | sort -u | cut -d= -f1 | cut -c1-3
+			) || (
+				echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
+			)
+		)bed"
+	elif [[ -n $FORCE ]]; then
+		tr=${FORCE:0:3}bed
+	elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ]; then
+		tr=dubbed
+	elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
+		tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
 	fi
+	da_db set type "\"$tr\""
+	url="$(echo "$baseurl" | grep "$tr=true" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
+	if ! (echo "$url" | grep -q "${tr}$"); then
+		echo "$(
+			tput setaf 1
+			tput dim
+		)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr} episode yet.$(tput sgr0)" 1>&2
+		if ! find . -name '*.mp4' | grep -q '\.mp4$'; then
+			cd ..
+			rm -rf "$OLDPWD"
+		fi
+		if da_db has; then
+			da_db del
+		fi
+		return 1
+	fi
+	url="$(echo "$url" | grep ^href | cut -d= -f2)"
+	for k in $url; do
+		if [ "$(echo "${k##*/}" | cut -d- -f1)" -gt "$(echo "$url" | grep "${k#*-}" | head -1 | xargs basename | cut -d- -f1)" ]; then
+			url="${url//$k/${k//-episode-/-extra-}}"
+		fi
+	done
 	url="$(echo "$url" | sed 's/^\///g')"
 	${DEBUG:-false} && set -x
 	epc=$(echo "$url" | wc -l)
@@ -133,7 +126,7 @@ da_get()
 		return 0
 	}
 	if ${FILE_LIST:-false} && [[ -z $FILE_LIST_RANGE ]]; then
-		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
+		vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
 		read -eri "1-$epc" -p$'Episode list: ' FILE_LIST_RANGE
 		ep="$(echo "${FILE_LIST_RANGE:-1-}" | num_unicode2ascii)"
 		tput cuu 2
@@ -166,12 +159,10 @@ da_get()
 		dl_notify="Episode ${ep_show:5}is"
 	fi
 	if [[ -n $ep ]] && [[ -n $ep_show ]]; then
-		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc Downloading:$ep_show" || (
-			vbar "ID:$id Type:${tr:-dubbed}"
-			vbar " Files:$epc Downloading:$ep_show "
-		)
+		vbar "ID:$id Type:${tr:-dubbed}"
+		vbar " Files:$epc Downloading:$ep_show "
 	else
-		[[ $TYPE == cartoon ]] && vbar "ID:$id Files:$epc" || vbar "ID:$id Files:$epc Type:${tr:-dubbed}"
+		vbar "ID:$id Files:$epc Type:${tr:-dubbed}"
 	fi
 	total_pw=$(echo "$ep" | tr \  \\n | wc -l)
 	${DEBUG:-false} && set -x

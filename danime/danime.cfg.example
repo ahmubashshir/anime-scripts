@@ -34,9 +34,6 @@ FILE_LIST=false
 #Timeout for domain resolving.
 RSOLV=3
 
-# default search mode
-TYPE=anime
-
 # Preferred type for anime [sub/dub]
 PREFERRED_TR=
 

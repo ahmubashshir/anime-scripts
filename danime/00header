@@ -28,7 +28,6 @@ else
 	RSOLV=3
 	FORCE=
 	SEARCHSTR=
-	TYPE=anime
 	PREFERRED_TR=${PREFERRED_TR:-dub}
 fi
 if [ -n "$AP" ]; then

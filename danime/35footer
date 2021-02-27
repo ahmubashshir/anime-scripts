@@ -135,22 +135,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				alias vbar=echo
 				alias stop_spinner=true
 				;;
-			-A)
-				#+option
-				#short: -A
-				#IDNT: 3
-				#text: Set search type to Anime(default).
-				#-option
-				TYPE=anime
-				;;
-			-C)
-				#+option
-				#short: -C
-				#IDNT: 3
-				#text: Set search type to Cartoon.
-				#-option
-				TYPE=cartoon
-				;;
 			-c | --continue)
 				#+option
 				#short: -c
@@ -265,11 +249,18 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#IDNT: 2
 				#args: [! ][id1[ id2[ ...]]]
 				#-option
-				DO_UPDATE=true
+				DO_ALT=update
 				if (($# > 1)); then
 					shift
 					DO_UPDATE_ONLY=("$@")
 				fi
+				;;
+			--db-rebuild)
+				#+option
+				#long: --db-rebuild
+				#text: fix/update database metadata.
+				#-option
+				DO_ALT=rebuild-db
 				;;
 			-l | --list)
 				#+option
@@ -277,7 +268,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#long: --list
 				#text: List updatable/interrupted series.
 				#-option
-				DO_UPDATE_LIST=true
+				DO_ALT=list-queue
 				;;
 			-h | --help)
 				#+option
@@ -409,7 +400,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		echo -e "Warning: --all/-a option can only be used when no\n\tselection or episode limit specified.\n\tDisabling autodownload mode"
 	fi
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
-	if [[ $SEARCHSTR != '' ]] || ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false}; then
+	if [[ $SEARCHSTR != '' ]] || [[ -n $DO_ALT ]]; then
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
 			if [ -x "${0%/*}/dubbedanime.scrap" ] && [ -x "$CHROMEDRIVER_PATH" ]; then
 				scrapper_bus=$(
@@ -435,10 +426,20 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 					gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method "$method" "$@"
 				fi
 			}
-			if ${DO_UPDATE:-false} || ${DO_UPDATE_LIST:-false}; then
-				da_update
-				exit
-			fi
+			case $DO_ALT in
+				update)
+					da_update
+					exit
+					;;
+				list-queue)
+					da_list_queue
+					exit
+					;;
+				rebuild-db)
+					da_rebuild_db
+					exit
+					;;
+			esac
 			if [ -n "$FILE_LIST_RANGE" ] && ! validate_limit "$FILE_LIST_RANGE"; then
 				echo "$(
 					tput setaf 1

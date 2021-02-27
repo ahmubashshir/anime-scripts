@@ -49,15 +49,15 @@ r.cookies = cj
 
 def refine(Str):
 	d={
-		'\''<'\'':'\''＜'\'',
-		'\''>'\'':'\''＞'\'',
-		'\'':'\'':'\''꞉'\'',
-		'\''"'\'':'\''＂'\'',
-		'\''/'\'':'\''⧸'\'',
-		'\''\\'\'':'\''⧹'\'',
-		'\''?'\'':'\''？'\'',
-		'\''|'\'':'\''⫿'\'',
-		'\''*'\'':'\''🞵'\'',
+		"<":"＜",
+		">":"＞",
+		":":"꞉",
+		"\"":"＂",
+		"/":"⧸",
+		"\\":"⧹",
+		"?":"？",
+		"|":"⫿",
+		"*":"🞵",
 	}
 	for n in d.keys():
 		Str=Str.replace(n,d[n])
@@ -65,20 +65,19 @@ def refine(Str):
 try:
 	if len(argv)>1:
 		data = {
-			"model"			:	"'${TYPE:-anime}'".title(),
+			"model"			:	"Anime",
 			"size"			:	200,
 			"what"			:	"query",
 			"letter"		:	"all",
-			"query[order]"	:	"date,asc",
-			"query[search]"	:	str.join(" ", argv[1:])
+			"query"			:	"search=" + " ".join(argv[1:])
 		}
 		try:
-			for n in r.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()['\''results'\'']:
-				print("%s/%s-%s:%s:%s"%('\'${TYPE:-anime}\''.lower(),n['\''id'\''],n['\''slug'\''],0 if not '\''total'\'' in n else n['\''total'\''],refine(n['\''title'\''])))
+			for n in r.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()["results"]:
+				print("%s:%s:%s:%s"%(n["url"],n["id"],0 if not "total" in n else n["total"],refine(n["title"])))
 		except:
 			pass
 except KeyboardInterrupt:
-	pass' "$@"
+	pass' "$@" | sed 's@^/@@'
 
 }
 da_search()
@@ -102,21 +101,15 @@ da_search()
 		vbar
 		vbar "Select One or more to download"
 		vbar
-		echo "$RES" | cut -d: -f2- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
+		echo "$RES" | cut -d: -f3- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
 		read -rp$'Download: ' RES_LIST
 	elif ${DOWNLOAD_ALL:-false} && [ -z "$RES_LIST" ]; then
 		RES_LIST='1-'
 	fi
-	if [ -z "$RES_LIST" ]; then
-		vbar
-		vbar "DubbedAnime.net Search Result" true
-		vbar
-		vbar "Select One or more to download"
-		vbar
-		echo "$RES" | cut -d: -f2- | awk -F: "{printf \"%-${#total_res}d ) %s\",NR,\$2;if (\$1) {print \" (eps:\"\$1\")\" }else{print \"\"}}"
-		read -rp$'Download: ' RES_LIST
+	if ! [[ $RES_LIST =~ ^[[:digit:],-]+$ ]]; then
+		RES_LIST=$(echo "$RES_LIST" | sed 's/[^[:digit:],-]/,/g' | tr -s , | sed 's/-,/,/g')
 	fi
-	RES=$(echo "$RES" | cut -d: -f1,3-)
+	RES=$(echo "$RES" | cut -d: -f1,2,4-)
 	RES_LIST=$(expand_limit "$(echo "$RES_LIST" | num_unicode2ascii)" "$total_res")
 	for n in $RES_LIST; do
 		target=$(echo "$RES" | head -n "$n" | tail -1)
@@ -128,7 +121,7 @@ da_search()
 		fi
 		cd "$base" || true
 		local dir
-		dir="$(echo "$target" | cut -d: -f2- | replace_invalid dir)"
+		dir="$(echo "$target" | cut -d: -f3- | replace_invalid dir)"
 		${SKIP_DOWNLOAD:-false} || if [ ! -d "$dir" ]; then
 			rm -f "$dir"
 			mkdir "$dir"
@@ -138,42 +131,60 @@ da_search()
 		}
 		${UPDATE_QUEUE:-false} && vbar
 		echo -e "Title: '$dir'"
-		da_get "$(echo "$target" | cut -d: -f1)" "$dir"
+		da_get "$(echo "$target" | cut -d: -f1)" "$dir" "$(echo "$target" | cut -d: -f2)" "$*"
 		if [ "$(echo "$RES_LIST" | wc -w)" -gt 1 ] && ! $NOBREAK; then
 			read -rsp$'Press Return to download next.'
 			printf '\n'
 		fi
 	done
 }
+
+da_rebuild_db()
+{
+	DO_UPDATE_ONLY=()
+	for id in $(da_db list); do
+		query=$(da_db get query)
+		if [[ $query == 0 ]]; then
+			query=$(da_db get title)
+		fi
+		url=$(da_api_search $query | grep ":$id:" | cut -d: -f1 | tr -d '[:space:]')
+		prev_url=$(da_db get url)
+		if [[ -n $url ]] && [[ $url != $prev_url ]]; then
+			echo "Fixing $(da_db get title) [$id]"
+			da_db set url "\"$url\""
+			DO_UPDATE_ONLY+=("$id")
+		elif [[ -z $url ]]; then
+			echo "Failed to fix $(da_db get title) [$id]"
+		fi
+	done
+}
+da_list_queue()
+{
+	for id in $(da_db list); do
+		if ! [ -d "$(da_db get path)" ]; then
+			da_db del
+			continue
+		fi
+		echo "[$id] $(da_db get title)"
+	done
+	return 0
+}
 da_update()
 {
-	local TYPE id dir updatable n new_eps
+	local id dir updatable n new_eps
 	NORESET=true
 	updatable=()
-	if ${DO_UPDATE_LIST:-false}; then
-		for n in $(da_db list); do
-			TYPE="$(dirname $n)"
-			id="$(basename $n)"
+	if (("${#DO_UPDATE_ONLY[@]}" == 0)); then
+		for id in $(da_db list); do
 			if ! [ -d "$(da_db get path)" ]; then
 				da_db del
 				continue
 			fi
-			echo "[$n] $(da_db get title)"
-		done
-		return 0
-	elif (("${#DO_UPDATE_ONLY[@]}" == 0)); then
-		for n in $(da_db list); do
-			TYPE="$(dirname $n)"
-			id="$(basename $n)"
-			if ! [ -d "$(da_db get path)" ]; then
-				da_db del
-				continue
-			fi
-			echo -n "[$n] Checking update..."
-			new_eps=$(($(da_get_len "$n-$(da_db get url)") - $(da_db get saved)))
+			echo -n "[$id] Checking update..."
+			new_eps=$(($(da_get_len "$(da_db get url)") - $(da_db get saved)))
 			if ((new_eps > 0)); then
-				updatable+=("$n")
-				echo -e "\r[$n] Queueing update($new_eps+)..."
+				updatable+=("$id")
+				echo -e "\r[$id] Queueing update($new_eps+)..."
 			else
 				echo
 			fi
@@ -181,9 +192,7 @@ da_update()
 	elif (("${#DO_UPDATE_ONLY[@]}")); then
 		if (("${#DO_UPDATE_ONLY[@]}" > 1)) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
 			DO_UPDATE_ONLY=("$(echo "${DO_UPDATE_ONLY[@]}" | cut -d' ' -f2- | tr -s ' ' '|')")
-			for n in $(da_db list); do
-				TYPE="$(dirname $n)"
-				id="$(basename $n)"
+			for id in $(da_db list); do
 				if echo "$n" | grep -qE "${DO_UPDATE_ONLY[0]}"; then
 					continue
 				fi
@@ -191,35 +200,31 @@ da_update()
 					da_db del
 					continue
 				fi
-				echo -n "[$n] Checking update..."
-				new_eps=$(($(da_get_len "$n-$(da_db get url)") - $(da_db get saved)))
+				echo -n "[$id] Checking update..."
+				new_eps=$(($(da_get_len "$(da_db get url)") - $(da_db get saved)))
 				if ((new_eps > 0)); then
-					updatable+=("$n")
-					echo -e "\r[$n] Queueing update($new_eps+)..."
+					updatable+=("$id")
+					echo -e "\r[$id] Queueing update($new_eps+)..."
 				else
 					echo
 				fi
 			done
 		else
-			for n in "${DO_UPDATE_ONLY[@]}"; do
-				TYPE="$(dirname $n)"
-				id="$(basename $n)"
+			for id in "${DO_UPDATE_ONLY[@]}"; do
 				if da_db has; then
-					updatable+=("$n")
+					updatable+=("$id")
 				fi
 			done
 		fi
 	fi
-	for n in "${updatable[@]}"; do
-		TYPE="$(dirname $n)"
-		id="$(basename $n)"
+	for id in "${updatable[@]}"; do
 		dir="$(da_db get path)"
 		if ! [ -d "$dir" ]; then
 			mkdir -p "$dir" || continue
 		fi
 		cd "$dir" || continue
 		FILE_LIST_RANGE=$(da_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')
-		da_get "$n-$(da_db get url)" "$(basename "$dir")"
+		da_get "$(da_db get url)" "$(basename "$dir")" "$id"
 		if [ "$(da_db get saved)" -ge "$(da_db get total)" ]; then
 			da_db del
 		fi
@@ -244,6 +249,6 @@ set_basedir()
 }
 #end:code
 if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] ||
-	[[ -n $BASH_VERSION  ]] && (return 0 2> /dev/null)); then
+	[[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_search "$@"
 fi

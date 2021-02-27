@@ -14,7 +14,7 @@ da_db()
 	local act=$1
 	shift
 	if ! {
-		jq   'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
+		jq 'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
 	}; then
 		echo '{}' > "$CACHE_FILE"
 	fi
@@ -27,38 +27,38 @@ da_db()
 da_db_add()
 {
 
-	data="$(jq '. * { "'"$TYPE"'" : {"'"$id"'":{ "title":null ,"path":null,"url":null,"total":null,"saved":null}} }' "$CACHE_FILE")"
+	data="$(jq '. * {"'"$id"'":{ "title":null ,"path":null,"url":null,"total":null,"saved":null}}' "$CACHE_FILE")"
 	da_db_write "$data"
 }
 da_db_list()
 {
-	for type in $(jq -r 'keys|@sh' "$CACHE_FILE" | tr -d \'\"); do
-		for id in $(jq -r '.'"$type"'|keys|[ .[] | tonumber ] | @sh' "$CACHE_FILE"); do
-			echo "$type/$id"
-		done
+	for id in $(jq -r 'keys[] | tonumber | @sh' "$CACHE_FILE"); do
+		echo "$id"
 	done
 }
 da_db_set()
 {
 	if da_db_has; then
-		data="$(jq '.'"$TYPE"'."'"$id"'".'"$1"'='"$2" "$CACHE_FILE")"
+		data="$(jq '."'"$id"'".'"$1"'='"$2" "$CACHE_FILE")"
 		da_db_write "$data"
 	fi
 }
 da_db_get()
 {
 	{
-		jq -re ".$TYPE.\"$id\".$*" "$CACHE_FILE" || echo 0
-	}                                                | tail -1
+		jq -re ".\"$id\".$*" "$CACHE_FILE" || echo 0
+	} | tail -1
 }
+
 da_db_has()
 {
-	jq -e '.'"$TYPE"'."'"$id"'"' "$CACHE_FILE" &> /dev/null
+	jq -e '."'"$id"'"' "$CACHE_FILE" &> /dev/null
 }
+
 da_db_del()
 {
 	if da_db_has; then
-		data="$(jq 'del(."'"$TYPE"'"."'"$id"'")' "$CACHE_FILE")"
+		data="$(jq 'del(."'"$id"'")' "$CACHE_FILE")"
 		da_db_write "$data"
 	fi
 }

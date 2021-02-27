@@ -166,7 +166,8 @@ da_get_episede()
 			fi
 			ep_file_url=
 			ep_file_host=$(echo "$n" | jq -r '.host')
-			ep_file_id=$(echo "$n" | jq -r '.id' | xargs basename -a)
+			ep_file_id=$(echo "$n" | jq -r '.id' | xargs basename -a 2> /dev/null)
+			[ -z "$ep_file_id" ] && continue
 			set +x
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
@@ -245,9 +246,9 @@ download()
 			elif ((tried <= ${MAX_TRY:-5})); then
 				tput cuu 2
 				((tried > 1)) && (
-					tput    el1
-					tput             el
-					tput                     cuu1
+					tput  el1
+					tput           el
+					tput                   cuu1
 				)
 				tput el1
 				tput el
@@ -287,7 +288,7 @@ compare_episode()
 		BS=524288
 	fi
 	if [ ! -e "$1" ] || {
-		[          -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
+		[        -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
 	}; then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
@@ -336,9 +337,9 @@ compare_episode()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                         ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                             && {
-		return                                                                                                                   0 2> /dev/null
+		[[ -n $BASH_VERSION                                                       ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                           && {
+		return                                                                                                                 0 2> /dev/null
 	}
 }; then
 	da_get_episede "$@"

@@ -149,7 +149,7 @@ da_rebuild_db()
 		fi
 		url=$(da_api_search $query | grep ":$id:" | cut -d: -f1 | tr -d '[:space:]')
 		prev_url=$(da_db get url)
-		if [[ -n $url ]] && [[ $url != $prev_url ]]; then
+		if [[ -n $url ]] && [[ $url != "$prev_url" ]]; then
 			echo "Fixing $(da_db get title) [$id]"
 			da_db set url "\"$url\""
 			DO_UPDATE_ONLY+=("$id")

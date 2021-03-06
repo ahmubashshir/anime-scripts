@@ -2,7 +2,8 @@
 ((def_help)) && return 0 || def_help=1
 DEBUG=${DEBUG:-false}
 #start:code
-danime_help() {
+danime_help()
+{
 	echo "$(basename "$0") Help:"
 	echo Usage:
 	printf "  %s [options] <anime name>\n" "$(basename "$0")"
@@ -13,26 +14,27 @@ danime_help() {
 }
 danime_help_options()
 {
+	local line TAB i
 	echo Options:
-	sed -n '/#+option/,/#-option/{s/^[[:blank:]]*//p}' "$0"|while read -r line;do
-		if [[ $line = \#+option ]];then
+	sed -n '/#+option/,/#-option/{s/^[[:blank:]]*//p}' "$0" | while read -r line; do
+		if [[ $line = \#+option ]]; then
 			TAB=2
 			printf '\t'
-		elif [[ $line =~ ^#IDNT: ]];then
-			TAB=$(echo "$line "|cut -d' ' -f2)
-		elif [[ $line =~ ^#short: ]]||[[ $line =~ ^#long: ]];then
-			echo "$line "|cut -d' ' -f2-|tr -d '\n\r'
-		elif [[ $line =~ ^#text: ]];then
-			for (( i=0;i<TAB;i++));do
+		elif [[ $line =~ ^#IDNT: ]]; then
+			TAB=$(echo "$line " | cut -d' ' -f2)
+		elif [[ $line =~ ^#short: ]] || [[ $line =~ ^#long: ]]; then
+			echo "$line " | cut -d' ' -f2- | tr -d '\n\r'
+		elif [[ $line =~ ^#text: ]]; then
+			for ((i = 0; i < TAB; i++)); do
 				printf '\t'
 			done
-			echo -e "$line"|cut -d' ' -f2-
-		elif [[ $line =~ ^#args: ]];then
-			for (( i=0;i<TAB+2;i++));do
+			echo -e "$line" | cut -d' ' -f2-
+		elif [[ $line =~ ^#args: ]]; then
+			for ((i = 0; i < TAB + 2; i++)); do
 				printf '\t'
 			done
 			echo -n "Argument: "
-			echo -e "$line"|cut -d' ' -f2-
+			echo -e "$line" | cut -d' ' -f2-
 		fi
 	done
 }

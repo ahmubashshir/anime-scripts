@@ -6,13 +6,13 @@ DEBUG=${DEBUG:-false}
 #start:code
 da_db()
 {
+	local CACHE_FILE act=$1
+	shift
 	if [ -n "$AP" ]; then
 		CACHE_FILE="$ANIME_PATH/.danime_db.json"
 	else
 		CACHE_FILE="$MEDIA_ROOT/.danime_db.json"
 	fi
-	local act=$1
-	shift
 	if ! {
 		jq 'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
 	}; then

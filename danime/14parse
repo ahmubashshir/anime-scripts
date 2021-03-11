@@ -57,13 +57,14 @@ trollvid:get_url()
 	#exec 2>/tmp/out.${CALLED_FROM_MP4_SH:-false}
 	local token
 	token=$(
-		scrapper_call org.freedesktop.DBus.Properties.Get local.scrapper token |
+		scrapper_call org.freedesktop.DBus.Properties.Get local.scrapper token 2> /dev/null |
 			sed "s/.*'\(.*\)'.*/\1/"
 	)
+	[ -z "$token" ] && return
 	[ "$token" ] &&
 		token=$(curl --config /dev/null -s "https://mp4.sh/embed/$1?x=$token" --compressed \
 			-H "Referer: https://ww5.dubbedanime.net/" | sed -n 's/.*data-token="\(.*\)" style.*/\1/p')
-
+	[ -z "$token" ] && return
 	[ "$token" ] &&
 		curl --config /dev/null -XPOST -s "https://mp4.sh/v/$1" --compressed \
 			-H "Referer: https://mp4.sh/embed/$1?x=$token" \
@@ -93,9 +94,9 @@ cloud9:get_url()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                             ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                                 && {
-		return                                                                                                                       0 2> /dev/null
+		[[ -n $BASH_VERSION                                                           ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                               && {
+		return                                                                                                                     0 2> /dev/null
 	}
 }; then
 	(($# == 3)) || exit

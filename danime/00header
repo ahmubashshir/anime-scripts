@@ -1,6 +1,4 @@
 #!/bin/bash
-#start:code
-#!/bin/bash
 # shellcheck disable=SC2086
 # shellcheck disable=SC1091
 # shellcheck disable=SC1090
@@ -11,6 +9,20 @@
 # shellcheck disable=SC2015
 # shellcheck disable=SC2143
 ((def_header)) && return 0 || def_header=1
+#start:code
+#!/bin/bash
+declare -a exit_traps
+trap 'on_exit' INT ERR TERM EXIT QUIT ABRT
+function on_exit
+{
+	local ret=$?
+	for each in "${exit_traps[@]}"; do
+		if [ "$(type -t "$each")" = "function" ]; then
+			"$each"
+		fi
+	done
+	exit $ret
+}
 # VERSION
 if [ -f ~/.config/danime.cfg ]; then
 	source ~/.config/danime.cfg

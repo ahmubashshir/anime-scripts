@@ -409,12 +409,10 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				)
 				if [ "$scrapper_bus" ]; then
 					SUPPORTED_HOSTS="trollvid${SUPPORTED_HOSTS:+|}${SUPPORTED_HOSTS}"
-					trap 'close_bus' SIGINT SIGTERM ERR EXIT
-					close_bus()
+					exit_traps+=(close_bus)
+					function close_bus
 					{
-						ret=$?
 						gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method local.scrapper.quit &> /dev/null
-						exit $ret
 					}
 				fi
 			fi

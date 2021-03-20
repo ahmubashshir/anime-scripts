@@ -144,6 +144,7 @@ da_rebuild_db()
 	DO_UPDATE_ONLY=()
 	for id in $(da_db list); do
 		query=$(da_db get query)
+		printf '\rChecking [%s]' "$id"
 		if [[ $query == 0 ]]; then
 			query=$(da_db get title)
 		fi
@@ -157,7 +158,10 @@ da_rebuild_db()
 			echo "Failed to fix $(da_db get title) [$id]"
 		fi
 	done
+	echo
+	da_update
 }
+
 da_list_queue()
 {
 	for id in $(da_db list); do

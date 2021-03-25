@@ -14,8 +14,8 @@ get_effective_url()
 get_url()
 {
 	local ep_file_host ep_file_id n try=0 url
-	ep_file_host=$(echo "$@" | jq -r '.host')
-	ep_file_id=$(echo "$@" | jq -r '.id' | xargs basename -a)
+	ep_file_host=$(echo "$1" | jq -r '.host')
+	ep_file_id=$(echo "$1" | jq -r '.id' | xargs basename -a)
 	if ! {
 		echo "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"
 	}; then
@@ -98,9 +98,9 @@ cloud9:get_url()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                         ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                             && {
-		return                                                                                                                   0 2> /dev/null
+		[[ -n $BASH_VERSION                                                       ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                           && {
+		return                                                                                                                 0 2> /dev/null
 	}
 }; then
 	(($# == 3)) || exit

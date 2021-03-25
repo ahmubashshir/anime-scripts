@@ -6,7 +6,7 @@
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
-SUPPORTED_HOSTS='mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
+SUPPORTED_HOSTS='trollvid|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
 get_effective_url()
 {
 	xargs curl --config /dev/null -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
@@ -28,7 +28,7 @@ get_url()
 			try=0
 			while [[ -z $url ]] && ((try++ < 5)); do
 				((try > 1)) && sleep 2
-				url="$(${ep_file_host// /+}:get_url "${n}")"
+				url="$(${ep_file_host// /+}:get_url "${n}" "$2")"
 			done
 			echo "$url"
 		else
@@ -54,22 +54,26 @@ xstreamcdn:get_url()
 
 trollvid:get_url()
 {
-	#exec 2>/tmp/out.${CALLED_FROM_MP4_SH:-false}
 	local token
 	token=$(
-		scrapper_call org.freedesktop.DBus.Properties.Get local.scrapper token 2> /dev/null |
-			sed "s/.*'\(.*\)'.*/\1/"
+		curl --silent --fail --config /dev/null -s "$2" |
+			sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 	)
 	[ -z "$token" ] && return
 	[ "$token" ] &&
-		token=$(curl --config /dev/null -s "https://mp4.sh/embed/$1?x=$token" --compressed \
-			-H "Referer: https://ww5.dubbedanime.net/" | sed -n 's/.*data-token="\(.*\)" style.*/\1/p')
+		token=$(
+			curl "https://mp4.sh/embed/${1}${token}" \
+				--config /dev/null -s \
+				-H 'Referer: https://ww5.dubbedanime.net/' |
+				sed -nE "/token: /s/.*'(.*)'.*/\1/p"
+		)
 	[ -z "$token" ] && return
 	[ "$token" ] &&
-		curl --config /dev/null -XPOST -s "https://mp4.sh/v/$1" --compressed \
-			-H "Referer: https://mp4.sh/embed/$1?x=$token" \
+		curl "https://mp4.sh/v/$1" \
 			-H 'Origin: https://mp4.sh' \
-			--data-raw "token=$token" | jq -r 'select(.success == true).data'
+			--config /dev/null -s \
+			--data-raw "token=$token" |
+		jq -r 'select(.success == true).file' 2> /dev/null
 }
 
 vidstreaming:get_url()
@@ -94,9 +98,9 @@ cloud9:get_url()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                           ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                               && {
-		return                                                                                                                     0 2> /dev/null
+		[[ -n $BASH_VERSION                                                         ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                             && {
+		return                                                                                                                   0 2> /dev/null
 	}
 }; then
 	(($# == 3)) || exit

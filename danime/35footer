@@ -402,28 +402,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	[[ -n $FORCE ]] && echo "${FORCE} enforced."
 	if [[ $SEARCHSTR != '' ]] || [[ -n $DO_ALT ]]; then
 		if [ -n "$NC" ] || check_up_server dubbedanime.net "${RSOLV:-1}"; then
-			if [ -x "${0%/*}/dubbedanime.scrap" ] && [ -x "$CHROMEDRIVER_PATH" ]; then
-				scrapper_bus=$(
-					export CHROMEDRIVER_PATH
-					"${0%/*}/dubbedanime.scrap"
-				)
-				if [ "$scrapper_bus" ]; then
-					SUPPORTED_HOSTS="trollvid${SUPPORTED_HOSTS:+|}${SUPPORTED_HOSTS}"
-					exit_traps+=(close_bus)
-					function close_bus
-					{
-						gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method local.scrapper.quit &> /dev/null
-					}
-				fi
-			fi
-			scrapper_call()
-			{
-				if gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method org.freedesktop.DBus.Peer.Ping > /dev/null 2>&1; then
-					method=$1
-					shift
-					gdbus call --session --dest "$scrapper_bus" --object-path /scrapper --method "$method" "$@"
-				fi
-			}
 			case $DO_ALT in
 				update)
 					da_update

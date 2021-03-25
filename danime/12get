@@ -184,7 +184,6 @@ da_get()
 			vbar "skipping $(echo "$ep_slug" | cut -d- -f1)"
 			continue
 		}
-		scrapper_call local.scrapper.load "https://ww5.dubbedanime.net/$ep_slug" &> /dev/null
 		da_get_episede "$ep_slug" "$k" "$epc" "$ep_progress" "$total_pw"
 		if ! (exit $?); then
 			echo "Failed to download $k"

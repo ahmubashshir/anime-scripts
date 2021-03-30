@@ -1,13 +1,10 @@
 OUTPUT:=danime
 id:= $(shell id -u)
-bats:=
-ifeq ($(bats),skip)
-	BATS=-skip
-else
-	BATS=
-	bats+=-r
-endif
+test:=yes
+syntax:=yes
+bats:=-r
 VERSION:=
+
 ifeq ($(id),0)
 	prefix=/usr
 else
@@ -23,24 +20,24 @@ ifneq ($(shell git status -su|wc -l),0)
 endif
 
 ifeq (, $(shell which shellcheck 2>/dev/null))
-	CHECK=no
+	check=no
 endif
-.PHONY: test test-skip check update upgrade debug install install-libbash install-spinner check nocheck
+
+.PHONY: test-yes test-no check-yes check-no update upgrade debug install install-libbash install-spinner check nocheck
 all: $(OUTPUT)
-$(OUTPUT): $(CHECK)check test$(BATS)
+$(OUTPUT): syntax-$(syntax) test-$(test)
 	@echo "Building executable \"$(OUTPUT)\""
 	sed -n '/^#start:code$$/,/^#end:code$$/{ /^#end:code$$/d; /^#start:code$$/d; p}' 00header  01include  02help 10db 11search  12get  13download  14parse  35footer | sed -n "w $(OUTPUT)"
 	sed -Ei "s/^(# VERSION).*/\1 $(VERSION)/" "$(OUTPUT)"
 	@chmod +x "$(OUTPUT)"
-check:
+syntax-yes:
 	@echo "Checking syntax."
 	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
-nocheck:
-	@echo "Checking syntax."
-	@echo skipping: shellcheck not found.
-test-skip:
+syntax-no:
+	@echo "Not checking syntax."
+test-no:
 	@echo Skipping tests.
-test:
+test-yes:
 	@echo Running tests.
 	./test/bats/bats $(bats) test
 clean:

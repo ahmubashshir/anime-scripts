@@ -78,12 +78,14 @@ trollvid:get_url()
 
 vidstreaming:get_url()
 {
-	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
+	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" |
+		jq '.source + .source_bk|[.[]|select(.type == "mp4")][0]|.file' |
+		get_effective_url
 }
 
 gogo+server:get_url()
 {
-	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1" | jq -r 'if has("source_bk") and ( .source_bk[]|length >0 ) then .source_bk else .source end|.[0]|.file' | get_effective_url
+	vidstreaming:get_url $1
 }
 
 mixdrop:get_url()
@@ -98,9 +100,9 @@ cloud9:get_url()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                       ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                           && {
-		return                                                                                                                 0 2> /dev/null
+		[[ -n $BASH_VERSION                                                     ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                         && {
+		return                                                                                                               0 2> /dev/null
 	}
 }; then
 	(($# == 3)) || exit

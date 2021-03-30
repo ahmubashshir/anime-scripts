@@ -100,12 +100,12 @@ cloud9:get_url()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                     ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                         && {
-		return                                                                                                               0 2> /dev/null
+		[[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]
+	} && {
+		return 0 2> /dev/null
 	}
 }; then
-	(($# == 3)) || exit
+	(($# >= 2)) || exit
 	remote=$1
 	shift
 	$remote:get_url "$@"

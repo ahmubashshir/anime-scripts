@@ -56,7 +56,7 @@ trollvid:get_url()
 {
 	local token
 	token=$(
-		curl --silent --fail --config /dev/null -s "$2" |
+		curl --silent --config /dev/null -s "$2" |
 			sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 	)
 	[ -z "$token" ] && return

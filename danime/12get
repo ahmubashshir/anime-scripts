@@ -59,12 +59,19 @@ da_get()
 		FORCE="$(< .type)"
 	fi
 	start_spinner "Fetching \"$id\" info"
-	while [[ -z "$da_page" ]] && ((try_page++ < 5)); do
+	while [[ \
+		"$(
+			echo "$da_page" |
+				xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+		)" != "https://ww5.dubbedanime.net/$series" ]] &&
+			((try_page++ < 5)); do
 		da_page=$(curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/$series")
+		((try_page > 1)) && sleep 1
 	done
 	da_page_json=$(echo "$da_page" | grep -E '(let|var) anime' | cut -d= -f2- | cut -d\  -f2- | sed 's/\;$//g' | jq)
-	baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true" or //li/@data-sub="true",";dubbed=",//li/@data-dubbed="true" or //li/@data-dub="true"," ")' -; done | tr -s ' ' \\n | tac)
+	baseurl=$(echo "$da_page" | xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/node()' - 2> /dev/null | awk '/<li/,/li>/{printf $0;if (++o%3 == 0) print ""}' | while read -rs xml_node; do echo -e "$xml_node" | xmllint --html --nowarning --xpath 'concat("href=",//a/@href,";subbed=",//li/@data-subbed="true" or //li/@data-sub="true",";dubbed=",//li/@data-dubbed="true" or //li/@data-dub="true"," ")' -; done | tr -s ' ' \\n | tac)
 	stop_spinner "$([[ -n $baseurl ]] && echo 0 || echo 1)"
+	[[ -n $baseurl ]] && ${DEBUG:-false} && echo "$da_page"
 	if ! {
 		da_db has && ${FILE_LIST:-false}
 	} && [ -z "$FILE_LIST_RANGE" ]; then

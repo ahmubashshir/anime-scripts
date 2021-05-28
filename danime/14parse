@@ -58,29 +58,29 @@ trollvid:get_url()
 	while [[ -z $url ]] && ((try++ < 5)); do
 		((try > 1)) && sleep 2
 		token=$(
-			curl --silent --config /dev/null -s "$2" |
-				sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
+			curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -s "$2" \
+				| sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 		)
 		[ -z "$token" ] && continue
-		[ "$token" ] &&
-			token=$(
+		[ "$token" ] \
+			&& token=$(
 				curl "https://mp4.sh/embed/${1}${token}" \
 					--config /dev/null -s \
-					-H 'Referer: https://ww5.dubbedanime.net/' |
-					sed -nE "/token: /s/.*'(.*)'.*/\1/p"
+					-H 'Referer: https://ww5.dubbedanime.net/' \
+					| sed -nE "/token: /s/.*'(.*)'.*/\1/p"
 			)
 		[ -z "$token" ] && continue
-		[ "$token" ] &&
-			url=$(
+		[ "$token" ] \
+			&& url=$(
 				curl "https://mp4.sh/v/$1" \
 					-H 'Origin: https://mp4.sh' \
 					--config /dev/null -s \
-					--data-raw "token=$token" |
-					jq -r 'select(.success == true).file' 2> /dev/null
+					--data-raw "token=$token" \
+					| jq -r 'select(.success == true).file' 2> /dev/null
 			)
-		[ "$url" ] &&
-			curl -s "$(echo "$url" | cut -d/ -f1-3)/video.php" --data-raw "token=$token" 2> /dev/null &&
-			{
+		[ "$url" ] \
+			&& curl -s "$(echo "$url" | cut -d/ -f1-3)/video.php" --data-raw "token=$token" 2> /dev/null \
+			&& {
 				echo "$url"
 				break
 			}
@@ -89,9 +89,9 @@ trollvid:get_url()
 
 vidstreaming:get_url()
 {
-	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" |
-		jq '.source + .source_bk|[.[]|select(.type == "mp4")][0]|.file' |
-		get_effective_url
+	curl --config /dev/null -s "https://gogo-stream.com/ajax.php?id=$1&refer=none" \
+		| jq '.source + .source_bk|[.[]|select(.type == "mp4")][0]|.file' \
+		| get_effective_url
 }
 
 gogo+server:get_url()

@@ -32,7 +32,7 @@ $(OUTPUT): syntax-$(syntax) test-$(test)
 	@chmod +x "$(OUTPUT)"
 syntax-yes:
 	@echo "Checking syntax."
-	shellcheck -eSC2178,SC2128 00header 01include 02help 11search 12get 13download 14parse 35footer
+	shellcheck -eSC2178,SC2128,SC2031,SC2030 00header 01include 02help 11search 12get 13download 14parse 35footer
 syntax-no:
 	@echo "Not checking syntax."
 test-no:

@@ -16,6 +16,14 @@ CURL_OPTIONS=(
 	-H 'sec-fetch-dest: empty'
 )
 
+cookies=()
+for each in ~/.local/share/danime/cookies-*.txt; do
+	cookies+=("$each")
+done
+if ((${#cookies[@]})); then
+	cat "${cookies[@]}" > ~/.local/share/danime/cookies.txt
+fi
+unset cookies
 if [ -f ~/.local/share/danime/cookies.txt ]; then
 	CURL_OPTIONS+=(--cookie ~/.local/share/danime/cookies.txt)
 fi
@@ -123,9 +131,9 @@ byte_mr()
 {
 	sed \
 		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[kK]/\1*1000/g' \
-		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g' |
-		bc |
-		sed \
+		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g' \
+		| bc \
+		| sed \
 			-e 's/\..*$//'
 }
 validate_limit()
@@ -145,8 +153,8 @@ validate_limit()
 					((ret++))
 				fi
 			elif ! {
-				[[ $each =~ ^[[:digit:]]+-$ ]] ||
-					[[ $each =~ ^[[:digit:]]+$ ]]
+				[[ $each =~ ^[[:digit:]]+-$ ]] \
+					|| [[ $each =~ ^[[:digit:]]+$ ]]
 			}; then
 				((ret++))
 			fi
@@ -194,10 +202,10 @@ anime_cover()
 	if [ ! -e folder.jpg ]; then
 		{
 			curl --config /dev/null -kLsIXGET "$anime_cover_img" && wget --no-check-certificate -q "$anime_cover_img" -cO "cover.jpg"
-		}                                                                                               &> /dev/null
+		}                                                                                             &> /dev/null
 		if {
 			! grep -q cover.jpg .hidden &> /dev/null
-		}                                     && [ -f cover.jpg ]; then
+		}                                   && [ -f cover.jpg ]; then
 			echo cover.jpg >> .hidden
 		fi
 	fi

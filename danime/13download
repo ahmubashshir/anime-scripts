@@ -76,24 +76,24 @@ da_get_episede()
 			page_url="https://ww5.dubbedanime.net/${d%%-*}"
 			unset d
 		fi
-		while [[ \
+		while [[ 
 			"$(
-				echo "$parse_episode_page" |
-					xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
-			)" != "$1" ]] &&
-				((try_page++ < 5)); do
-			parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$1" | grep -E '(var|let) episode')"
+				echo "$parse_episode_page" \
+					| xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+			)" != "$1" ]] \
+			&& ((try_page++ < 5)); do
+			parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" | grep -E '(var|let) episode')"
 			((try_page > 1)) && sleep 1
 		done
 		if [ -z "$parse_episode_page" ]; then
 			try_page=0
-			while [[ \
+			while [[ 
 				"$(
-					echo "$parse_episode_page" |
-						xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
-				)" != "$page_url" ]] &&
-					((try_page++ < 5)); do
-				parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "$page_url" | grep -E '(var|let) episode')"
+					echo "$parse_episode_page" \
+						| xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+				)" != "$page_url" ]] \
+				&& ((try_page++ < 5)); do
+				parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$page_url" | grep -E '(var|let) episode')"
 				((try_page > 1)) && sleep 1
 			done
 			shift
@@ -137,19 +137,19 @@ da_get_episede()
 			ep_title="${ep_title% *} $(echo "${ep_title##* } $ep_number" | sed 's|episode|ep|gI;s|ova|ova|gI;s|ona|ona|gI;s|movie|movie|gI;s|special|special|gI')"
 			ep_title="$(echo "$ep_title" | sed 's| *$||g;s|^ *||g')"
 			slug=$(
-				echo "$parse_episode_page" |
-					jq -r '.slug' |
-					sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/"
+				echo "$parse_episode_page" \
+					| jq -r '.slug' \
+					| sed "s/\(-episode-\)/$([[ ${tr:0:1} == d ]] && echo -${tr:0:3})\1/"
 			)
 			ep_id_list=$(
-				echo "$parse_episode_page" |
-					da_read_ep_json "$filter" "$slug"
+				echo "$parse_episode_page" \
+					| da_read_ep_json "$filter" "$slug"
 			)
 			if [ -z "$ep_id_list" ]; then
 				tr=subbed
 				slug=$(
-					echo "$parse_episode_page" |
-						jq -r '.slug'
+					echo "$parse_episode_page" \
+						| jq -r '.slug'
 				)
 				ep_id_list=$(echo "$parse_episode_page" | da_read_ep_json "$filter" "$slug")
 			fi
@@ -193,8 +193,8 @@ da_get_episede()
 				ep_file_url=$(get_mapped "$ep_number")
 			fi
 			for ep_file_url_current in $ep_file_url; do
-				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] &&
-					remote_exist "$ep_file_url_current"; then
+				if ! [[ $ep_file_url_current =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]] \
+					&& remote_exist "$ep_file_url_current"; then
 					continue
 				fi
 				ep_file_url=
@@ -232,8 +232,8 @@ da_get_episede()
 				if ((ret == 0)); then
 					download "$ep_file_name" "$ep_file_url_current"
 				elif ( 
-					((ret == 4)) &&
-						(
+					((ret == 4)) \
+						&& (
 							${REPLACE_FAIL:-false} || ((${failed_tests:-0} <= 5))
 						) && ! ${NO_REPLACE:-false}
 				) || ((ret == 5)) || (${REPLACE_MANUAL:-false} && ((ret == 3))); then
@@ -264,8 +264,8 @@ download()
 				tput cuu 2
 				((tried > 1)) && (
 					tput el1
-					tput     el
-					tput             cuu1
+					tput   el
+					tput           cuu1
 				)
 				tput el1
 				tput el
@@ -305,7 +305,7 @@ compare_episode()
 		BS=524288
 	fi
 	if [ ! -e "$1" ] || {
-		[  -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
+		[ -n "$CHECK_FILE" ] && [ "$CHECK_FILE" == "false" ]
 	}; then
 		return 0
 	elif [ "$CHECK_FILE" == "error" ]; then
@@ -354,9 +354,9 @@ compare_episode()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                                 ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                     && {
-		return                                                                                                           0 2> /dev/null
+		[[ -n $BASH_VERSION                                               ]] || [[ $0 =~ bin/bashdb$ ]]
+	}                                                                                                   && {
+		return                                                                                                         0 2> /dev/null
 	}
 }; then
 	da_get_episede "$@"

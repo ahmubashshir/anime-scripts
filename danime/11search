@@ -69,10 +69,11 @@ try:
 			"size"			:	200,
 			"what"			:	"query",
 			"letter"		:	"all",
+			"page"			:	1,
 			"query"			:	"search=" + " ".join(argv[1:])
 		}
 		try:
-			for n in r.post("https://ww5.dubbedanime.net/ajax/paginate", data).json()["results"]:
+			for n in r.post("%shttps://ww5.dubbedanime.net/ajax/paginate"%os.environ.get("PUPPETEER_PROXY"), data).json()["results"]:
 				print("%s:%s:%s:%s"%(n["url"],n["id"],0 if not "total" in n else n["total"],refine(n["title"])))
 		except:
 			pass
@@ -251,7 +252,7 @@ set_basedir()
 	esac
 }
 #end:code
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] ||
-	[[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_search "$@"
 fi

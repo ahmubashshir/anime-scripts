@@ -58,7 +58,7 @@ trollvid:get_url()
 	while [[ -z $url ]] && ((try++ < 5)); do
 		((try > 1)) && sleep 2
 		token=$(
-			curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -s "$2" \
+			curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -s "${PUPPETEER_PROXY}$2" \
 				| sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 		)
 		[ -z "$token" ] && continue

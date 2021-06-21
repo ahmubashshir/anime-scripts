@@ -28,7 +28,7 @@ da_get_len()
 	type=$(da_db get type)
 	(
 		try_page=0
-		until curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/$series" || ((try_page++ >= 5)); do
+		until curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series" || ((try_page++ >= 5)); do
 			sleep 1
 		done
 	) | case $type in
@@ -59,13 +59,13 @@ da_get()
 		FORCE="$(< .type)"
 	fi
 	start_spinner "Fetching \"$id\" info"
-	while [[ \
+	while [[ 
 		"$(
-			echo "$da_page" |
-				xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
-		)" != "https://ww5.dubbedanime.net/$series" ]] &&
-			((try_page++ < 5)); do
-		da_page=$(curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "https://ww5.dubbedanime.net/$series")
+			echo "$da_page" \
+				| xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+		)" != "https://ww5.dubbedanime.net/$series" ]] \
+		&& ((try_page++ < 5)); do
+		da_page=$(curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series")
 		((try_page > 1)) && sleep 1
 	done
 	da_page_json=$(echo "$da_page" | grep -E '(let|var) anime' | cut -d= -f2- | cut -d\  -f2- | sed 's/\;$//g' | jq)
@@ -182,17 +182,17 @@ da_get()
 	${DEBUG:-false} && set -x
 	for k in $ep; do
 		ep_slug="$(
-			echo "$url" |
-				head -n "$k" |
-				tail -1
+			echo "$url" \
+				| head -n "$k" \
+				| tail -1
 		)"
 		((ep_progress += 1))
 		(
-			echo ":$DA_IGNORE_EP:" |
-				grep -q ":$(
-					echo "$ep_slug" |
-						cut -d- -f1 |
-						xargs basename
+			echo ":$DA_IGNORE_EP:" \
+				| grep -q ":$(
+					echo "$ep_slug" \
+						| cut -d- -f1 \
+						| xargs basename
 				):"
 		) && {
 			vbar "skipping $(echo "$ep_slug" | cut -d- -f1)"
@@ -211,7 +211,7 @@ da_get()
 	[[ $DISPLAY != '' ]] && notify-send --urgency=normal -a DubbedAnime --expire-time=1000000 --icon=emblem-downloads --category=transfer.complete "Download Completed" "<b>$TITLE</b>\n${dl_notify} downloaded"
 }
 #end:code
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] ||
-	[[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_get "$@"
 fi

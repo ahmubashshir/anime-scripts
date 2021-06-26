@@ -5,7 +5,7 @@ function check_up_server()
 	t_efbec206=$2
 	t_efbec206=${t_efbec206:=3}
 	[ $t_efbec206 -gt 3 ] && echo "Resolving $1,wait $t_efbec206 seconds" 1>&2
-	resp_efbec206=$(wget -T $t_efbec206 "$1" -S --spider -qO - 2>&1 | head -1 | tr -d \  | cut -d/ -f1)
+	resp_efbec206=$(curl -m $t_efbec206 -sIXGET "$1" | head -1 | tr -d \  | cut -d/ -f1)
 	if [[ $resp_efbec206 = 'HTTP' ]]; then
 		return 0
 	fi

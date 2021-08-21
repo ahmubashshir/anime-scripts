@@ -74,7 +74,7 @@ da_db_write()
 	fi
 }
 #end:code
-
-if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
 	da_db "$@"
 fi

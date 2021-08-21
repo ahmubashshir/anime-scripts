@@ -79,10 +79,16 @@ da_get_episede()
 		while [[ 
 			"$(
 				echo "$parse_episode_page" \
-					| xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+					| xmllint --html --xmlout --xpath \
+						'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
 			)" != "$1" ]] \
 			&& ((try_page++ < 5)); do
-			parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" | grep -E '(var|let) episode')"
+			parse_episode_page="$(
+				curl --config /dev/null \
+					-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
+					"${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" \
+					| grep -E '(var|let) episode'
+			)"
 			((try_page > 1)) && sleep 1
 		done
 		if [ -z "$parse_episode_page" ]; then
@@ -90,17 +96,29 @@ da_get_episede()
 			while [[ 
 				"$(
 					echo "$parse_episode_page" \
-						| xmllint --html --xmlout --xpath 'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
+						| xmllint --html --xmlout --xpath \
+							'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
 				)" != "$page_url" ]] \
 				&& ((try_page++ < 5)); do
-				parse_episode_page="$(curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$page_url" | grep -E '(var|let) episode')"
+				parse_episode_page="$(
+					curl --config /dev/null \
+						-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
+						"${CURL_OPTIONS[@]}" -Lks \
+						"${PUPPETEER_PROXY}$page_url" \
+						| grep -E '(var|let) episode'
+				)"
 				((try_page > 1)) && sleep 1
 			done
 			shift
 			set "$page_url" "$@"
 		fi
 		unset page_url
-		parse_episode_page="$(echo "$parse_episode_page" | cut -d= -f2- | sed 's/\;$//g;s/^[[:blank:]]*//g' | head -1)"
+		parse_episode_page="$(
+			echo "$parse_episode_page" \
+				| cut -d= -f2- \
+				| sed 's/\;$//g;s/^[[:blank:]]*//g' \
+				| head -1
+		)"
 		if echo "$tr" | grep -qvw 'dubbed\|subbed'; then
 			tr=dubbed
 		fi
@@ -119,7 +137,13 @@ da_get_episede()
 			local ep_number
 			ep_number=$(echo "$parse_episode_page" | jq -r '.number')
 			if [ "$ep_number" = "null" ]; then
-				ep_number=$(echo "$parse_episode_page" | jq -r '.name.default' | rev | cut -d' ' -f1 | rev)
+				ep_number=$(
+					echo "$parse_episode_page" \
+						| jq -r '.name.default' \
+						| rev \
+						| cut -d' ' -f1 \
+						| rev
+				)
 				if ! [[ $ep_number =~ ^[[:digit:].]+$ ]]; then
 					((null_ep_count += 1))
 					ep_number=${null_ep_count}n
@@ -158,7 +182,21 @@ da_get_episede()
 			fi
 			ep_file_name="$(echo "$ep_title" | replace_invalid)-$tr.mp4"
 		fi
-		ep_id_list="$(echo "$ep_id_list" | awk -e '!seen[$0]++' | awk '/'"${PREFERRED_HOSTS//,/|}"'/{print};!/'"${PREFERRED_HOSTS//,/|}"'/{lines[a++]=$0};END{for(i in lines) print lines[i]}')"
+		ep_id_list="$(
+			echo "$ep_id_list" \
+				| awk -e '!seen[$0]++' \
+				| awk \
+					'/'"${PREFERRED_HOSTS//,/|}"'/{
+						print
+					}
+					!/'"${PREFERRED_HOSTS//,/|}"'/{
+						lines[a++]=$0
+					}
+					END {
+						for(i in lines)
+							print lines[i]
+					}'
+		)"
 		set +x
 		if [ -n "$parse_episode_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0
@@ -253,7 +291,16 @@ da_get_episede()
 download()
 {
 	local s1 s2 ret tried
-	s1=$(curl --config /dev/null -kLsIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
+	s1=$(
+		curl --config /dev/null -kLsIXGET "$2" \
+			| awk \
+				'/^HTTP\/[12.]+ 200/,/^\r$/ {
+					gsub(/\r/,"")
+					if( tolower($1) ~ /^content-length:$/) {
+						print $2
+					}
+				}'
+	)
 	s2=$(stat -Lc%s "$1" 2> /dev/null || echo 0)
 	if ((s1 >= s2)); then
 		until fget "$2" "$1"; do
@@ -264,8 +311,8 @@ download()
 				tput cuu 2
 				((tried > 1)) && (
 					tput el1
-					tput   el
-					tput           cuu1
+					tput el
+					tput         cuu1
 				)
 				tput el1
 				tput el
@@ -315,7 +362,16 @@ compare_episode()
 	if ((${BS:-524288} > size)); then
 		BS=$size
 	fi
-	wsize=$(curl --config /dev/null -LksIXGET "$2" | awk '/^HTTP\/[12.]+ 200/,/^\r$/{gsub(/\r/,"");if( tolower($1) ~ /^content-length:$/){ print $2 }}')
+	wsize=$(
+		curl --config /dev/null -LksIXGET "$2" \
+			| awk \
+				'/^HTTP\/[12.]+ 200/,/^\r$/ {
+					gsub(/\r/,"")
+					if( tolower($1) ~ /^content-length:$/) {
+						print $2
+					}
+				}'
+	)
 	if ((size > wsize)); then
 		return 3
 	elif ((size == 0)); then
@@ -354,9 +410,9 @@ compare_episode()
 #end:code
 if ! {
 	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
-		[[ -n $BASH_VERSION                                               ]] || [[ $0 =~ bin/bashdb$ ]]
-	}                                                                                                   && {
-		return                                                                                                         0 2> /dev/null
+		[[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]
+	} && {
+		return 0 2> /dev/null
 	}
 }; then
 	da_get_episede "$@"

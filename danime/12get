@@ -28,7 +28,7 @@ da_get_len()
 	type=$(da_db get type)
 	(
 		try_page=0
-		until curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series" || ((try_page++ >= 5)); do
+		until curl --disable "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series" || ((try_page++ >= 5)); do
 			sleep 1
 		done
 	) | case $type in
@@ -67,7 +67,7 @@ da_get()
 		)" != "https://ww5.dubbedanime.net/$series" ]] \
 		&& ((try_page++ < 5)); do
 		da_page=$(
-			curl --config /dev/null "${CURL_OPTIONS[@]}" -ksL \
+			curl --disable "${CURL_OPTIONS[@]}" -ksL \
 				"${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series"
 		)
 		((try_page > 1)) && sleep 1

@@ -22,7 +22,7 @@ da_read_ep_json()
 {
 	cat | {
 		jq -Mc '.videos[]|del(.date)'
-		curl --config /dev/null -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$2" 2> /dev/null | jq -Mc '.[]' 2> /dev/null
+		curl --disable -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$2" 2> /dev/null | jq -Mc '.[]' 2> /dev/null
 	} | jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | eval "$1"
 }
 get_mapped()
@@ -84,7 +84,7 @@ da_get_episede()
 			)" != "$1" ]] \
 			&& ((try_page++ < 5)); do
 			parse_episode_page="$(
-				curl --config /dev/null \
+				curl --disable \
 					-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
 					"${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" \
 					| grep -E '(var|let) episode'
@@ -101,7 +101,7 @@ da_get_episede()
 				)" != "$page_url" ]] \
 				&& ((try_page++ < 5)); do
 				parse_episode_page="$(
-					curl --config /dev/null \
+					curl --disable \
 						-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
 						"${CURL_OPTIONS[@]}" -Lks \
 						"${PUPPETEER_PROXY}$page_url" \
@@ -292,7 +292,7 @@ download()
 {
 	local s1 s2 ret tried
 	s1=$(
-		curl --config /dev/null -kLsIXGET "$2" \
+		curl --disable -kLsIXGET "$2" \
 			| awk \
 				'/^HTTP\/[12.]+ 200/,/^\r$/ {
 					gsub(/\r/,"")
@@ -312,7 +312,7 @@ download()
 				((tried > 1)) && (
 					tput el1
 					tput el
-					tput         cuu1
+					tput       cuu1
 				)
 				tput el1
 				tput el
@@ -363,7 +363,7 @@ compare_episode()
 		BS=$size
 	fi
 	wsize=$(
-		curl --config /dev/null -LksIXGET "$2" \
+		curl --disable -LksIXGET "$2" \
 			| awk \
 				'/^HTTP\/[12.]+ 200/,/^\r$/ {
 					gsub(/\r/,"")
@@ -399,7 +399,7 @@ compare_episode()
 		printf "\rComparing episode[test:%d]" "$((i + 1))"
 		start=${offsets[$i]}
 		hash1="$(dd bs=1 count="${BS:-524288}" status=none if="$1" skip="$start" | sha256sum | cut -d\  -f1)"
-		hash2="$(curl --config /dev/null -Lskr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
+		hash2="$(curl --disable -Lskr "$start-$((start + ${BS:-524288} - 1))" "$2" | sha256sum | cut -d\  -f1)"
 		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
 		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
 		test "$hash1" = "$hash2" || return 4

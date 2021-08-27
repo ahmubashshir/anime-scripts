@@ -9,7 +9,7 @@ DEBUG=${DEBUG:-false}
 SUPPORTED_HOSTS='trollvid|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
 get_effective_url()
 {
-	xargs curl --config /dev/null -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
+	xargs curl --disable -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
 }
 get_url()
 {
@@ -44,12 +44,12 @@ beautify_js()
 
 mp4upload:get_url()
 {
-	curl --config /dev/null -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
+	curl --disable -ks "https://www.mp4upload.com/embed-$1.html" | grep 'eval(' | cut -d\> -f2- | beautify_js | sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
 }
 
 xstreamcdn:get_url()
 {
-	curl --config /dev/null -sX POST "https://fcdn.stream/api/source/$1" --data "r=https://fcdn.stream/f/$1" --data 'd=fcdn.stream' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
+	curl --disable -sX POST "https://fcdn.stream/api/source/$1" --data "r=https://fcdn.stream/f/$1" --data 'd=fcdn.stream' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
 }
 
 trollvid:get_url()
@@ -58,28 +58,27 @@ trollvid:get_url()
 	while [[ -z $url ]] && ((try++ < 5)); do
 		((try > 1)) && sleep 2
 		token=$(
-			curl --config /dev/null -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -s "${PUPPETEER_PROXY}$2" \
+			curl --disable -H "referer: https://ww5.dubbedanime.net$(da_db get url)" "${CURL_OPTIONS[@]}" -s "${PUPPETEER_PROXY}$2" \
 				| sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 		)
 		[ -z "$token" ] && continue
 		[ "$token" ] \
 			&& token=$(
-				curl "https://mp4.sh/embed/${1}${token}" \
-					--config /dev/null -s \
-					-H 'Referer: https://ww5.dubbedanime.net/' \
+				curl --disable "https://mp4.sh/embed/${1}${token}" \
+					-s -H 'Referer: https://ww5.dubbedanime.net/' \
 					| sed -nE "/token: /s/.*'(.*)'.*/\1/p"
 			)
 		[ -z "$token" ] && continue
 		[ "$token" ] \
 			&& url=$(
-				curl "https://mp4.sh/v/$1" \
+				curl --disable "https://mp4.sh/v/$1" \
 					-H 'Origin: https://mp4.sh' \
-					--config /dev/null -s \
-					--data-raw "token=$token" \
+					-s --data-raw "token=$token" \
 					| jq -r 'select(.success == true).file' 2> /dev/null
 			)
 		[ "$url" ] \
-			&& curl -s "$(echo "$url" | cut -d/ -f1-3)/video.php" --data-raw "token=$token" 2> /dev/null \
+			&& curl --disable -s "$(echo "$url" | cut -d/ -f1-3)/video.php" \
+				--data-raw "token=$token" 2> /dev/null \
 			&& {
 				echo "$url"
 				break
@@ -89,11 +88,11 @@ trollvid:get_url()
 
 vidstreaming:get_url()
 {
-	curl --config /dev/null -s "https://streamani.net/streaming.php?id=$1" \
+	curl --disable -s "https://streamani.net/streaming.php?id=$1" \
 		| xmllint \
 			--nocdata --noent --html --xmlout \
 			--xpath 'string(//*[@data-provider="serverwithtoken"][1]/@data-video)' - 2> /dev/null \
-		| xargs curl --config /dev/null -s \
+		| xargs curl --disable -s \
 		| xmllint \
 			--nocdata --html --xmlout --xpath \
 			'string(//div[@id="myVideo"]/../script[contains(text(), "playerInstance.setup")]/text())' - 2> /dev/null \
@@ -108,7 +107,7 @@ gogo+server:get_url()
 
 mixdrop:get_url()
 {
-	curl --config /dev/null -s "https://mixdrop.to/e/$1" \
+	curl --disable -s "https://mixdrop.to/e/$1" \
 		| grep '^eval' \
 		| beautify_js \
 		| grep MDCore.wurl \
@@ -117,7 +116,7 @@ mixdrop:get_url()
 
 cloud9:get_url()
 {
-	curl --config /dev/null -s "https://api.cloud9.to/stream/$1" \
+	curl --disable -s "https://api.cloud9.to/stream/$1" \
 		| jq -r 'select(.success == true).data.sources|[.[]|select(.height<=720)][0].file'
 }
 #end:code

@@ -15,8 +15,8 @@ ifeq ($(VERSION),)
 	VERSION=r$(shell git rev-list --count HEAD).$(shell git rev-parse --short HEAD)
 endif
 
-ifneq ($(shell git status -su|wc -l),0)
-	VERSION:=$(VERSION)-$(shell git status -su|wc -l)
+ifneq ($(shell git status -su -- $(PWD)	|wc -l),0)
+	VERSION:=$(VERSION)-$(shell git status -su -- $(PWD)|wc -l)
 endif
 
 ifeq (, $(shell which shellcheck 2>/dev/null))

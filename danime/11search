@@ -73,7 +73,7 @@ try:
 			"query"			:	"search=" + " ".join(argv[1:])
 		}
 		try:
-			for n in r.post("%shttps://1anime.to/ajax/paginate"%os.environ.get("PUPPETEER_PROXY"), data).json()["results"]:
+			for n in r.post("%shttps://1anime.to/ajax/paginate"%os.environ.get("PUPPETEER_PROXY", ""), data).json()["results"]:
 				print("%s:%s:%s:%s"%(n["url"],n["id"],0 if not "total" in n else n["total"],refine(n["title"])))
 		except:
 			pass

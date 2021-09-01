@@ -97,7 +97,8 @@ vidstreaming:get_url()
 			--nocdata --html --xmlout --xpath \
 			'string(//div[@id="myVideo"]/../script[contains(text(), "playerInstance.setup")]/text())' - 2> /dev/null \
 		| beautify_js \
-		| sed -nE "/^\s+file:.*\.mp4/s/.*'(.*)',/\1/p"
+		| sed -nE "/^\s+file:.*\.mp4/s/.*'(.*)',/\1/p" \
+		| head -n 1
 }
 
 gogo+server:get_url()

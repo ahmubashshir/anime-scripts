@@ -1,7 +1,7 @@
 {
-	"dubbedanime_api":{
+	"api":{
 		"method":"POST",
-		"url":"https://ww5.dubbedanime.net/ajax/paginate",
+		"url":"https://1anime.to/ajax/paginate",
 		"dict":["params:query"],
 		"list":["params:query[order][by,as]"],
 		"params":{
@@ -51,4 +51,3 @@
 		}
 	}
 }
-

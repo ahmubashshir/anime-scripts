@@ -1,4 +1,4 @@
-# Script to download anime from dubbedanime.net
+# Script to download anime from 1anime.to
 
 [![asciicast](https://asciinema.org/a/262000.svg)](https://asciinema.org/a/262000)
 

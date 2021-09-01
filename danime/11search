@@ -32,17 +32,17 @@ if os.path.exists(cookiesFile):
 r = requests.Session()
 
 r.headers = {
-    "authority"			: "ww5.dubbedanime.net",
+    "authority"			: "1anime.to",
     "pragma"			: "no-cache",
     "cache-control"		: "no-cache",
     "accept"			: "application/json",
     "x-requested-with"	: "XMLHttpRequest",
     "user-agent"		: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
-    "origin"			: "https://ww5.dubbedanime.net",
+    "origin"			: "https://1anime.to",
     "sec-fetch-site"	: "same-origin",
     "sec-fetch-mode"	: "cors",
     "sec-fetch-dest"	: "empty",
-    "referer"			: "https://ww5.dubbedanime.net/browse-anime?search=%s"%quote_plus(" ".join(argv[1:]))
+    "referer"			: "https://1anime.to/browse-anime?search=%s"%quote_plus(" ".join(argv[1:]))
 }
 
 r.cookies = cj
@@ -73,7 +73,7 @@ try:
 			"query"			:	"search=" + " ".join(argv[1:])
 		}
 		try:
-			for n in r.post("%shttps://ww5.dubbedanime.net/ajax/paginate"%os.environ.get("PUPPETEER_PROXY"), data).json()["results"]:
+			for n in r.post("%shttps://1anime.to/ajax/paginate"%os.environ.get("PUPPETEER_PROXY"), data).json()["results"]:
 				print("%s:%s:%s:%s"%(n["url"],n["id"],0 if not "total" in n else n["total"],refine(n["title"])))
 		except:
 			pass

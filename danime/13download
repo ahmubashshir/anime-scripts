@@ -72,8 +72,8 @@ da_get_episede()
 			local d
 			d=$1
 			shift
-			set "https://ww5.dubbedanime.net/$d" "$@"
-			page_url="https://ww5.dubbedanime.net/${d%%-*}"
+			set "https://1anime.to/$d" "$@"
+			page_url="https://1anime.to/${d%%-*}"
 			unset d
 		fi
 		while [[ 
@@ -85,7 +85,7 @@ da_get_episede()
 			&& ((try_page++ < 5)); do
 			parse_episode_page="$(
 				curl --disable \
-					-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
+					-H "referer: https://1anime.to$(da_db get url)" \
 					"${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" \
 					| grep -E '(var|let) episode'
 			)"
@@ -102,7 +102,7 @@ da_get_episede()
 				&& ((try_page++ < 5)); do
 				parse_episode_page="$(
 					curl --disable \
-						-H "referer: https://ww5.dubbedanime.net$(da_db get url)" \
+						-H "referer: https://1anime.to$(da_db get url)" \
 						"${CURL_OPTIONS[@]}" -Lks \
 						"${PUPPETEER_PROXY}$page_url" \
 						| grep -E '(var|let) episode'
@@ -312,7 +312,7 @@ download()
 				((tried > 1)) && (
 					tput el1
 					tput el
-					tput       cuu1
+					tput   cuu1
 				)
 				tput el1
 				tput el

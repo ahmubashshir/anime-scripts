@@ -28,7 +28,7 @@ da_get_len()
 	type=$(da_db get type)
 	(
 		try_page=0
-		until curl --disable "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series" || ((try_page++ >= 5)); do
+		until curl --disable "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://1anime.to/$series" || ((try_page++ >= 5)); do
 			sleep 1
 		done
 	) | case $type in
@@ -64,11 +64,11 @@ da_get()
 			echo "$da_page" \
 				| xmllint --html --xmlout --xpath \
 					'string((//head/meta[@property="og:url"])[1]/@content)' - 2> /dev/null
-		)" != "https://ww5.dubbedanime.net/$series" ]] \
+		)" != "https://1anime.to/$series" ]] \
 		&& ((try_page++ < 5)); do
 		da_page=$(
 			curl --disable "${CURL_OPTIONS[@]}" -ksL \
-				"${PUPPETEER_PROXY}https://ww5.dubbedanime.net/$series"
+				"${PUPPETEER_PROXY}https://1anime.to/$series"
 		)
 		((try_page > 1)) && sleep 1
 	done

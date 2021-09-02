@@ -43,6 +43,10 @@ else
 	PREFERRED_TR=${PREFERRED_TR:-dub}
 fi
 if [ -n "$AP" ]; then
+	#+env
+	#text: Set ANIME_PATH for only this instance.
+	#special: @ denotes $MEDIA_ROOT/
+	#-env
 	ANIME_PATH="$AP"
 fi
 if [[ $ANIME_PATH = @* ]]; then

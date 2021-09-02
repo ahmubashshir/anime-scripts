@@ -35,8 +35,8 @@ da_get_len()
 		null | 0)
 			xmllint --html --nowarning --xpath '//*[@id="jump-episode"]/li/a/@href' - 2> /dev/null | wc -l
 			;;
-		subbed | dubbed)
-			xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/li[@data-'$type'="true" or @data-'${type:0:3}'="true"]/a/@href' - 2> /dev/null | wc -l
+		sub* | dub*)
+			xmllint --html --nowarning --xpath '//ul[@id="jump-episode"]/li[@data-'$type'bed="true" or @data-'${type:0:3}'="true"]/a/@href' - 2> /dev/null | wc -l
 			;;
 		*)
 			return 1
@@ -121,21 +121,21 @@ da_get()
 			) || (
 				echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1 | cut -c1-3
 			)
-		)bed"
+		)"
 	elif [[ -n $FORCE ]]; then
-		tr=${FORCE:0:3}bed
+		tr=${FORCE:0:3}
 	elif [ "$(echo "$baseurl" | grep dubbed=true | tr -d '[:space:]')" != "" ]; then
-		tr=dubbed
+		tr=dub
 	elif [ "$(echo "$baseurl" | grep subbed=true | tr -d "[:space:]")" != "" ]; then
 		tr=$(echo "$baseurl" | tr \; \\n | grep '=true$' | sort -u | cut -d= -f1)
 	fi
 	da_db set type "\"$tr\""
-	url="$(echo "$baseurl" | grep "$tr=true" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
+	url="$(echo "$baseurl" | grep "${tr}bed=true" | cut -d\; -f1 | awk "{print \$0\"-english-$tr\";}")"
 	if ! (echo "$url" | grep -q "${tr}$"); then
 		echo "$(
 			tput setaf 1
 			tput dim
-		)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr} episode yet.$(tput sgr0)" 1>&2
+		)\"$(ellipsis 38 "$TITLE")\" doesn't have any ${tr}bed episode yet.$(tput sgr0)" 1>&2
 		if ! find . -name '*.mp4' | grep -q '\.mp4$'; then
 			cd ..
 			rm -rf "$OLDPWD"
@@ -160,7 +160,7 @@ da_get()
 		return 0
 	}
 	if ${FILE_LIST:-false} && [[ -z $FILE_LIST_RANGE ]]; then
-		vbar "ID:$id Type:${tr:-dubbed} Files:$epc"
+		vbar "ID:$id Type:${tr:-dub}bed Files:$epc"
 		read -eri "1-$epc" -p$'Episode list: ' FILE_LIST_RANGE
 		ep="$(echo "${FILE_LIST_RANGE:-1-}" | num_unicode2ascii)"
 		tput cuu 2
@@ -179,9 +179,6 @@ da_get()
 		ep_show="file $FILE_LIST_RANGE"
 		dl_notify="Episode ${ep_show:5} is"
 	fi
-	if [ -n "$FORCE" ]; then
-		echo "${FORCE:0:3}" > .type
-	fi
 	${DEBUG:-false} && set +x
 	${SKIP_DOWNLOAD:-false} || anime_cover "https://cdn.animeapi.com/images/${1%%-*}.jpg" &
 	ep=$(expand_limit "${FILE_LIST_RANGE:-1-}" "$epc")
@@ -193,10 +190,10 @@ da_get()
 		dl_notify="Episode ${ep_show:5}is"
 	fi
 	if [[ -n $ep ]] && [[ -n $ep_show ]]; then
-		vbar "ID:$id Type:${tr:-dubbed}"
+		vbar "ID:$id Type:${tr:-dub}bed"
 		vbar " Files:$epc Downloading:$ep_show "
 	else
-		vbar "ID:$id Files:$epc Type:${tr:-dubbed}"
+		vbar "ID:$id Files:$epc Type:${tr:-dub}bed"
 	fi
 	total_pw=$(echo "$ep" | tr \  \\n | wc -l)
 	${DEBUG:-false} && set -x

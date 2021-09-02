@@ -372,7 +372,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#long: --sub
 				#long: --dub
 				#IDNT: 1
-				#text: Prefer subbed/dubbed for downloading.
+				#text: Prefer sub/dub for downloading.
 				#-option
 				PREFERRED_TR=$(echo "$1" | tr -d - | cut -c1 | tr '[:upper:]' '[:lower:]')ub
 				;;
@@ -387,7 +387,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		shift
 	done
 	if [[ -n $TYPE_ANIME ]] && {
-		[[ $TYPE_ANIME = subbed ]] || [[ $TYPE_ANIME = dubbed ]]
+		[[ $TYPE_ANIME = sub ]] || [[ $TYPE_ANIME = dub ]]
 	}; then
 		tr=$TYPE_ANIME
 	else

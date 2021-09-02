@@ -98,7 +98,7 @@ da_search()
 		RES_LIST='1'
 	elif [ -z "$RES_LIST" ] && ! ${DOWNLOAD_ALL:-false}; then
 		vbar
-		vbar "DubbedAnime.net Search Result" true
+		vbar "Search Result" true
 		vbar
 		vbar "Select One or more to download"
 		vbar

@@ -49,7 +49,7 @@ mp4upload:get_url()
 
 xstreamcdn:get_url()
 {
-	curl --disable -sX POST "https://fcdn.stream/api/source/$1" --data "r=https://fcdn.stream/f/$1" --data 'd=fcdn.stream' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
+	curl --disable -sX POST "https://embedsito.com/api/source/$1" --data "r=https://1anime.to/" --data 'd=embedsito.com' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
 }
 
 trollvid:get_url()
@@ -88,16 +88,12 @@ trollvid:get_url()
 
 vidstreaming:get_url()
 {
-	curl --disable -s "https://streamani.net/streaming.php?id=$1" \
+	curl --disable -s "https://gogoplay1.com/download?id=$1" \
 		| xmllint \
 			--nocdata --noent --html --xmlout \
-			--xpath 'string(//*[@data-provider="serverwithtoken"][1]/@data-video)' - 2> /dev/null \
-		| xargs curl --disable -s \
-		| xmllint \
-			--nocdata --html --xmlout --xpath \
-			'string(//div[@id="myVideo"]/../script[contains(text(), "playerInstance.setup")]/text())' - 2> /dev/null \
-		| beautify_js \
-		| sed -nE "/^\s+file:.*\.mp4/s/.*'(.*)',/\1/p" \
+			--xpath '//a[@download]/@href' - 2> /dev/null \
+		| sed 's/[[:blank:]]?*href="\(.*\)"/\1/' \
+		| tail -n 2 \
 		| head -n 1
 }
 

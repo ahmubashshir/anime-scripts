@@ -234,7 +234,7 @@ replace_invalid()
 remote_exist()
 {
 	if echo "$@" | grep -q http; then
-		if [[ $(curl --disable -kLsIXGET "$@" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
+		if [[ $(curl --disable --referer "$1" -kLsIXGET "$1" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
 			return 0
 		else
 			return 1

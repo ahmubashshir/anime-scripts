@@ -1,15 +1,18 @@
+prefix:=
+ifeq ($(id),0)
+	prefix:=/usr
+else
+	prefix:=$(HOME)
+endif
+
 OUTPUT:=danime
 id:= $(shell id -u)
 test:=yes
 syntax:=yes
 bats:=-r
 VERSION:=
-
-ifeq ($(id),0)
-	prefix=/usr
-else
-	prefix=$(HOME)/bin
-endif
+bindir:=$(prefix)/bin
+test_target:=test
 
 ifeq ($(VERSION),)
 	VERSION=r$(shell git rev-list --count HEAD).$(shell git rev-parse --short HEAD)
@@ -39,7 +42,7 @@ test-no:
 	@echo Skipping tests.
 test-yes:
 	@echo Running tests.
-	./test/bats/bats $(bats) test
+	./test/bats/bats $(bats) $(test_target)
 clean:
 	@echo "Cleaning"
 	rm -f $(OUTPUT)
@@ -50,14 +53,14 @@ debug: check
 	@make clean
 install: all
 	@echo Installing $(OUTPUT)
-	install -C $(OUTPUT) $(prefix)/$(OUTPUT)
-	install -C getmap.py $(prefix)/$(OUTPUT)_getmap
+	install -C $(OUTPUT) $(bindir)/$(OUTPUT)
+	install -C getmap.py $(bindir)/$(OUTPUT)_getmap
 install-libbash:
 	@echo Installing libbash
-	install -C ../lib/libbash $(prefix)/libbash
+	install -C ../lib/libbash $(bindir)/libbash
 install-spinner:
 	@echo Installing spinner
-	install -C ../lib/spinner $(prefix)/spinner
+	install -C ../lib/spinner $(bindir)/spinner
 update:
 	@git pull
 upgrade: update install install-spinner install-libbash

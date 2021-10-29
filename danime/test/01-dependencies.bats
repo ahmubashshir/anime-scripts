@@ -12,15 +12,6 @@ fi
 @test "Checking for awk..." {
 	assert_dep_exec awk
 }
-@test "Checking for bash..." {
-	assert_dep_exec bash
-}
-@test "Checking for dos2unix..." {
-	assert_dep_exec dos2unix
-}
-@test "Checking for cd..." {
-	assert_dep_exec cd
-}
 @test "Checking for curl..." {
 	assert_dep_exec curl
 }
@@ -29,9 +20,6 @@ fi
 }
 @test "Checking for dd..." {
 	assert_dep_exec dd
-}
-@test "Checking for echo..." {
-	assert_dep_exec echo
 }
 @test "Checking for false..." {
 	assert_dep_exec false
@@ -63,12 +51,6 @@ fi
 @test "Checking for printf..." {
 	assert_dep_exec printf
 }
-@test "Checking for read..." {
-	assert_dep_exec read
-}
-@test "Checking for readonly..." {
-	assert_dep_exec readonly
-}
 @test "Checking for rm..." {
 	assert_dep_exec rm
 }
@@ -86,9 +68,6 @@ fi
 }
 @test "Checking for stat..." {
 	assert_dep_exec stat
-}
-@test "Checking for tac..." {
-	assert_dep_exec tac
 }
 @test "Checking for tail..." {
 	assert_dep_exec tail
@@ -111,17 +90,8 @@ fi
 @test "Checking for xmllint..." {
 	assert_dep_exec xmllint
 }
-@test "Checking for tee..." {
-	assert_dep_exec tee
-}
 @test "Checking for python3..." {
 	assert_dep_exec python3
-}
-@test "Checking for gdbus..." {
-	assert_dep_exec gdbus
-}
-@test "Checking for chromedriver..." {
-	assert_dep_exec chromedriver
 }
 @test "Checking for $py3-jsbeautifier..." {
 	assert_dep_py3 jsbeautifier
@@ -135,9 +105,6 @@ fi
 }
 @test "Checking for $py3-requests..." {
 	assert_dep_py3 requests
-}
-@test "Checking for $py3-selenium..." {
-	assert_dep_py3 selenium
 }
 @test "Checking for $py3-yaml..." {
 	assert_dep_py3 yaml

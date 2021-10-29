@@ -53,14 +53,14 @@ debug: check
 	@make clean
 install: all
 	@echo Installing $(OUTPUT)
-	install -C $(OUTPUT) $(bindir)/$(OUTPUT)
-	install -C getmap.py $(bindir)/$(OUTPUT)_getmap
+	install -CDm755 $(OUTPUT) $(bindir)/$(OUTPUT)
+	install -CDm755 getmap.py $(bindir)/$(OUTPUT)_getmap
 install-libbash:
 	@echo Installing libbash
-	install -C ../lib/libbash $(bindir)/libbash
+	install -CDm755 ../lib/libbash $(bindir)/libbash
 install-spinner:
 	@echo Installing spinner
-	install -C ../lib/spinner $(bindir)/spinner
+	install -CDm755 ../lib/spinner $(bindir)/spinner
 update:
 	@git pull
 upgrade: update install install-spinner install-libbash

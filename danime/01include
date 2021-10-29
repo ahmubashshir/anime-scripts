@@ -15,17 +15,19 @@ CURL_OPTIONS=(
 	-H 'sec-fetch-mode: cors'
 	-H 'sec-fetch-dest: empty'
 )
-
-cookies=()
-for each in ~/.local/share/danime/cookies-*.txt; do
-	cookies+=("$each")
-done
-if ((${#cookies[@]})); then
-	cat "${cookies[@]}" > ~/.local/share/danime/cookies.txt
-fi
-unset cookies
-if [ -f ~/.local/share/danime/cookies.txt ]; then
-	CURL_OPTIONS+=(--cookie ~/.local/share/danime/cookies.txt)
+shopt -s nullglob
+if [ -d ~/.local/share/danime ]; then
+	cookies=()
+	for each in ~/.local/share/danime/cookies-*.txt; do
+		cookies+=("$each")
+	done
+	if ((${#cookies[@]})); then
+		cat "${cookies[@]}" > ~/.local/share/danime/cookies.txt
+	fi
+	unset cookies
+	if [ -f ~/.local/share/danime/cookies.txt ]; then
+		CURL_OPTIONS+=(--cookie ~/.local/share/danime/cookies.txt)
+	fi
 fi
 
 langs=(

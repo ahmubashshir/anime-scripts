@@ -4,15 +4,15 @@ load "00-load"
 regex="(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]"
 function setup
 {
-	if curl -I google.com &> /dev/null; then
+	if curl --disable -I duck.com &> /dev/null; then
 		export CONNECTED=true
 	fi
 }
 
 @test "check 'get_effective_url()'" {
 	${CONNECTED:-false} || skip
-	run get_effective_url <<< $(echo google.com)
-	assert_output "http://www.google.com/"
+	run get_effective_url <<< $(echo https://duck.com)
+	assert_output "https://duckduckgo.com/"
 }
 
 @test "get url from trollvid" {
@@ -36,12 +36,14 @@ function setup
 
 @test "get url from xstreamcdn" {
 	${CONNECTED:-false} || skip
+	skip # Video deleted, have to find new video ID to test with
 	run xstreamcdn:get_url 36d3ecmrw73xzew
 	assert_output --regexp "$regex"
 }
 
 @test "get url from cloud9" {
 	${CONNECTED:-false} || skip
+	skip # Server down
 	run cloud9:get_url uw-nKG9IKU7_
 	assert_output --regexp "$regex"
 }
@@ -54,6 +56,7 @@ function setup
 
 @test "get url from mixdrop" {
 	${CONNECTED:-false} || skip
+	skip # Video deleted, have to find new video ID to test with
 	run mixdrop:get_url rw6vnp0xu3nj7w
 	assert_output --regexp "$regex"
 }

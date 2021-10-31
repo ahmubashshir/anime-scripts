@@ -6,7 +6,7 @@
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
-SUPPORTED_HOSTS='trollvid|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop|cloud9'
+SUPPORTED_HOSTS='trollvid|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop'
 get_effective_url()
 {
 	xargs curl --disable -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
@@ -54,17 +54,17 @@ xstreamcdn:get_url()
 
 trollvid:get_url()
 {
-	local token try=0 url
+	local token xToken try=0 url
 	while [[ -z $url ]] && ((try++ < 5)); do
 		((try > 1)) && sleep 2
-		token=$(
+		xToken=$(
 			curl --disable -L -H "referer: https://1anime.to$(da_db get url)" "${CURL_OPTIONS[@]}" -s "${PUPPETEER_PROXY}$2" \
 				| sed -nE "/xToken/s/.*'(.*)'.*/\1/p"
 		)
-		[ -z "$token" ] && continue
-		[ "$token" ] \
+		[ -z "$xToken" ] && continue
+		[ "$xToken" ] \
 			&& token=$(
-				curl --disable "https://mp4.sh/embed/${1}${token}" \
+				curl --disable "https://mp4.sh/embed/${1}${xToken}" \
 					-s -H 'Referer: https://1anime.to/' \
 					| sed -nE "/token: /s/.*'(.*)'.*/\1/p"
 			)
@@ -72,6 +72,9 @@ trollvid:get_url()
 		[ "$token" ] \
 			&& url=$(
 				curl --disable "https://mp4.sh/v/$1" \
+					-H "User-Agent: $USER_AGENT" \
+					-H "Referer: https://mp4.sh/embed/${1}${xToken}" \
+					-H "Alt-Used: mp4.sh" \
 					-H 'Origin: https://mp4.sh' \
 					-s --data-raw "token=$token" \
 					| jq -r 'select(.success == true).file' 2> /dev/null
@@ -79,10 +82,8 @@ trollvid:get_url()
 		[ "$url" ] \
 			&& curl --disable -s "$(echo "$url" | cut -d/ -f1-3)/video.php" \
 				--data-raw "token=$token" 2> /dev/null \
-			&& {
-				echo "$url"
-				break
-			}
+			&& echo "$url" \
+			&& break
 	done
 }
 

@@ -20,10 +20,13 @@ DEBUG=${DEBUG:-false}
 #start:code
 da_read_ep_json()
 {
-	cat | {
+	{
 		jq -Mc '.videos[]|del(.date)'
-		curl --disable -H "referer: $page_url" "${CURL_OPTIONS[@]}" -Lks "https://vid.xngine.com/api/episode/$2" 2> /dev/null | jq -Mc '.[]' 2> /dev/null
-	} | jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) )' | eval "$1"
+		curl --disable -H "referer: $page_url" \
+			"${CURL_OPTIONS[@]}" -Lks \
+			"https://vid.xngine.com/api/episode/$2" 2> /dev/null \
+			| jq -Mc 'select((.|type)== "array")[]' 2> /dev/null
+	} | jq -Mc 'select(has("id") and (.host|test("'$SUPPORTED_HOSTS'")) ) | '"$1"
 }
 get_mapped()
 {
@@ -82,8 +85,7 @@ da_get_episede()
 			parse_episode_page="$(
 				curl --disable \
 					-H "referer: https://1anime.to$(da_db get url)" \
-					"${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1" \
-					| grep -E '(var|let) episode'
+					"${CURL_OPTIONS[@]}" -Lks "${PUPPETEER_PROXY}$1"
 			)"
 			((try_page > 1)) && sleep 1
 		done
@@ -100,17 +102,16 @@ da_get_episede()
 					curl --disable \
 						-H "referer: https://1anime.to$(da_db get url)" \
 						"${CURL_OPTIONS[@]}" -Lks \
-						"${PUPPETEER_PROXY}$page_url" \
-						| grep -E '(var|let) episode'
+						"${PUPPETEER_PROXY}$page_url"
 				)"
 				((try_page > 1)) && sleep 1
 			done
 			shift
 			set "$page_url" "$@"
 		fi
-		unset page_url
 		parse_episode_page="$(
 			echo "$parse_episode_page" \
+				| grep -E '(var|let) episode' \
 				| cut -d= -f2- \
 				| sed 's/\;$//g;s/^[[:blank:]]*//g' \
 				| head -1
@@ -119,9 +120,9 @@ da_get_episede()
 			tr=dub
 		fi
 		if [[ $tr = dub ]] || [[ $tr = sub ]]; then
-			filter="grep '\"type\":\s*\"${tr}\(bed\|\)\"'"
+			filter="select(.type|test(\"${tr}(bed|)\"))"
 		else
-			filter="cat"
+			filter="select(.)"
 		fi
 		if [ -z "$parse_episode_page" ]; then
 			stop_spinner 1

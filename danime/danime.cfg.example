@@ -39,3 +39,9 @@ PREFERRED_TR=
 
 # file checker block size[1-100 kb]
 BS=
+
+# Force Disable auto-update
+#NO_AUTO_UPDATE=1
+
+# Update automatically, this is the default
+AUTO_UPDATE=1

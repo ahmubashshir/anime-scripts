@@ -71,4 +71,54 @@ da_get_license()
 	echo " Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,"
 	echo " MA 02110-1301, USA."
 }
+
+danime_check_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE + AUTO_UPDATE - NO_AUTO_UPDATE < 1)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^# VERSION/{print $3;exit}' "$0")
+	UPDATE=$(curl --disable -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $UPDATE ]]; then return 1; fi
+	if [[ "$VERSION" != "$UPDATE" ]]; then
+		printf 'Update Available!\n'
+		printf 'Current version: %s\n' "$VERSION"
+		printf 'Latest version: %s\n' "$UPDATE"
+		return 0
+	fi
+	return 1
+}
+
+danime_self_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE + AUTO_UPDATE - NO_AUTO_UPDATE < 1)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^# VERSION/{print $3;exit}' "$0")
+	UPDATE=$(curl --disable -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $UPDATE ]]; then return 1; fi
+
+	printf 'Updating: %s -> %s' "$VERSION" "$UPDATE"
+	curl --disable -Ls "$UPDATE_REPO/danime" > "$0~update"
+	ret=$?
+	if ((ret == 0)); then
+		chmod +x "$0~update"
+		mv "$0~update" "$0"
+	else
+		rm -f "$0~update"
+	fi
+	return "$ret"
+}
 #end:code

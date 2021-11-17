@@ -41,6 +41,8 @@ else
 	FORCE=
 	SEARCHSTR=
 	PREFERRED_TR=${PREFERRED_TR:-dub}
+	AUTO_UPDATE=1
+	NO_AUTO_UPDATE=0
 fi
 if [ -n "$AP" ]; then
 	#+env
@@ -109,6 +111,7 @@ check_deps bin:awk bin:curl \
 #variables
 sp=$sp18
 SPINNER_DELAY=0.07
+UPDATE_REPO=https://github.com/ahmubashshir/anime-scripts/raw/release
 #main
 ANIME_PATH="${ANIME_PATH:-$MEDIA_ROOT/Anime}"
 CARTOON_PATH="${CARTOON_PATH:-$MEDIA_ROOT/Animetion-Movie/Series}"
@@ -117,6 +120,8 @@ POWER_RANGERS_PATH="${POWER_RANGERS_PATH:-$MOVIE_PATH/Power Rangers}"
 NOBREAK=${NOBREAK:-true}
 NORESET=${NORESET:-false}
 DOWNLOAD_ALL=${DOWNLOAD_ALL:-false}
+AUTO_UPDATE=${AUTO_UPDATE:-1}
+NO_AUTO_UPDATE=${NO_AUTO_UPDATE:-0}
 FILE_LIST=${FILE_LIST:-false}
 FORCE=
 SEARCHSTR=

@@ -42,6 +42,15 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				da_get_license
 				exit 0
 				;;
+			-U | --self-update)
+				#+option
+				#short: -U
+				#long: --self-update
+				#IDNT: 1
+				#text: Update this program.
+				#-option
+				((CHECK_UPDATE = AUTO_UPDATE - NO_AUTO_UPDATE + 1))
+				;;
 			-i | --id)
 				#+option
 				#short: -i
@@ -131,9 +140,6 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#text: enable debug mode
 				#-option
 				DEBUG=true
-				alias start_spinner=echo
-				alias vbar=echo
-				alias stop_spinner=true
 				;;
 			-c | --continue)
 				#+option
@@ -386,6 +392,13 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 		esac
 		shift
 	done
+	if ((CHECK_UPDATE + AUTO_UPDATE - NO_AUTO_UPDATE >= 1)) && danime_check_update; then
+		danime_self_update
+		export TYPE_ANIME PREFERRED_HOSTS PREFERRED_TR SKIP_DOWNLOAD FORCE \
+			NOBREAK NORESET UPDATE_QUEUE DOWNLOAD_ALL DO_ALT RES_LIST FILE_LIST \
+			FILE_LIST_RANGE REPLACE_FAIL REPLACE_MANUAL DEBUG CONTINUE
+		exec "$0" "$SEARCHSTR"
+	fi
 	if [[ -n $TYPE_ANIME ]] && {
 		[[ $TYPE_ANIME = sub ]] || [[ $TYPE_ANIME = dub ]]
 	}; then

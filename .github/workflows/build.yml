@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  # run on every push on the master branch
+  push:
+    branches:
+    - master
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: master
+      - name: Build binary
+        run: |
+          mkdir build
+          make -C danime test=no syntax=no install bindir="$(pwd)/build"
+          echo r$(git rev-list --count HEAD).$(git rev-parse --short HEAD) > build/VERSION
+
+      - name: Push built binary to release branch
+        uses: crazy-max/ghaction-github-pages@v2.5.0
+        with:
+          target_branch: release
+          build_dir: build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

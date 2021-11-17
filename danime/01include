@@ -246,4 +246,19 @@ remote_exist()
 	fi
 
 }
+
+if ${DEBUG:-false}; then
+	vbar()
+	{
+		echo "$*"
+	}
+	start_spinner()
+	{
+		vbar "$@"
+	}
+	stop_spinner()
+	{
+		:
+	}
+fi
 #end:code

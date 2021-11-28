@@ -110,7 +110,7 @@ danime_self_update()
 	UPDATE=$(curl --disable -Ls "$UPDATE_REPO/VERSION")
 	if [[ -z $UPDATE ]]; then return 1; fi
 
-	printf 'Updating: %s -> %s' "$VERSION" "$UPDATE"
+	printf 'Updating: %s -> %s\n' "$VERSION" "$UPDATE"
 	curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/danime" > "$0~update"
 	ret=$?
 	if ((ret == 0)); then

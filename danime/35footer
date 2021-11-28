@@ -49,7 +49,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 				#IDNT: 1
 				#text: Update this program.
 				#-option
-				((CHECK_UPDATE = AUTO_UPDATE - NO_AUTO_UPDATE + 1))
+				((CHECK_UPDATE = AUTO_UPDATE - NO_AUTO_UPDATE + 2))
 				;;
 			-i | --id)
 				#+option
@@ -394,10 +394,14 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	done
 	if ((CHECK_UPDATE + AUTO_UPDATE - NO_AUTO_UPDATE >= 1)) && danime_check_update; then
 		danime_self_update
-		export TYPE_ANIME PREFERRED_HOSTS PREFERRED_TR SKIP_DOWNLOAD FORCE \
-			NOBREAK NORESET UPDATE_QUEUE DOWNLOAD_ALL DO_ALT RES_LIST FILE_LIST \
-			FILE_LIST_RANGE REPLACE_FAIL REPLACE_MANUAL DEBUG CONTINUE
-		exec "$0" "$SEARCHSTR"
+		if ((CHECK_UPDATE + AUTO_UPDATE - NO_AUTO_UPDATE < 2)); then
+			export TYPE_ANIME PREFERRED_HOSTS PREFERRED_TR SKIP_DOWNLOAD FORCE \
+				NOBREAK NORESET UPDATE_QUEUE DOWNLOAD_ALL DO_ALT RES_LIST FILE_LIST \
+				FILE_LIST_RANGE REPLACE_FAIL REPLACE_MANUAL DEBUG CONTINUE
+			exec "$0" "$SEARCHSTR"
+		else
+			exit
+		fi
 	fi
 	if [[ -n $TYPE_ANIME ]] && {
 		[[ $TYPE_ANIME = sub ]] || [[ $TYPE_ANIME = dub ]]

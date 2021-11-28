@@ -167,7 +167,11 @@ validate_limit()
 }
 num_unicode2ascii()
 {
-	sed "$(for n in "${langs[@]}"; do echo "y/$n/0123456789/;"; done)"
+	local -a seds=()
+	for n in "${langs[@]}"; do
+		seds+=(-e "y/$n/0123456789/")
+	done
+	sed "${seds[@]}"
 }
 srand()
 {

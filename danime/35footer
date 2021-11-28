@@ -408,7 +408,7 @@ if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	}; then
 		tr=$TYPE_ANIME
 	else
-		tr="$(echo "$@" | sed 'y/০১২৩৪৫৬৭৮৯/0123456789/' | sed 's| |\n|g' | grep -E '^sub$' || echo dub)bed"
+		tr="$(echo "$@" | num_unicode2ascii | sed 's| |\n|g' | grep -E '^sub$' || echo dub)bed"
 	fi
 	if {
 		[[ -n "$FILE_LIST_RANGE" ]] || [[ -n "$RES_LIST" ]]

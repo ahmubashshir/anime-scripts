@@ -109,7 +109,7 @@ check_deps bin:awk bin:curl \
 . spinner
 . libbash
 #variables
-sp=$sp18
+sp=$sp1
 SPINNER_DELAY=0.07
 UPDATE_REPO=https://github.com/ahmubashshir/anime-scripts/raw/release
 #main

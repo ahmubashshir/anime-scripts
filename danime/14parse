@@ -6,7 +6,7 @@
 . 01include
 DEBUG=${DEBUG:-false}
 #start:code
-SUPPORTED_HOSTS='trollvid|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop'
+SUPPORTED_HOSTS='trollvid|mp4.sh|mp4upload|vidstreaming|xstreamcdn|gogo server|mixdrop'
 get_effective_url()
 {
 	xargs curl --disable -ILksXGET -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
@@ -16,6 +16,7 @@ get_url()
 	local ep_file_host ep_file_id n try=0 url
 	ep_file_host=$(echo "$1" | jq -r '.host')
 	ep_file_id=$(echo "$1" | jq -r '.id' | xargs basename -a)
+	mirror="${ep_file_host//[^[:alnum:]]/}"
 	if ! {
 		echo "$SUPPORTED_HOSTS" | grep -q "$ep_file_host"
 	}; then
@@ -23,12 +24,12 @@ get_url()
 		return 1
 	fi
 	for n in $ep_file_id; do
-		if [ -n "$(type -t ${ep_file_host// /+}:get_url || type -w ${ep_file_host// /+}:get_url)" ]; then
+		if [[ $(type -t "${mirror}:get_url" || type -w "${mirror}:get_url") ]]; then
 			url=""
 			try=0
 			while [[ -z $url ]] && ((try++ < 5)); do
 				((try > 1)) && sleep 2
-				url="$(${ep_file_host// /+}:get_url "${n}" "$2")"
+				url="$("${mirror}:get_url" "${n}" "$2")"
 			done
 			echo "$url"
 		else
@@ -52,9 +53,13 @@ xstreamcdn:get_url()
 	curl --disable -sX POST "https://embedsito.com/api/source/$1" --data "r=https://1anime.to/" --data 'd=embedsito.com' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
 }
 
+mp4sh:get_url() {
+	trollvid:get_url "$@"
+}
+
 trollvid:get_url()
 {
-	local token xToken try=0 url
+	local token xToken try=0 url page
 	while [[ -z $url ]] && ((try++ < 5)); do
 		((try > 1)) && sleep 2
 		xToken=$(
@@ -63,11 +68,13 @@ trollvid:get_url()
 		)
 		[ -z "$xToken" ] && continue
 		[ "$xToken" ] \
-			&& token=$(
+			&& page=$(
 				curl --disable "https://mp4.sh/embed/${1}${xToken}" \
 					-s -H 'Referer: https://1anime.to/' \
-					| sed -nE "/token: /s/.*'(.*)'.*/\1/p"
 			)
+		[ -n "$page" ] && stream=$(sed -nE "/let stream =/s/.*'(.*)'.*/\1/p" <<< "$page")
+		[ -n "$stream" ] && echo "$stream" && return
+		[ -n "$page" ] && token=$(sed -nE "/token: /s/.*'(.*)'.*/\1/p" <<< "$page")
 		[ -z "$token" ] && continue
 		[ "$token" ] \
 			&& url=$(

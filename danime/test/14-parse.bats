@@ -50,7 +50,7 @@ function setup
 
 @test "get url from gogo server" {
 	${CONNECTED:-false} || skip
-	run gogo+server:get_url MTQ1NTY5
+	run gogoserver:get_url MTQ1NTY5
 	assert_output --regexp "$regex"
 }
 

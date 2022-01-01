@@ -53,7 +53,8 @@ xstreamcdn:get_url()
 	curl --disable -sX POST "https://embedsito.com/api/source/$1" --data "r=https://1anime.to/" --data 'd=embedsito.com' | jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null | get_effective_url
 }
 
-mp4sh:get_url() {
+mp4sh:get_url()
+{
 	trollvid:get_url "$@"
 }
 
@@ -70,7 +71,7 @@ trollvid:get_url()
 		[ "$xToken" ] \
 			&& page=$(
 				curl --disable "https://mp4.sh/embed/${1}${xToken}" \
-					-s -H 'Referer: https://1anime.to/' \
+					-s -H 'Referer: https://1anime.to/'
 			)
 		[ -n "$page" ] && stream=$(sed -nE "/let stream =/s/.*'(.*)'.*/\1/p" <<< "$page")
 		[ -n "$stream" ] && echo "$stream" && return
@@ -105,7 +106,7 @@ vidstreaming:get_url()
 		| head -n 1
 }
 
-gogo+server:get_url()
+gogoserver:get_url()
 {
 	vidstreaming:get_url "$1"
 }

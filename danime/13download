@@ -199,7 +199,7 @@ da_get_episede()
 							print lines[i]
 					}'
 		)
-		set +x
+		${DEBUG:-false} && set +x
 		if [ -n "$parse_episode_page" ] && [ -n "$ep_title" ]; then
 			stop_spinner 0
 		else
@@ -225,7 +225,7 @@ da_get_episede()
 			ep_file_host=$(echo "$n" | jq -r '.host')
 			ep_file_id=$(echo "$n" | jq -r '.id' | xargs basename -a 2> /dev/null)
 			[ -z "$ep_file_id" ] && continue
-			set +x
+			${DEBUG:-false} && set +x
 			start_spinner "Getting url from provider[$ep_file_host:$(ellipsis 15 "$ep_file_id")]"
 			${DEBUG:-false} && set -x
 			readarray -t ep_file_url < <(get_url "$n" "$1")

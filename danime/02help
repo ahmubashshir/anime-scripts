@@ -84,12 +84,17 @@ danime_check_update()
 
 	local VERSION UPDATE
 	VERSION=$(awk '/^# VERSION/{print $3;exit}' "$0")
-	UPDATE=$(curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/VERSION")
-	if [[ -z $UPDATE ]]; then return 1; fi
-	if [[ "$VERSION" != "$UPDATE" ]]; then
+	LATEST=$(curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $LATEST ]]; then return 1; fi
+	LATEST=$(
+		printf '%s\n' "$VERSION" "$LATEST" \
+			| sort --version-sort --reverse \
+			| head -n1
+	)
+	if [[ "$VERSION" != "$LATEST" ]]; then
 		printf 'Update Available!\n'
 		printf 'Current version: %s\n' "$VERSION"
-		printf 'Latest version: %s\n' "$UPDATE"
+		printf 'Latest version: %s\n' "$LATEST"
 		return 0
 	fi
 	return 1

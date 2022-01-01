@@ -9,6 +9,21 @@
 . 14parse
 DEBUG=${DEBUG:-false}
 #start:code
+
+if [[ $- =~ x ]]; then
+	function vbar
+	{
+		echo "$*"
+	}
+	function start_spinner
+	{
+		echo ":: $*"
+	}
+	function stop_spinner
+	{
+		echo ":: $*"
+	}
+fi
 if [[ $# != 0 ]] && [[ $1 != latest ]]; then
 	while [ -n "$1" ]; do
 		case $1 in

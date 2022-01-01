@@ -15,7 +15,7 @@ CURL_OPTIONS=(
 	-H 'sec-fetch-mode: cors'
 	-H 'sec-fetch-dest: empty'
 )
-shopt -s nullglob
+shopt -s nullglob extglob
 if [ -d ~/.local/share/danime ]; then
 	cookies=()
 	for each in ~/.local/share/danime/cookies-*.txt; do

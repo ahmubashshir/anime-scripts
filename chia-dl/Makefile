@@ -2,7 +2,8 @@ prefix:=
 OUTPUT:=chia-dl
 test:=yes
 syntax:=yes
-bats:=-r
+BATSFLAGS:=-p -T -x
+BATS:= $(shell which bats 2>/dev/null)
 VERSION:=
 bindir:=$(prefix)/bin
 test_target:=test
@@ -35,6 +36,10 @@ ifneq ($(syndep),)
     checks += syntax
 endif
 
+ifeq ($(BATS),)
+    BATS = ./test/bats/bin/bats
+endif
+
 source = \
         00header \
         01include \
@@ -64,7 +69,7 @@ syntax:
 
 test:
 	@echo Running tests.
-	./test/bats/bats $(bats) $(test_target)
+	$(BATS) $(BATSFLAGS) $(test_target)
 clean:
 	@echo "Cleaning"
 	rm -f $(OUTPUT)

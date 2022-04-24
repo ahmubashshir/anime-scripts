@@ -7,7 +7,7 @@ fail_dep()
 	local -a pkgs
 	local pkg
 	readarray -t pkgs < <(
-		: "${_pkgs=${2#*@}}"
+		_pkgs="${2#*@}"
 		echo "${_pkgs//@/$'\n'}"
 	)
 	error "$1" "${2%@*}"

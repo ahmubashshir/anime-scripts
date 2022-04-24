@@ -11,6 +11,18 @@
 ((def_header)) && return 0 || def_header=1
 #start:code
 #!/bin/bash
+cat << EOF
+https://1anime.to is down atm...
+And I don't know when will it come back...
+So I'll keep this one for archival.
+If you use this, install chia-dl from the same repository
+  -> github.com/ahmubashshir/anime-scripts.git
+
+  --
+Mubashshir
+EOF
+exit
+
 declare -a exit_traps
 trap 'on_exit' INT ERR TERM EXIT QUIT ABRT
 function on_exit

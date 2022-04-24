@@ -9,8 +9,7 @@
 # shellcheck disable=SC2119
 # shellcheck disable=SC2032
 ((def_download)) && return 0 || def_download=1
-source libbash
-source spinner
+. 00header
 sp=$sp31
 SPINNER_DELAY=0.04
 . 14parse

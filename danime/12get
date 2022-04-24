@@ -9,8 +9,7 @@
 # shellcheck disable=SC2143
 # shellcheck disable=SC2001
 ((def_get)) && return 0 || def_get=1
-. libbash
-. spinner
+. 00header
 DEBUG=${DEBUG:-false}
 sp=$sp31
 SPINNER_DELAY=0.04

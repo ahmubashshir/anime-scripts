@@ -2,6 +2,7 @@
 # shellcheck disable=SC2034
 ((def_include)) && return 0 || def_include=1
 DEBUG=${DEBUG:-false}
+. 00header
 #start:code
 export USER_AGENT="${USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36}"
 CURL_OPTIONS=(

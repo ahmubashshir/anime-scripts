@@ -1,6 +1,7 @@
 #!/bin/bash
 ((def_help)) && return 0 || def_help=1
 DEBUG=${DEBUG:-false}
+. 00header
 #start:code
 danime_help()
 {

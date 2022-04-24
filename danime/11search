@@ -10,8 +10,7 @@
 # shellcheck disable=SC2143
 ((def_search)) && return 0 || def_search=1
 DEBUG=${DEBUG:-false}
-. libbash
-. spinner
+. 00header
 . 01include
 . 10db
 . 12get

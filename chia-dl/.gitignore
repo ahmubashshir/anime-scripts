@@ -1,0 +1,9 @@
+*.mp4
+*.jpg
+.*
+*~
+*.swp
+!.gitignore
+!.shellcheckrc
+!.env_setup
+chia-dl

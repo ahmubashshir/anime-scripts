@@ -1,0 +1,3 @@
+source-path=SCRIPTDIR
+source-path=SCRIPTDIR/../lib
+external-sources=true

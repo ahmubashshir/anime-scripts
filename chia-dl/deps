@@ -1,0 +1,80 @@
+#!/bin/bash
+. 03msg
+#start:code
+typeset -gi depfs=0
+fail_dep()
+{
+	local -a pkgs
+	local pkg
+	readarray -t pkgs < <(
+		: "${_pkgs=${2#*@}}"
+		echo "${_pkgs//@/$'\n'}"
+	)
+	error "$1" "${2%@*}"
+	for pkg in "${pkgs[@]}"; do
+		plainerr 'Available in `%s'\'' as `%s'\' "${pkg%:*}" "${pkg#*:}"
+	done
+}
+pydep()
+{
+	if ! python3 -c "import ${1%%@*}" &> /dev/null; then
+		depfs+=1
+		fail_dep "Please install \`py-module:%s'" "$1"
+	fi
+}
+dep()
+{
+	if ! type "${1%%@*}" &> /dev/null; then
+		depfs+=1
+		fail_dep "Please install \`%s' or make sure it is in your path." "$1"
+	fi
+}
+
+dep awk@pacman:gawk
+dep base64@pacman:coreutils
+dep bc@pacman:bc
+dep convert@pacman:imagemagick
+dep curl@pacman:curl
+dep cut@pacman:coreutils
+dep date@pacman:coreutils
+dep dd@pacman:coreutils
+dep ffmpeg@pacman:ffmpeg
+dep ffprobe@pacman:ffmpeg
+dep grep@pacman:grep
+dep head@pacman:coreutils
+dep jq@pacman:jq
+dep js-beautify@pacman:python-jsbeautifier
+dep lsof@pacman:lsof
+dep lwp-request@pacman:perl-libwww
+dep mkdir@pacman:coreutils
+dep mv@pacman:coreutils
+dep notify-send@pacman:libnotify
+dep openssl@pacman:openssl
+dep python3@pacman:python
+dep rm@pacman:coreutils
+dep sed@pacman:sed
+dep sha256sum@pacman:coreutils
+dep sort@pacman:coreutils
+dep stat@pacman:coreutils
+dep tac@pacman:coreutils
+dep tail@pacman:coreutils
+dep tput@pacman:ncurses
+dep tr@pacman:coreutils
+dep tty@pacman:coreutils
+dep wc@pacman:coreutils
+dep wget@pacman:wget
+dep xargs@pacman:findutils
+dep xmllint@pacman:libxml
+
+pydep requests@pypi:requests@pacman:python-requests
+pydep yaml@pypi:yaml@pacman:python-yaml
+pydep numpy@pypi:numpy@pacman:python-numpy
+
+if ((depfs > 0)); then
+	error "Install missing dependencies to continue."
+	exit 3
+else
+	unset -f fail_dep pydep dep
+	unset depfs
+fi
+#end:code

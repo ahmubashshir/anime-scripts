@@ -1,0 +1,460 @@
+#!/bin/bash
+# shellcheck disable=SC1091
+((def_download)) && return 0 || def_download=1
+source libbash
+. 00header
+. 01include
+. 03msg
+. 10db
+. 04lib
+. 14parse
+#start:code
+chia_ep_get_hosts()
+{
+	xpath '//div[i[contains(@class,"iconlayer-")]]//a[not(contains(@class, "selected"))]' \
+		| sed -E \
+			-e 's@.* class="play-video (\w+)" data-video="(https:|)//([^"]+)">.*@\1 \3@' \
+			-e 's@amp\;@@g' \
+		| sed -E \
+			-e '/^vidcdn/s@ .+\?id=([^&]+)&token=([^&]+)&expires=([^&]+)$@ \1:\2:\3@' \
+			-e '/^mp4upload/s@ .+/embed-([^.]+).html$@ \1@' \
+			-e '/\/.+$/s@ .+/([^/]+)$@ \1@' \
+			-e 's@ @/@'
+}
+
+get_mapped()
+{
+	python3 -c 'import yaml
+import requests as r
+from sys import argv, exit
+try:
+	with open("maps.yml") as file:
+		maps = yaml.load(file, Loader=yaml.FullLoader)
+except FileNotFoundError:
+	exit(0)
+
+if len(argv) == 2:
+	ep=int(argv[1])
+	if ep in maps["eps"].keys():
+		data = r.get(maps["api"]%maps["eps"][ep])
+		if data.ok:
+			json = data.json()
+		else:
+			exit(0)
+		for n in ["source", "source_bk"]:
+			if n in json.keys():
+				print(next(k["file"] for k in json[n]))
+				exit(0)' "$@"
+}
+
+chia_get_episede()
+{
+	(($# < 3)) && return 1
+
+	local slug="$1" ep_slug="$2" idx="$3" progress="$4" total="$5"
+	local try_page=0 isdub=false chia_page page_slug tr=sub ep_file_name ep_host_sel
+	local -a ep_hosts ep_file_url
+
+	local -i rfail=REPLACE_FAIL rman=REPLACE_MANUAL
+
+	isdub=$(chia_db get is-dub)
+	if [[ $ep_slug =~ ^- ]]; then
+		page_slug="$slug"
+		[[ $isdub = true ]] && page_slug+="-dub" && tr=dub
+		page_slug+="$ep_slug"
+	fi
+
+	bug download
+	msg '[%d/%d] Fetching episode: %s' "$progress" "$total" "$page_slug"
+	local purl
+	while [[ $purl != https://${DNS_NAME}/watch/${page_slug}.html ]] \
+		&& ((try_page++ < 5)); do
+		chia_page="$(
+			curl --disable \
+				--referer "https://${DNS_NAME}/anime/${slug}.html" \
+				"${CURL_OPTIONS[@]}" -Lks \
+				"${PUPPETEER_PROXY}https://${DNS_NAME}/watch/${page_slug}.html"
+		)"
+		purl="$(xpath 'string(//head/link[@rel="canonical"]/@href)' <<< "$chia_page")"
+		((try_page > 1)) && sleep 1
+	done
+	unset purl
+	unbug download
+	if [ -z "$chia_page" ]; then
+		error 'Failed to fetch episode: %s' "$page_slug"
+		return 1
+	fi
+
+	readarray -t ep_hosts < <(
+		chia_ep_get_hosts <<< "$chia_page" | grep -v '^vidcdn'
+		chia_ep_get_hosts <<< "$chia_page" | grep '^vidcdn'
+		# chia_ep_get_hosts <<< "$chia_page"
+	)
+
+	read -r ep_title < <(
+		xpath 'string(//meta[@property="og:description"][1]/@content)' \
+			<<< "$chia_page" 2> /dev/null \
+			| sed -e 's/(Dub) //' \
+				-e 's|episode|ep|gI' \
+				-e 's|ova|OVA|gI' \
+				-e 's|ona|ONA|gI' \
+				-e 's|movie|Movie|gI' \
+				-e 's|special|Special|gI' \
+			| sed -E 's/(OVA|ONA|Special)/\1 ep/gI'
+	)
+	# shellcheck disable=SC2119
+	ep_file_name="$(replace_invalid <<< "$ep_title")-${tr}bed.mp4"
+	readarray -t ep_hosts < <(
+		printf '%s\n' "${ep_hosts[@]}" \
+			| awk -e '!seen[$0]++' \
+			| if [[ -n $PREFERRED_HOSTS ]]; then
+				awk \
+					'/^('"${PREFERRED_HOSTS//,/|}"')\// {
+					print
+				}
+				!/^('"${PREFERRED_HOSTS//,/|}"')\//{
+					lines[a++]=$0
+				}
+				END {
+					for(i in lines)
+						print lines[i]
+				}'
+			else
+				cat
+			fi
+	)
+
+	ep_title=$(ellipsis $(($(tput cols) - 8)) "$ep_title")
+	msg2 'Downloading "%s"' "$ep_title"
+	if ((${#ep_hosts[@]} == 1)) && ((rfail == 0)); then
+		rfail=1
+	elif ((${#ep_hosts[@]} > 1)) && ((rfail == 1)); then
+		rfail=0
+	fi
+	bug download
+	for ep_host_sel in "${ep_hosts[@]}"; do
+		local ep_file_id ep_file_host file_num=0 curi
+		ep_file_url=()
+		ep_file_host=$(cut -d/ -f1 <<< "$ep_host_sel")
+		ep_file_id=$(cut -d/ -f2- <<< "$ep_host_sel")
+		[ -z "$ep_file_id" ] && continue
+
+		unbug download
+		ask 'Getting url from %s: %s\r' "$ep_file_host" "${ep_file_id%%:*}"
+		bug download
+
+		readarray -t ep_file_url < <(get_url "$ep_file_host" "$ep_file_id")
+
+		if ((${#ep_file_url[@]} == 0)) && [ "$(printf '%s\n' "${ep_hosts[@]}" | wc -l)" -eq 1 ] && [ -f maps.yml ]; then
+			ep_file_url=()
+			readarray -t ep_file_url < <(get_mapped "$idx")
+		fi
+
+		for curi in "${ep_file_url[@]}"; do
+			if remote_exist "$curi"; then
+				continue
+			fi
+			ep_file_url=()
+		done
+
+		if ((${#ep_file_url[@]} == 0)); then
+			continue
+		fi
+		if ((${#ep_file_url[@]} == 1)); then
+			unset file_num
+		fi
+		printf '\n'
+		for curi in "${ep_file_url[@]}"; do
+			if [ -n "$file_num" ]; then
+				((file_num++))
+				# shellcheck disable=SC2119
+				ep_file_name="$(replace_invalid <<< "$ep_title")-part$file_num-${tr}bed.mp4"
+			fi
+			ep_file_name="${ep_file_name//---/--}"
+			((SKIP_DOWNLOAD == false)) || continue
+
+			compare_episode "$ep_file_name" "$curi"
+			ret=$?
+
+			if ((ret == 1)); then
+				s=$(stat -Lc%s "$ep_file_name" 2> /dev/null || echo 0)
+				msg2 "Downloaded $ep_file_name [$(byte_hr "$s")]."
+				unset s
+				if check_file "$ep_file_name" && (($(chia_db get saved) < idx)); then
+					chia_db set saved "$idx"
+					continue
+				elif ((rfail)); then
+					rm "$ep_file_name"
+					ret=0
+				fi
+			elif ((\
+				ret == 2 && (rfail || ${failed_tests:-0} <= 5) && NO_REPLACE == 0)) \
+					|| ((rman + ret == 2)); then
+				rm "$ep_file_name"
+				ret=0
+			elif ((ret > 0)); then
+				msg2 "File doesn't match."
+				continue 2
+			fi
+
+			if ((ret == 0)); then
+				download "$ep_file_name" "$curi" && chia_db set saved "$idx"
+			fi
+		done
+		break
+	done
+	unbug download
+	return 0
+}
+
+download_hls()
+{
+	(
+		set -e -o pipefail
+		ffprobe="$(
+			ffprobe \
+				-print_format json \
+				-show_format \
+				-show_programs \
+				-referer "$2" \
+				-i "$2" -loglevel error
+		)"
+		read -r duration < <(jq -r .format.duration <<< "$ffprobe")
+		read -r program < <(
+			jq -r '
+					[
+					  .programs
+					  | sort_by(.tags.variant_bitrate)[]
+					  | select(.streams[].display_aspect_ratio == "16:9")
+					  | {
+					      i: .program_id,
+					      b:.tags.variant_bitrate,
+					      h: (.streams[]|select(.height)).height,
+					      w:  (.streams[]|select(.width)).width
+						}
+					] | sort_by(.b)
+					  | if length > 2 then
+					      .[1]
+					    else
+					      .[0]
+					    end
+					  | .i' \
+				<<< "$ffprobe"
+		)
+		ffmpeg ${HLS_ACCEL:+-hwaccel $HLS_ACCEL} -y -progress /dev/stdout \
+			-referer "$2" -i "$2" -map "0:p:$program" -c copy -f mp4 "$1.part" 2> /dev/null \
+			| awk -v "duration=$duration" -F= \
+				'function tttt(s) {
+					t = s % 60
+					d = sprintf("%02d", t);
+					s = (s - t) / 60;
+					t = s % 60
+					s = (s - t) / 60;
+					d = sprintf("%02d:", t) d;
+					if (s > 0) {
+						d = sprintf("%02d:", s) d;
+					}
+					return d
+				}
+				function calceta(d, s, S) {
+					if (s == 0 || d == 0) return "INF"
+					s = int((S - s) / (s/d));
+					return tttt(s)
+				}
+				function pbar(enc, duration, start) {
+					cols = 40;
+					progress = enc / duration;
+					fill = cols * progress;
+
+					bar = gensub(/ /,"#","g",sprintf("%" fill "s",""))
+					diff = systime() - start
+					eta = calceta(diff, enc, duration)
+
+					diff = tttt(diff)
+					if (progress == 0) fill = 1
+					blank = sprintf("%" fill - cols "s","")
+					printf "\033[2K\r%6.2f%% [%s%s] elapsed: %s  eta: %s", progress * 100 - 0.01, bar, blank, diff, eta
+				}
+				BEGIN {
+					from = systime()
+					duration = duration * 1000000
+					enc = 0
+					pbar(enc, duration, from);
+				}
+				/out_time_ms/ {enc = $2 }
+				{
+					pbar(enc, duration , from)
+				}
+				END{printf "\n";}'
+	)
+	return
+}
+check_file()
+{
+	local ret
+	ask "Checking $(ellipsis 40 "$1") integrity"
+	unbug download
+	(($# < 3)) && set "$1" 0 0
+	: | ffmpeg -v quiet -map 0:0 -f null - -i "$1"
+	ret=$?
+	if ((ret != 0 || $2 < $3)); then
+		echo ": corrupted"
+	else
+		echo ": ok"
+	fi
+	return $ret
+}
+# doc:start
+# download "file.mp4" "http://up.tld/remote"
+# returns: nothing
+# doc:end
+download()
+{
+	local s1 s2 ret tried
+	if [[ $2 =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+		echo
+		msg2 'Downloading "%s"' "$1"
+		download_hls "$@"
+		ret=$?
+	else
+		s1=$(
+			curl --disable --referer "${2}" -kLsIXGET "$2" \
+				| awk \
+					'/^HTTP\/[12.]+ 200/,/^\r$/ {
+						gsub(/\r/,"")
+						if( tolower($1) ~ /^content-length:$/) {
+							print $2
+						}
+					}'
+		)
+		s2=$(stat -Lc%s "$1.part" 2> /dev/null || echo 0)
+		if ((s1 >= s2)); then
+			if [[ -f "$1" && ! -f "$1.part" ]]; then
+				mv "$1" "$1.part"
+			fi
+			until fget "$2" "$1.part" --no-check-certificate; do
+				ret=$?
+				if [[ $ret = 10 ]]; then
+					mv "$1.part" "$1"
+					return 0
+				elif ((tried <= ${MAX_TRY:-5})); then
+					tput cuu 2
+					((tried > 1)) && (
+						tput el1
+						tput el
+						tput cuu1
+					)
+					tput el1
+					tput el
+					((tried += 1))
+					echo "Retrying...[$tried]"
+				else
+					break
+				fi
+			done
+		else
+			echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
+		fi
+	fi
+	if ((ret == 0)) && [ "$CHECK_FILE" == "false" ]; then
+		chia_db set saved "$idx"
+		return 0
+	fi
+	unbug download
+	check_file "$1.part" && mv "$1.part" "$1"
+}
+# doc:start
+# comare_episode "local.mp4" "http://up.tld/remote"
+# returns: 0 1 2 3
+# 0 - OK
+# 1 - Exists
+# 2 - Mismatch
+# doc:end
+compare_episode()
+{
+	((SKIP_COMPARE == false)) || return 0
+	bug compare
+
+	if [[ $2 =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+		printf '\nHLS Remote: skipping comparison'
+		tput cuu1
+		return 0
+	fi
+	# not downloaded
+	if ! [[ -e "$1" || -e "$1.part" ]]; then
+		return 0
+	fi
+	# downloaded, complete
+	if [[ -e "$1" && ! -e "$1.part" ]]; then
+		return 1
+	fi
+	unbug compare
+	# downloaded, partial
+	local size wsize BS="$BS" hash1 hash2
+	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+		BS=$(byte_mr <<< "$BS")
+	else
+		BS=524288
+	fi
+	size=$(stat -Lc%s "$1.part")
+	if ((BS > size)); then
+		BS=$size
+	fi
+	wsize=$(
+		curl --disable -LksIXGET "$2" \
+			| awk \
+				'/^HTTP\/[12.]+ 200/,/^\r$/ {
+					gsub(/\r/,"")
+					if( tolower($1) ~ /^content-length:$/) {
+						print $2
+					}
+				}'
+	)
+	if ((size > wsize)); then
+		return 2
+	elif ((size == 0)); then
+		return 0
+	fi
+	bug compare
+	if command -v mediainfo &> /dev/null; then
+		asize=$(
+			mediainfo "$1.part" 2> /dev/null \
+				| sed -nE '/^stream size/Is/^.*:\s+([0-9.]+)\s+MiB.*/\1/Ip' \
+				| awk '{ d +=  $1 * 1048576};END {print int(d)}'
+		)
+	else
+		asize=$size
+	fi
+	if ((asize > wsize)); then
+		return 2
+	fi
+	unbug compare
+	failed_tests=${TOTAL_CHECKS:-10}
+	IFS=' ' read -ra offsets < <(srand 0 $((size - BS)) $((BS / 2)) "${TOTAL_CHECKS:-10}")
+	if ((${#offsets} == 0)); then
+		# empty file
+		return 0
+	fi
+
+	for ((i = 0; i < ${TOTAL_CHECKS:-${#offsets}}; i++)); do
+		ask 'Comparing episode[test:%d]\r' "$((i + 1))"
+		start=${offsets[$i]}
+		hash1="$(dd bs=1 count="$BS" status=none if="$1.part" skip="$start" | sha256sum | cut -d\  -f1)"
+		hash2="$(curl --disable -Lskr "$start-$((start + BS - 1))" "$2" | sha256sum | cut -d\  -f1)"
+		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
+		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
+		test "$hash1" = "$hash2" || return 2
+	done
+	ask 'Comparing episode[test:1-%d:pass]\n' "${TOTAL_CHECKS:-${#offsets}}"
+	return 0
+}
+#end:code
+if ! {
+	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
+		[[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]
+	} && {
+		return 0 2> /dev/null
+	}
+}; then
+	chia_get_episede "$@"
+fi

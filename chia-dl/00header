@@ -1,0 +1,74 @@
+#!/bin/bash
+# shellcheck disable=SC2034,SC1090,SC1091
+((def_header)) && return 0 || def_header=1
+#start:code
+#!/bin/bash
+
+#+VERSION
+
+declare -a exit_traps
+trap 'on_exit' INT ERR TERM EXIT QUIT ABRT
+function on_exit
+{
+	local ret=$?
+	for each in "${exit_traps[@]}"; do
+		if [ "$(type -t "$each")" = "function" ]; then
+			"$each"
+		fi
+	done
+	exit $ret
+}
+
+#variables
+readonly UPDATE_REPO=https://raw.githubusercontent.com/ahmubashshir/anime-scripts/release
+declare +x -irg true=1 false=0 auto=true always=2 never=false
+declare +x -ig NOBREAK NORESET DOWNLOAD_ALL \
+	AUTO_UPDATE FILE_LIST CONTINUE \
+	SKIP_DOWNLOAD SKIP_COMPARE update_queue COLOR=${COLOR:-auto}
+#main
+if [ -f ~/.config/chia-dl.cfg ]; then
+	set()
+	{
+		declare -n var="$1"
+		if [[ -z $var ]] && (($# == 2)); then
+			var="$2"
+		elif ((${#var[@]} == 0)) && (($# == 2)); then
+			shift
+			var=("$@")
+		fi
+		declare -g "$1"
+	}
+	source ~/.config/chia-dl.cfg
+	unset -f set
+fi
+if [ -n "$AP" ]; then
+	#+env
+	#:text Set ANIME_PATH for only this instance.
+	#:note @ denotes $MEDIA_ROOT/
+	#-env
+	ANIME_PATH="$AP"
+fi
+if [[ $ANIME_PATH = @* ]]; then
+	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#@*}"
+fi
+if [[ ! -d $ANIME_PATH ]]; then
+	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1
+fi
+
+readonly MEDIA_ROOT="${MEDIA_ROOT:-/mnt/Multimedia}"
+readonly ANIME_PATH="${ANIME_PATH:-$MEDIA_ROOT/Anime}"
+readonly CARTOON_PATH="${CARTOON_PATH:-$MEDIA_ROOT/Animetion-Movie/Series}"
+readonly MOVIE_PATH="${MOVIE_PATH:-$MEDIA_ROOT/Movie}"
+readonly POWER_RANGERS_PATH="${POWER_RANGERS_PATH:-$MOVIE_PATH/Power Rangers}"
+
+NOBREAK=${NOBREAK:-true}
+NORESET=${NORESET:-false}
+DOWNLOAD_ALL=${DOWNLOAD_ALL:-false}
+AUTO_UPDATE=${AUTO_UPDATE:-auto}
+FILE_LIST=${FILE_LIST:-false}
+SEARCHSTR=
+#end:code
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	declare -p | awk '$2 !~ /x/' | grep -vE 'BASH|SHELL|PS[0-9]+|-- [[:alnum:]]+$|OPT'
+fi

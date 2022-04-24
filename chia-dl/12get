@@ -1,0 +1,151 @@
+#!/bin/bash
+# shellcheck disable=SC1091,SC2030,SC2031
+((def_get)) && return 0 || def_get=1
+. 00header
+. 03msg
+. 13download
+. 10db
+. 01include
+#start:code
+chia_get_len()
+{
+	local slug="$1" try_page=0
+	[ "$slug" = "" ] && return 3
+
+	until curl --disable "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://${DNS_NAME}/anime/${slug}.html" || ((++try_page > 5)); do
+		sleep 1
+	done \
+		| chia_crawl_page \
+		| wc -l
+}
+
+chia_crawl_page()
+{
+	xpath '//div[@class="list_episode"]//li/a/@href' \
+		| sed -nE 's@.*/watch/([[:alnum:]-]+)\.html.*@\1@p' \
+		| tac \
+		| sed -E "s/^$slug//"
+}
+
+chia_get()
+{
+	local \
+		slug="$1" \
+		title="$2" \
+		status="$3" \
+		query="$4" \
+		chia_page ep_show dl_notify idx ep_slug dl_progress dubbed=false
+
+	local -a eps sel
+
+	if [ "$slug" = "" ]; then
+		return 3
+	fi
+
+	msg 'Fetching info: "%s"' "$slug"
+
+	bug get
+	local purl
+	while [[ $purl != https://${DNS_NAME}/anime/${slug}.html ]] \
+		&& ((try_page++ < 5)); do
+		chia_page=$(
+			curl --disable "${CURL_OPTIONS[@]}" -ksL \
+				"${PUPPETEER_PROXY}https://${DNS_NAME}/anime/${slug}.html"
+		)
+		purl=$(xpath 'string(//head/link[@rel="canonical"]/@href)' <<< "$chia_page")
+		((try_page > 1)) && sleep 1
+	done
+	unbug get
+	unset purl
+
+	readarray -t eps < <(chia_crawl_page <<< "$chia_page")
+	if grep -q '\-dub$' <<< "$slug"; then
+		slug=${slug%*-dub}
+		dubbed=true
+
+	fi
+	bug get-db
+	if ! {
+		chia_db has && ((FILE_LIST))
+	} && [ -z "$FILE_LIST_RANGE" ]; then
+		chia_db add
+	fi
+	chia_db set path "\"$PWD\""
+	chia_db set title "\"$title\""
+	chia_db set status "\"$status\""
+	chia_db set is-dub "$dubbed"
+
+	if [[ -n $query ]]; then
+		chia_db set query "\"$query\""
+	fi
+	unbug get-db
+
+	((${#eps[@]} == 0)) && error "No episode is available to download yet." && exit 1
+	msg2 'Downloading: %s' "$title"
+
+	bug get-db
+	case "$status" in
+		ongoing) chia_db set total "$((${#eps[@]} + 1))" ;;
+		*) chia_db set total "${#eps[@]}" ;;
+	esac
+	unbug get-db
+
+	((update_queue)) && {
+		msg2 "Appending to queue."
+		return 0
+	}
+
+	if ((FILE_LIST == true)) && [[ -z $FILE_LIST_RANGE ]]; then
+		read -eri "1-${#eps[@]}" -p$'Episode list: ' FILE_LIST_RANGE
+		tput cuu 1
+	fi
+
+	if ((CONTINUE == true)) && [[ -z $FILE_LIST_RANGE ]] && [[ -n "$(chia_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')" ]]; then
+		FILE_LIST_RANGE="$(chia_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')"
+	fi
+	# shellcheck disable=SC2001
+	FILE_LIST_RANGE="$(sed 's/^[-,[:blank:]]*//g' <<< "${FILE_LIST_RANGE:-1-}")"
+
+	if [[ $FILE_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
+		ep_show="range($(ellipsis "$(($(tput cols) - 50))" "$(tr -d \  <<< "$FILE_LIST_RANGE")"))"
+		dl_notify="Episodes in ${ep_show} are"
+	elif [[ $FILE_LIST_RANGE =~ [[:digit:],]+- ]]; then
+		ep_show="range($FILE_LIST_RANGE${#eps[@]})"
+		dl_notify="Episodes in ${ep_show} are"
+	elif [[ -n $FILE_LIST_RANGE ]]; then
+		ep_show="file $FILE_LIST_RANGE"
+		dl_notify="Episode ${ep_show:5} is"
+	fi
+
+	((SKIP_DOWNLOAD == false)) && anime_cover "https://gogocdn.net/cover/${slug}.png"
+
+	msg2 '%s' "$ep_show"
+
+	readarray -t sel < <(
+		expand_limit "${FILE_LIST_RANGE:-1-}" "${#eps[@]}"
+	)
+
+	for idx in "${sel[@]}"; do
+		ep_slug="${eps[idx - 1]}"
+		if ! chia_get_episede "$slug" "$ep_slug" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
+			error "Failed to download: %s" "$slug$ep_slug"
+			notify \
+				"Download Failed" \
+				"Failed to download <a href=\"https://${DNS_NAME}/watch/${slug}$(
+					[[ $dubbed = true ]] && printf '\-dub'
+				)${ep_slug}.html\">file ${ep_slug#*-}</a>" \
+				u:normal t:1000000 i:emblem-downloads c:transfer.error
+			((NOBREAK == true)) || break
+		fi
+	done
+	if chia_db has && [ "$(chia_db get saved)" -ge "$(chia_db get total)" ]; then
+		chia_db del
+	fi
+	notify "Download Completed" "<b>$title</b>\n${dl_notify} downloaded" t:1000000 i:emblem-downloads c:transfer.complete u:normal
+}
+
+#end:code
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	chia_get "$@"
+fi

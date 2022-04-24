@@ -1,0 +1,81 @@
+#!/bin/bash
+((def_db)) && return 0 || def_db=1
+# shellcheck disable=SC2015
+. 00header
+#start:code
+chia_db()
+{
+	local CACHE_FILE act=$1
+	local -I slug
+	shift
+	if [ -n "$AP" ]; then
+		CACHE_FILE="$ANIME_PATH/.chia_queue.json"
+	else
+		CACHE_FILE="$MEDIA_ROOT/.chia_queue.json"
+	fi
+	if ! {
+		jq 'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
+	}; then
+		echo '{}' > "$CACHE_FILE"
+	fi
+	while [[ $1 =~ .*=.* ]]; do
+		eval "local $1"
+		shift
+	done
+	"chia_db_$act" "$@"
+}
+chia_db_add()
+{
+
+	data="$(jq '. * {"'"$slug"'":{ "title":null ,"path":null,"total":null,"saved":null,"is-dub":null}}' "$CACHE_FILE")"
+	chia_db_write "$data"
+}
+chia_db_list()
+{
+
+	for slug in $(jq -r 'keys[] | tostring' "$CACHE_FILE"); do
+		echo "$slug"
+	done
+}
+chia_db_set()
+{
+	if chia_db_has; then
+		data="$(jq '."'"$slug"'"."'"$1"'"='"$2" "$CACHE_FILE")"
+		chia_db_write "$data"
+	fi
+}
+chia_db_get()
+{
+	{
+		jq -re ".\"$slug\".\"$*\"" "$CACHE_FILE" || echo 0
+	} | tail -1
+}
+
+chia_db_has()
+{
+	jq -e '."'"$slug"'"' "$CACHE_FILE" &> /dev/null
+}
+
+chia_db_del()
+{
+	if chia_db_has; then
+		data="$(jq 'del(."'"$slug"'")' "$CACHE_FILE")"
+		chia_db_write "$data"
+	fi
+}
+chia_db_write()
+{
+	if [ -n "$1" ]; then
+		echo "$1" > "$CACHE_FILE~"
+		if jq . "$CACHE_FILE~" > /dev/null 2>&1; then
+			mv "$CACHE_FILE~" "$CACHE_FILE"
+		else
+			rm "$CACHE_FILE~"
+		fi
+	fi
+}
+#end:code
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	chia_db "$@"
+fi

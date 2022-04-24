@@ -1,0 +1,195 @@
+#!/bin/bash
+((def_search)) && return 0 || def_search=1
+. 00header
+. 01include
+. 03msg
+. 10db
+. 12get
+#start:code
+chia_api_search()
+{
+	local arg
+	while [[ $# -gt 0 ]]; do
+		arg+="$(jq -r '@uri' <<< "\"$1\"")"
+		shift
+		[[ $# -eq 0 ]] || arg+="+"
+	done
+	bug search
+	curl --disable \
+		-s "https://$DNS_NAME/search?keyword=$arg" \
+		-H 'X-Requested-With: XMLHttpRequest' \
+		| jq -rc 'sort_by(.released)[]'
+	unbug search
+}
+
+chia_search()
+{
+	local -a RES sel
+	local cnt=0 total_res i
+	msg 'Searching for "%s"' "$*"
+	readarray -t RES < <(chia_api_search "$@")
+	total_res="${#RES[@]}"
+
+	if ((total_res == 0)); then
+		error 'No result: %s' "$*"
+		plainerr 'You should check your keywords.'
+		return 4
+	fi
+
+	if ((total_res == 1)); then
+		RES_LIST='1'
+	elif [ -z "$RES_LIST" ] && ((DOWNLOAD_ALL == false)); then
+		printf '%s\n' "${RES[@]}" \
+			| while read -r line; do
+				opt "${BOLD}%-${#total_res}d${ALL_OFF}> ${BOLD}${YELLOW}[Year: %04d, Status: %9s] ${GREEN}%s${ALL_OFF}\n" \
+					"$((++cnt))" \
+					"$(jq -r '.released' <<< "$line")" \
+					"$(jq -r '.status' <<< "$line")" \
+					"$(jq -r '.name' <<< "$line")"
+			done
+		msg "Download: (eg: \"1,3,7\", \"1-4\", \"1-3,7\")"
+		ask " range: "
+		read -r RES_LIST
+	elif ((DOWNLOAD_ALL == true)) && [ -z "$RES_LIST" ]; then
+		RES_LIST='1-'
+	fi
+
+	if ! [[ $RES_LIST =~ ^[[:digit:],-]+$ ]]; then
+		# shellcheck disable=SC2001
+		RES_LIST=$(
+			sed 's/[^[:digit:],-]/,/g' <<< "$RES_LIST" | tr -s , | sed 's/-,/,/g'
+		)
+	fi
+
+	readarray -t sel < <(
+		expand_limit "$(num_unicode2ascii <<< "$RES_LIST")" "$total_res"
+	)
+
+	for i in "${sel[@]}"; do
+		local target base name
+		target=${RES[i - 1]}
+
+		base="$(set_basedir "$(jq -r .alias <<< "$target")")"
+		if ! [ -d "$base" ] || ! [ -e "$base" ]; then
+			rm -f "$base"
+			mkdir -p "$base"
+		fi
+
+		cd "$base" || true
+		bug dir
+		read -r name < <(jq -r .name <<< "$target" | sed 's@ *(Dub)$@@')
+		read -r dir < <(replace_invalid dir <<< "$name")
+
+		((SKIP_DOWNLOAD == false)) && if [ ! -d "$dir" ]; then
+			rm -f "$dir"
+			mkdir "$dir"
+		fi
+		((SKIP_DOWNLOAD == false)) && {
+			cd "$dir" || continue
+		}
+
+		chia_get \
+			"$(jq -r .alias <<< "$target")" \
+			"$name" \
+			"$(jq -r '.status' <<< "$target" | tr '[:upper:]' '[:lower:]')" \
+			"$*"
+		if ((total_res > 1 && NOBREAK == false)); then
+			read -rsp$'Press Return to download next.\n'
+		fi
+	done
+	msg 'See you later :3'
+	return 0
+}
+
+chia_list_queue()
+{
+	local slug
+	local -a slugs
+	readarray -t slugs < <(chia_db list)
+	for slug in "${slugs[@]}"; do
+		if ! [ -d "$(chia_db get path)" ]; then
+			chia_db del
+			continue
+		fi
+		msg "$(chia_db get title)"
+	done
+	return 0
+}
+
+chia_queue_update()
+{
+	local new_eps
+	if ! [ -d "$(chia_db get path)" ]; then
+		chia_db del
+		return
+	fi
+	msg "Checking update: %s" "$slug"
+	new_eps=$(($(chia_get_len "$slug") - $(chia_db get saved)))
+	if ((new_eps > 0)); then
+		updatable+=("$slug")
+		msg2 "new: %d eps" "$new_eps"
+	fi
+}
+
+chia_update()
+{
+	local slug dir updatable
+	NORESET=true
+	updatable=()
+	if (("${#DO_UPDATE_ONLY[@]}" == 0)); then
+		readarray -t DO_UPDATE_ONLY < <(
+			chia_db list
+		)
+	fi
+
+	if (("${#DO_UPDATE_ONLY[@]}" > 1)) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
+		DO_UPDATE_ONLY=("$(printf '%s|' "${DO_UPDATE_ONLY[@]:1}" | sed 's/|$//')")
+		for slug in $(chia_db list); do
+			if grep -qE "${DO_UPDATE_ONLY[0]}" <<< "$slug"; then
+				continue
+			fi
+			chia_queue_update
+		done
+	else
+		for slug in "${DO_UPDATE_ONLY[@]}"; do
+			chia_queue_update
+		done
+	fi
+
+	for slug in "${updatable[@]}"; do
+		dir="$(chia_db get path)"
+		if ! [ -d "$dir" ]; then
+			mkdir -p "$dir" || continue
+		fi
+		cd "$dir" || continue
+
+		chia_get "$slug" "$(chia_db get title)" "$(chia_db get status)"
+
+		if [ "$(chia_db get saved)" -ge "$(chia_db get total)" ]; then
+			chia_db del
+		fi
+		if ((NOBREAK == false)); then
+			read -rsp$'Press Return to download next.'
+			printf '\n'
+		fi
+	done
+}
+
+set_basedir()
+{
+	case $1 in
+		*-avatar-the-legend-of-korra-* | *-avatar-the-last-airbender-*)
+			echo "$CARTOON_PATH/Avatar"
+			;;
+		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
+		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;
+		*movie*) echo "$MOVIE_PATH" ;;
+		*) echo "$ANIME_PATH" ;;
+	esac
+}
+#end:code
+if ! ([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] \
+	|| [[ -n $BASH_VERSION ]] && (return 0 2> /dev/null)); then
+	colorize
+	chia_search "$@"
+fi

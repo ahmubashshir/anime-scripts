@@ -1,0 +1,385 @@
+#!/bin/bash
+((def_footer)) && return 0 || def_footer=1
+. 00header
+. 01include
+. 02help
+. 03msg
+. 04lib
+. 11search
+. 12get
+. 13download
+. 14parse
+. deps
+#start:code
+if [[ $# -gt 0 ]]; then
+	while [ -n "$1" ]; do
+		case $1 in
+			-v | --version)
+				#+option
+				#:short -v
+				#:long --version
+				#:text Show version and license.
+				#-option
+				if [ "${0##*/}" = "35footer" ]; then
+					printf "chia-dl master-r%d.%s\n" \
+						"$(git rev-list --count HEAD)" \
+						"$(git rev-parse --short HEAD)"
+					(($(printf '%d' "$(git diff --shortstat | cut -d' ' -f2)"))) && {
+						printf '-'
+						git diff --shortstat | cut -d' ' -f2
+					}
+				else
+					printf -- 'chia-dl %s\n' "$(awk '/^#\+VERSION/{print $2;exit}' "$0")"
+				fi
+				printf '\n'
+				chia_get_license
+				exit 0
+				;;
+			-L | --license)
+				#+option
+				#:short -L
+				#:long --license
+				#:text Show license.
+				#-option
+				chia_get_license
+				exit 0
+				;;
+			-U | --self-update)
+				#+option
+				#:short -U
+				#:long --self-update
+				#:IDNT 1
+				#:text Update this program.
+				#-option
+				((CHECK_UPDATE = always))
+				;;
+			--list-mirror)
+				#+option
+				#:long --list-mirror
+				#:text List supported mirrors
+				#-option
+				readarray -t mirrors < <(
+					printf '%s' "${SUPPORTED_HOSTS//|/$'\n'}"
+				)
+				msg 'Supported mirrors'
+				msg2 '%s' "${mirrors[@]}"
+				exit 0
+				;;
+			-m | --mirror)
+				#+option
+				#:short -m
+				#:long --mirror
+				#:text select preferred mirrors.
+				#:args mirror1[,mirror2[,...]]
+				#-option
+				if grep -Eq "${2//,/|}" <<< "${SUPPORTED_HOSTS//|/$'\n'}"; then
+					PREFERRED_HOSTS="${PREFERRED_HOSTS:+$PREFERRED_HOSTS,}$2"
+				fi
+				shift
+				;;
+			--mirror=[[:alnum:].,]*)
+				tmp="${1##*=}"
+				if grep -Eq "${tmp//,/|}" <<< "${SUPPORTED_HOSTS//|/$'\n'}"; then
+					PREFERRED_HOSTS="${PREFERRED_HOSTS:+$PREFERRED_HOSTS,}$tmp"
+				fi
+				unset tmp
+				;;
+			--break | -b)
+				#+option
+				#:short -b
+				#:long --break
+				#:text break on error
+				#-option
+				NOBREAK=false
+				;;
+			-nb | --no-break)
+				#+option
+				#:short -nb
+				#:long --no-break
+				#:text don't break on error
+				#-option
+				NOBREAK=true
+				;;
+			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
+				#+option
+				#:short -B
+				#:long --block
+				#:text set block size for testing.(allowed suffixes: kM)
+				#:args <block size>
+				#-option
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}
+				BS=$(byte_mr <<< "$BS")
+				;;
+			-B[[:digit:].]* | --block=[[:digit:].]*)
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+$ ]] || BS=${1/-B/}
+				;;
+			-B | --block)
+				BS=$2
+				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+					BS=$(byte_mr <<< "$BS")
+					shift
+				else
+					echo "Invalid block size." 1>&2
+				fi
+				;;
+			--debug | --debug=[[:alnum:].:-]*)
+				#+option
+				#:long --debug
+				#:text enable debug mode
+				#:args [all | type1[:type2[...]]
+				#-option
+				DEBUG=${1#*=}
+				[[ $DEBUG = --debug ]] && DEBUG=all
+				;;
+			-c | --continue)
+				#+option
+				#:short -c
+				#:long --continue
+				#:text Reload previous episode selection.
+				#-option
+				CONTINUE=true
+				;;
+			-nc | --no-continue)
+				#+option
+				#:short -nc
+				#:long --no-continue
+				#:IDNT 1
+				#:text Don't Reload previous episode selection.
+				#-option
+				CONTINUE=false
+				;;
+			-n | --no-break-or-reset)
+				#+option
+				#:short -n
+				#:long --no-break-or-reset
+				#:IDNT 1
+				#:text equivalent to -nb -nr.
+				#-option
+				NOBREAK=true
+				NORESET=true
+				;;
+			-R | --reset)
+				#+option
+				#:short -R
+				#:long --reset
+				#:text Clear screen on selection change.
+				#-option
+				NORESET=false
+				;;
+			-r | --replace)
+				#+option
+				#:short -r
+				#:long --replace
+				#:text Replace unmatched episode.
+				#:args <manual | fail>
+				#-option
+				if grep -qiE 'manual|fail' <<< "$2"; then
+					declare -gi "REPLACE_$(tr '[:lower:]' '[:upper:]' <<< "$2")=1"
+					shift
+				else
+					declare -gi REPLACE_FAIL=1 REPLACE_MANUAL=1
+				fi
+				;;
+			-r[fm] | --replace=fail | --replace=manual)
+				REPLACE="$(tr '[:lower:]' '[:upper:]' <<< "${1#*=}")"
+				if ! grep -qiE 'manual|fail' <<< "$REPLACE"; then
+					REPLACE="$(
+						if [ "${1/-r/}" = "m" ]; then
+							echo manual
+						else
+							echo fail
+						fi | tr '[:lower:]' '[:upper:]'
+					)"
+				fi
+				declare -gi "REPLACE_$REPLACE=1"
+				unset REPLACE
+				;;
+			-f | --file-list)
+				#+option
+				#:short -f
+				#:long --file-list
+				#:text Ask for list of files to download.
+				#-option
+				FILE_LIST=true
+				;;
+			-s | --select)
+				#+option
+				#:short -s
+				#:long --select
+				#:text Select search results.
+				#:args <result-index-list>
+				#-option
+				if [[ $2 =~ ^[[:digit:],-]+$ ]]; then
+					RES_LIST=$2
+					shift
+				else
+					error 'Invalid selection index: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			--select=[[:digit:],-]*)
+				RES_LIST=${1#*=}
+				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || unset RES_LIST
+				;;
+			-u | --update)
+				#+option
+				#:short -u
+				#:long --update
+				#:text Update and continue incomplete downloads,
+				#:IDNT 4
+				#:text adding '!' as first arg inverts match.
+				#:IDNT 2
+				#:args [! ][id1[ id2[ ...]]]
+				#-option
+				DO_ALT=update
+				if (($# > 1)); then
+					shift
+					DO_UPDATE_ONLY=("$@")
+				fi
+				;;
+			-l | --list)
+				#+option
+				#:short -l
+				#:long --list
+				#:text List updatable/interrupted series.
+				#-option
+				DO_ALT=list-queue
+				;;
+			-h | --help)
+				#+option
+				#:short -h
+				#:long --help
+				#:text Show help
+				#-option
+				help
+				exit 0
+				;;
+			-T[[:digit:]]* | --timeout=[[:digit:]]*)
+				RSOLV=${1#*=}
+				[[ $RSOLV =~ ^[[:digit:]]+$ ]] || RSOLV=${1/-T/}
+				;;
+			-T | --timeout)
+				#+option
+				#:short -T
+				#:long --timeout
+				#:text Set timeout for requests.
+				#-option
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					RSOLV=${2}
+					shift
+				else
+					error 'Invalid argument: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			-t | --try)
+				#+option
+				#:short -t
+				#:long --try
+				#:text set retry attempts
+				#:args <retry>
+				#-option
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					MAX_TRY=${2}
+					shift
+				else
+					error 'Invalid argument: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			-t[[:digit:]]* | --try=[[:digit:]]*)
+				MAX_TRY=${1#*=}
+				[[ $MAX_TRY =~ ^[[:digit:]]+$ ]] || MAX_TRY=${1/-t/}
+				;;
+			-a | --all)
+				#+option
+				#:short -a
+				#:long --all
+				#:text Download all results. implies -n
+				#-option
+				DOWNLOAD_ALL=true
+				NOBREAK=true
+				NORESET=true
+				unset RES_LIST
+				;;
+			-q | --queue)
+				#+option
+				#:short -q
+				#:long --queue
+				#:text Add selected results to download queue. implies -n
+				#-option
+				NOBREAK=true
+				NORESET=true
+				update_queue=1
+				;;
+			-nr | --no-reset)
+				#+option
+				#:short -nr
+				#:long --no-reset
+				#:text Don't reset terminal on selection download.
+				#-option
+				NORESET=true
+				;;
+			-d | --dry-run)
+				#+option
+				#:short -d
+				#:long --dry-run
+				#:text Don't download anything
+				#-option
+				SKIP_DOWNLOAD=true
+				;;
+			-[[:alnum:]]?? | --[[:alnum:]]*)
+				echo "Invalid option -- $1" 1>&2
+				exit 1
+				;;
+			*)
+				SEARCHSTR="$(sed 's|^ *||g;s|* $||g' <<< "$SEARCHSTR $1")"
+				;;
+		esac
+		shift
+	done
+	if ((CHECK_UPDATE >= auto && AUTO_UPDATE >= auto)) && check_update; then
+		if self_update; then
+			export PREFERRED_HOSTS SKIP_DOWNLOAD \
+				NOBREAK NORESET update_queue DOWNLOAD_ALL DO_ALT RES_LIST FILE_LIST \
+				REPLACE_FAIL REPLACE_MANUAL DEBUG CONTINUE
+			exec "$0" "$SEARCHSTR"
+		else
+			exit
+		fi
+	fi
+	if [[ -n "$RES_LIST" ]] && ((DOWNLOAD_ALL)); then
+		DOWNLOAD_ALL=false
+		warning "--all/-a option can only be used when no"
+		plain "election or episode limit specified."
+		msg "Disabling autodownload mode"
+	fi
+	if [[ $SEARCHSTR != '' ]] || [[ -n $DO_ALT ]]; then
+		if ((NC)) || check_up_server "${PUPPETEER_PROXY}https://$DNS_NAME" "${RSOLV:-1}"; then
+			case $DO_ALT in
+				update)
+					chia_update
+					exit
+					;;
+				list-queue)
+					chia_list_queue
+					exit
+					;;
+			esac
+			chia_search "$SEARCHSTR"
+			exit $?
+		else
+			error 'Request timed out'
+			exit 5
+		fi
+	else
+		help
+		exit 1
+	fi
+else
+	help
+	exit 1
+fi
+#end:code

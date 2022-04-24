@@ -1,0 +1,39 @@
+#!/bin/bash
+#chia-dl config file
+
+# Base Directory for Media
+set MEDIA_ROOT '/mnt/Multimedia'
+
+# Directory for anime
+set ANIME_PATH "$MEDIA_ROOT/Anime"
+
+# Directory for animation series
+set CARTOON_PATH "$MEDIA_ROOT/Animetion-Movie/Series"
+
+# Directory for Movies
+set MOVIE_PATH "$MEDIA_ROOT/Movie"
+
+# Directory for TV Series
+set TV_SERIES_PATH "$MOVIE_PATH/Series"
+
+# Directory for Power Rangers
+set POWER_RANGERS_PATH "$MOVIE_PATH/Power Rangers"
+
+# Don't break on failure.
+set NOBREAK true
+
+# Don't reset terminal on completion.
+set NORESET false
+
+# Show episode list always
+set FILE_LIST false
+
+#Timeout for domain resolving.
+set RSOLV 3
+
+# file checker block size[1-100 kb]
+set BS 1k
+
+# Update automatically, this is the default
+# this is tristate: [auto, always, never]
+set AUTO_UPDATE auto

@@ -1,0 +1,218 @@
+#!/bin/bash
+((def_lib)) && return 0 || def_lib=1
+#start:code
+function check_up_server()
+{
+	local resp t
+	t=$2
+	t=${t:=3}
+	[ $t -gt 3 ] && echo "Resolving $1,wait $t seconds" 1>&2
+	resp=$(curl -m $t -sIXGET "$1" | head -1 | tr -d \  | cut -d/ -f1)
+	if [[ $resp = 'HTTP' ]]; then
+		return 0
+	fi
+	return 1
+}
+
+function byte_hr()
+{
+	local n size unit
+	size=$1
+	for n in 'B' 'kB' 'MB' 'GB' 'TB' 'PB' 'EB' 'ZB'; do
+		unit=$n
+		i=${size%.*}
+		if ((i / 1024 == 0)); then
+			break
+		else
+			size=$(echo "scale=2;$size/1024.00" | bc | sed 's|\.00$||g')
+		fi
+	done
+	printf '%s %s' "$size" "$unit"
+}
+function fget()
+{
+	local dld dlsize ex lsof name perm pid response S size url
+	url="$1"
+	name="$2"
+	if (($# > 2)); then
+		shift 2
+	else
+		shift $#
+	fi
+
+	S=$(curl --disable --referer "$url" -skLIXGET "$url" 2>&1 | awk '/^HTTP\/[12.]+ 200/,/^\r$/ {gsub(/\r/,"");if(length)print}')
+	if (exit "$?"); then
+		if [ "$name" = "" ]; then
+			name="${url##*/}"
+		fi
+		dlsize=$(awk 'tolower($0) ~ /content-length:/ {print $2}' <<< "$S" | tail -1)
+		dld="false"
+		if [ -e "$name" ]; then
+			lsof=$(lsof "$name" 2> /dev/null)
+			pid=$(awk '/[[:digit:]]+[w:W:u]/ {print $2}' <<< "$lsof" | tail -1)
+			perm=$(awk '/[[:digit:]]+[w:W:u]/ {print $4}' <<< "$lsof" | tail -1)
+			process=$(awk '/[[:digit:]]+[w:W:u]/ {print $1}' <<< "$lsof" | tail -1)
+			size=$(stat -Lc%s "$name")
+		else
+			size=0
+			pid=""
+			perm=""
+			process=""
+		fi
+		if [ -e "$name" ] && ((dlsize <= size)); then
+			dld="true"
+		fi
+		if [ $dld = "false" ]; then
+			response=$(awk '/HTTP\/[12.]/ {print $2}' <<< "$S" | tail -1)
+			if [[ $response =~ 20. ]]; then
+				if [[ "$perm" == "" ]]; then
+					echo "Server Response:$response $(server_responce "$response")"
+					if [ -e "$name" ] && ((dlsize > size)) && [ "$pid" = "" ]; then
+						echo -e "Appending to '$name'\nleft $(byte_hr $((dlsize - size))) from $(byte_hr "$dlsize")"
+					elif [ ! -e "$name" ]; then
+						echo -e "Writing to '$name'\nFile Size: $(byte_hr "$dlsize")"
+					fi
+					wget --referer="$url" "$@" --show-progress -qcO "$name" "$url"
+					if (($? == 5)); then
+						wget "$@" --show-progress -qcO "$name" --no-check-certificate "$url" || (exit $?)
+					fi
+				else
+					(exit 10)
+				fi
+			else
+				echo "$response $(server_responce "$response")"
+				[[ $response =~ 40. ]] && ${SHOW_URL:-false} && echo "$url"
+				if [[ "${response:0:1}${response:2:3}" =~ ^[[:digit:],-]+$ ]]; then
+					return "${response:0:1}${response:2:3}"
+				else
+					echo "${response:0:1}${response:2:3}"
+					return 99
+				fi
+			fi
+		fi
+	else
+		(exit 4)
+	fi
+	ex=$?
+	if [ "$dld" = "false" ]; then
+		case $ex in
+			0 | 8)
+				echo -e "$(
+					tput setaf 2
+					tput bold
+				)Saved $name [$(byte_hr "$dlsize" "")]"
+				;;
+
+			1) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Unknown error occured" ;;
+			2) echo -e "$(tput setaf 1)Option parsing error" ;;
+			3) echo -e "$(
+				tput setaf 1
+				tput smul
+			)I/O Error" ;;
+			4) echo -e "$(
+				tput setaf 1
+				tput smul
+			)Network Failure" ;;
+			5) echo -e "$(
+				tput setaf 1
+				tput dim
+			)SSL verification failure" ;;
+			6) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Username/password authentication failure" ;;
+			7) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Protocol errors" ;;
+			10) echo -e "$(
+				tput setaf 1
+				tput dim
+			)'$name' is Open in $process for writing.\npid:$pid\tFD:$perm" ;;
+			*) true ;;
+		esac
+		tput sgr0
+		return $ex
+	else
+		if ((dlsize == size)); then
+			echo -e "Already downloaded $name [$(byte_hr $size)]."
+		else
+			echo -e "Already downloaded $name [$(byte_hr $size)],\nbut size doesn't match.[size on server $(byte_hr "$dlsize")]"
+		fi
+		return 0
+	fi
+}
+function server_responce()
+{
+	case $1 in
+		100) echo "Continue" ;;
+		101) echo "Switching Protocols" ;;
+		102) echo "Processing" ;;
+		200) echo "OK" ;;
+		201) echo "Created" ;;
+		202) echo "Accepted" ;;
+		203) echo "Non-authoritative Information" ;;
+		204) echo "No Content" ;;
+		205) echo "Reset Content" ;;
+		206) echo "Partial Content" ;;
+		207) echo "Multi-Status" ;;
+		208) echo "Already Reported" ;;
+		226) echo "IM Used" ;;
+		300) echo "Multiple Choices" ;;
+		301) echo "Moved Permanently" ;;
+		302) echo "Found" ;;
+		303) echo "See Other" ;;
+		304) echo "Not Modified" ;;
+		305) echo "Use Proxy" ;;
+		307) echo "Temporary Redirect" ;;
+		308) echo "Permanent Redirect" ;;
+		400) echo "Bad Request" ;;
+		401) echo "Unauthorized" ;;
+		402) echo "Payment Required" ;;
+		403) echo "Forbidden" ;;
+		404) echo "Not Found" ;;
+		405) echo "Method Not Allowed" ;;
+		406) echo "Not Acceptable" ;;
+		407) echo "Proxy Authentication Required" ;;
+		408) echo "Request Timeout" ;;
+		409) echo "Conflict" ;;
+		410) echo "Gone" ;;
+		411) echo "Length Required" ;;
+		412) echo "Precondition Failed" ;;
+		413) echo "Payload Too Large" ;;
+		414) echo "Request-URI Too Long" ;;
+		415) echo "Unsupported Media Type" ;;
+		416) echo "Requested Range Not Satisfiable" ;;
+		417) echo "Expectation Failed" ;;
+		418) echo "I'm a teapot" ;;
+		421) echo "Misdirected Request" ;;
+		422) echo "Unprocessable Entity" ;;
+		423) echo "Locked" ;;
+		424) echo "Failed Dependency" ;;
+		426) echo "Upgrade Required" ;;
+		428) echo "Precondition Required" ;;
+		429) echo "Too Many Requests" ;;
+		431) echo "Request Header Fields Too Large" ;;
+		444) echo "Connection Closed Without Response" ;;
+		451) echo "Unavailable For Legal Reasons" ;;
+		499) echo "Client Closed Request" ;;
+		500) echo "Internal Server Error" ;;
+		501) echo "Not Implemented" ;;
+		502) echo "Bad Gateway" ;;
+		503) echo "Service Unavailable" ;;
+		504) echo "Gateway Timeout" ;;
+		505) echo "HTTP Version Not Supported" ;;
+		506) echo "Variant Also Negotiates" ;;
+		507) echo "Insufficient Storage" ;;
+		508) echo "Loop Detected" ;;
+		510) echo "Not Extended" ;;
+		511) echo "Network Authentication Required" ;;
+		599) echo "Network Connect Timeout Error" ;;
+		*) echo "Invalid Response" ;;
+	esac
+	return 0
+}
+#end:code

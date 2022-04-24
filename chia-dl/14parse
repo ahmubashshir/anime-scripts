@@ -1,0 +1,135 @@
+#!/bin/bash
+# shellcheck disable=SC2086,SC1091,SC1090,SC2154
+((def_parse)) && return 0 || def_parse=1
+. 01include
+. 03msg
+#start:code
+SUPPORTED_HOSTS='vidcdn|xstreamcdn|mp4upload|doodstream|mixdrop'
+
+get_effective_url()
+{
+	xargs -rn 1 curl --disable -ILksXGET "$@" -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
+}
+get_url()
+{
+	local try=0 url
+	mirror="${1//[^[:alnum:]]/}"
+
+	if ! grep -q "$1" <<< "$SUPPORTED_HOSTS"; then
+		msg2 "unimplemented:$1"
+		return 1
+	fi
+	if [[ $(type -t "${mirror}:get_url" || type -w "${mirror}:get_url") ]]; then
+		try=0
+		while [[ -z $url ]] && ((try++ < 5)); do
+			((try > 1)) && sleep 2
+			bug parse
+			url="$("${mirror}:get_url" "$2")"
+			unbug parse
+		done
+		echo "$url"
+	else
+		msg2 "unimplemented:${1/_/.}"
+		return
+	fi
+}
+beautify_js()
+{
+	js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null
+}
+
+mp4upload:get_url()
+{
+	curl --disable -ks "https://www.mp4upload.com/embed-$1.html" \
+		| grep 'eval(' \
+		| cut -d\> -f2- \
+		| beautify_js \
+		| sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
+}
+
+xstreamcdn:get_url()
+{
+	curl --disable -sX POST "https://embedsito.com/api/source/$1" \
+		--data "r=https://1anime.to/" --data 'd=embedsito.com' \
+		| jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null \
+		| get_effective_url --referer 'https://embedsito.com'
+}
+
+vidcdn:get_url()
+{
+	local RHOST="https://goload.pro"
+	local ajax_url="$RHOST/encrypt-ajax.php"
+
+	curl --disable -s "$RHOST/streaming.php?id=${1%%:*}" \
+		| sed -nE \
+			-e 's/.*class="container-(.*)">/0 \1/p' \
+			-e 's/.*class="wrapper container-(.*)">/1 \1/p' \
+			-e 's/.*class=".*videocontent-(.*)">/2 \1/p' \
+			-e 's/.*data-value="(.*)">.*/3 \1/p' \
+		| (
+			kidx=('key' 'iv' 'dkey' 'token')
+			while read -r idx data; do
+				read -r "${kidx[idx]}" < <(
+					case "$idx" in
+						[0-2]) tr -d $'\n' <<< "$data" | od -A n -t x1 | tr -d $' \n' ;;
+						3) echo "$data" ;;
+					esac
+				)
+			done
+			read -r token < <(
+				base64 -d <<< "$token" \
+					| openssl enc -d -aes256 -K "$key" -iv "$iv" \
+					| sed -nE 's/.*&(token.*)/\1/p'
+			)
+			read -r eid < <(
+				openssl enc -e -aes256 -K "$key" -iv "$iv" <<< "${1%%:*}" | base64
+			)
+
+			curl --disable -s \
+				-H "X-Requested-With:XMLHttpRequest" \
+				"${ajax_url}?id=${eid}&alias=${1%%:*}&$token" \
+				| jq -r .data \
+				| base64 -d \
+				| openssl enc -d -aes256 -K "$dkey" -iv "$iv" \
+				| jq -r '.source[0].file' 2> /dev/null
+		)
+}
+
+mixdrop:get_url()
+{
+	curl --disable -s "https://mixdrop.to/e/$1" \
+		| grep '^eval' \
+		| beautify_js \
+		| grep MDCore.wurl \
+		| sed -E 's@.* = "//(.*)".*@https://\1@'
+}
+
+doodstream:get_url()
+{
+
+	local RHOST=https://doodstream.com
+	local UA='Lynx/2.8.9rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/3.6.5'
+	lwp-request -b "$RHOST" \
+		-H "User-Agent: $UA" "/d/$1" \
+		| xpath 'string(//div[@class="download-content"]/a/@href)' \
+		| xargs -rn 1 lwp-request -b "$RHOST" -H "User-Agent: $UA" \
+		| xpath 'string(//a[contains(@onclick, ".dood.video/")]/@onclick)' \
+		| sed -E "s@.*\('((https:)?//[^']+)'.*\)@\1@" \
+		| get_effective_url --referer "$RHOST"
+}
+#end:code
+if ! {
+	[[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] || {
+		[[ -n $BASH_VERSION ]] || [[ $0 =~ bin/bashdb$ ]]
+	} && {
+		return 0 2> /dev/null
+	}
+}; then
+	if (($# >= 2)); then
+		remote=$1
+		shift
+		get_url $remote "$@"
+	else
+		"$@"
+	fi
+fi

@@ -1,0 +1,129 @@
+#!/bin/bash
+((def_help)) && return 0 || def_help=1
+. 00header
+#start:code
+help()
+{
+	echo "$(basename "$0") Help:"
+	echo Usage:
+	printf "  %s [options] <anime name>\n" "$(basename "$0")"
+	help_options
+	# FIXME: implement help functions [env, examples]
+	help_examples
+	help_env
+}
+help_options()
+{
+	local line TAB i
+	echo Options:
+	sed -n '/#+option/,/#-option/{s/^[[:blank:]]*//p}' "$0" | while read -r line; do
+		if [[ $line = \#+option ]]; then
+			TAB=2
+			printf '\t'
+		elif [[ $line =~ ^#:IDNT ]]; then
+			TAB=$(echo "$line " | cut -d' ' -f2)
+		elif [[ $line =~ ^#:short ]] || [[ $line =~ ^#:long ]]; then
+			echo "$line " | cut -d' ' -f2- | tr -d '\n\r'
+		elif [[ $line =~ ^#:text ]]; then
+			for ((i = 0; i < TAB; i++)); do
+				printf '\t'
+			done
+			echo -e "$line" | cut -d' ' -f2-
+		elif [[ $line =~ ^#:args ]]; then
+			for ((i = 0; i < TAB + 2; i++)); do
+				printf '\t'
+			done
+			echo -n "Argument: "
+			echo -e "$line" | cut -d' ' -f2-
+		fi
+	done
+}
+help_examples()
+{
+	echo Examples:
+	echo $'\t'not yet implemented.
+}
+help_env()
+{
+	echo Env Variable:
+	echo $'\t'not yet implemented.
+}
+chia_get_license()
+{
+	echo " Copyright $(date +%Y) Ahmad Hasan Mubashshir <ahmubashshir@gmail.com>"
+	echo
+	echo " 'chia-dl' is free software; you can redistribute it and/or modify"
+	echo " it under the terms of the GNU General Public License as published by"
+	echo " the Free Software Foundation; either version 2 of the License, or"
+	echo " (at your option) any later version."
+	echo
+	if [ -e "LICENSE" ] && [ "$(sha256sum LICENSE | awk '{print $1}')" = "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986" ]; then
+		echo "See 'LICENSE' for more details."
+		return 0
+	fi
+	echo " 'chia-dl' is distributed in the hope that it will be useful,"
+	echo " but WITHOUT ANY WARRANTY; without even the implied warranty of"
+	echo " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
+	echo " GNU General Public License for more details."
+	echo
+	echo " You should have received a copy of the GNU General Public License"
+	echo " along with 'chia-dl'; if not, write to the Free Software"
+	echo " Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,"
+	echo " MA 02110-1301, USA."
+}
+
+check_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE == never && AUTO_UPDATE <= auto)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^#+VERSION/{print $3;exit}' "$0")
+	LATEST=$(curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $LATEST ]]; then return 1; fi
+	LATEST=$(
+		printf '%s\n' "$VERSION" "$LATEST" \
+			| sort --version-sort --reverse \
+			| head -n1
+	)
+	if [[ "$VERSION" != "$LATEST" ]]; then
+		printf 'Update Available!\n'
+		printf 'Current version: %s\n' "$VERSION"
+		printf 'Latest version: %s\n' "$LATEST"
+		return 0
+	fi
+	return 1
+}
+
+self_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE == never && AUTO_UPDATE <= auto)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^#+VERSION/{print $3;exit}' "$0")
+	UPDATE=$(curl --disable -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $UPDATE ]]; then return 1; fi
+
+	printf 'Updating: %s -> %s\n' "$VERSION" "$UPDATE"
+	curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/chia-dl" > "$0~update"
+	ret=$?
+	if ((ret == 0)); then
+		chmod +x "$0~update"
+		mv "$0~update" "$0"
+	else
+		rm -f "$0~update"
+	fi
+	return "$ret"
+}
+#end:code

@@ -1,0 +1,293 @@
+#!/bin/bash
+# shellcheck disable=SC2034
+((def_include)) && return 0 || def_include=1
+#start:code
+DNS_NAME=chia-anime.cc
+export USER_AGENT="${USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36}"
+
+CURL_OPTIONS=(
+	--compressed
+	-H 'authority: '"$DNS_NAME"
+	-H 'pragma: no-cache'
+	-H 'cache-control: no-cache'
+	-H 'user-agent: '"$USER_AGENT"
+	-H 'origin: https://'"$DNS_NAME"
+	-H 'sec-fetch-site: same-origin'
+	-H 'sec-fetch-mode: cors'
+	-H 'sec-fetch-dest: empty'
+)
+
+shopt -s nullglob extglob
+if [ -d ~/.local/share/chia-dl ]; then
+	cookies=()
+	for each in ~/.local/share/chia-dl/cookies-*.txt; do
+		cookies+=("$each")
+	done
+	if ((${#cookies[@]})); then
+		cat "${cookies[@]}" > ~/.local/share/chia-dl/cookies.txt
+	fi
+	unset cookies
+	if [ -f ~/.local/share/chia-dl/cookies.txt ]; then
+		CURL_OPTIONS+=(--cookie ~/.local/share/chia-dl/cookies.txt)
+	fi
+fi
+
+langs=(
+	'০১২৩৪৫৬৭৮৯'
+	'〇一二三四五六七八九'
+	'０１２３４５６７８９'
+)
+
+ellipsis()
+{
+	python3 -c "try:
+	from sys import argv
+	l=int(int(argv[1])/2)
+	if len(' '.join(argv[2:]))>l*2:
+		print(' '.join(argv[2:])[0:l],'...',' '.join(argv[2:])[-l:],sep='')
+	else:
+		print(' '.join(argv[2:]),sep='')
+except KeyboardInterrupt:
+	pass" "$@"
+
+}
+
+bug()
+{
+	local ret=$?
+	[[ :$DEBUG: =~ :($1|all): ]] || return
+	[[ $- =~ x ]] || set -x
+	return $ret
+}
+unbug()
+{
+	local ret=$?
+	[[ :$DEBUG: =~ :($1|all): ]] || return
+	[[ $- =~ x ]] && set +x
+	return $ret
+}
+
+expand_limit()
+{
+	local start end range="$1" max="$2"
+	# debug flag
+	bug expand
+	# code
+	if [[ $range =~ ^[[:digit:]]+-$ ]]; then
+		for ((start = ${range%%-*}; start <= max; start++)); do
+			((start <= max)) && printf "%d\n" "$start"
+		done
+	else
+		local -a ranges
+		readarray -t ranges < <(
+			tr -s ',' '\n' <<< "$range"
+		)
+		for range in "${ranges[@]}"; do
+			if [[ $range =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
+				start=${range%%-*}
+				end=${range##*-}
+				if ((end > max)); then
+					end=$max
+				fi
+				expand_limit "$start-" "$end"
+			elif [[ $range =~ ^[[:digit:]]+$ ]]; then
+				((range <= max)) && printf "%d\n" "$range"
+			else
+				expand_limit "$range" "$max"
+			fi
+		done
+	fi
+	# unset debug
+	unbug expand
+	return 0
+}
+contract_limit()
+{
+	# arrays
+	local -a args
+	# variables
+	local max="$1" next_curr=0 curr_prev=0 prev curr next
+	# debug
+	bug contract
+	shift
+	# code
+	readarray -t args < <(printf '%s\n' "$@" | tr -s ', ' \\n | sort -un)
+	for ((ind = 2; ind < ${#args[@]}; ind++)); do
+		prev=${args[ind - 2]}
+		curr=${args[ind - 1]}
+		next=${args[ind]}
+		next_curr=$((next - curr))
+		curr_prev=$((curr - prev))
+		if ((ind == 2)); then
+			printf '%d' "$prev"
+		elif ((next_curr >= 2)) && ((curr_prev < 2)); then
+			printf -- '-%d,%d' "$curr" "$next"
+		elif ((curr_prev > 1)) && ((next_curr > 1)); then
+			printf ',%d' "$next"
+		elif ((next >= max)); then
+			printf -- '-\n'
+			break
+		elif ((ind + 1 == ${#args[@]})); then
+			printf -- '-%d\n' "$next"
+			break
+		fi
+	done
+	unbug contract
+	return 0
+}
+byte_mr()
+{
+	sed \
+		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[kK]/\1*1000/g' \
+		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g' \
+		| bc \
+		| sed \
+			-e 's/\..*$//'
+}
+validate_limit()
+{
+	bug validate
+	local range="$1" ret=0 start end
+	local -a ranges
+	if ! [[ $range =~ ^[[:digit:],-]+$ ]]; then
+		ret=1
+	elif [[ $range =~ ^[[:digit:]]+-$ ]]; then
+		ret=0
+	else
+		readarray -t ranges < <(
+			tr -s ',' '\n' <<< "$range"
+		)
+		for range in "${ranges[@]}"; do
+			if [[ $range =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
+				start=${range%%-*}
+				end=${range#*-}
+				if ((end <= start)); then
+					((ret++))
+				fi
+			elif ! {
+				[[ $range =~ ^[[:digit:]]+-$ ]] \
+					|| [[ $range =~ ^[[:digit:]]+$ ]]
+			}; then
+				((ret++))
+			fi
+		done
+	fi
+	unbug validate
+	return "$ret"
+}
+num_unicode2ascii()
+{
+	python3 -c 'from sys import argv
+if not len(argv)>1:
+	exit(0)
+
+try:
+	_in = input()
+	for tr in argv[1:]:
+		_in = _in.translate(str.maketrans(tr, "0123456789"))
+	print(_in)
+except:
+	pass' "${langs[@]}"
+}
+srand()
+{
+	python3 -c 'import numpy as np
+from sys import argv
+def random_spaced(low, high, delta, n, size=1):
+	"""
+	Choose n random values between low and high, with minimum spacing delta.
+		If size is None, one sample is returned.
+	Set size=m (an integer) to return m samples.
+		The values in each sample returned by random_spaced are in increasing
+	order.
+	"""
+	empty_space = high - low - (n-1)*delta
+	if empty_space < 0:
+		return [low, high - delta]
+	if size is None:
+		u = np.random.rand(n)
+	else:
+		u = np.random.rand(size, n)
+		x = empty_space * np.sort(u, axis=-1)
+	return low + x + delta * np.arange(n)
+try:
+		print(*(str(int(n)) for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]),sep=" ")
+except KeyboardInterrupt:
+	pass' "$@"
+
+}
+anime_cover()
+{
+	if [[ ! -e cover.jpg || ! -s cover.jpg ]]; then
+		curl --disable -kLs "$1" | convert "${1##*.}:-" "cover.jpg"
+	fi &> /dev/null
+	if ! grep -q cover.jpg .hidden && [ -f cover.jpg ]; then
+		echo cover.jpg >> .hidden
+	fi &> /dev/null
+}
+replace_invalid()
+{
+	local -a args
+	args=(
+		-e 's|<|＜|g'
+		-e 's|>|＞|g'
+		-e 's|:|꞉|g'
+		-e 's|\"|＂|g'
+		-e 's|/|⧸|g'
+		-e 's|\\|⧹|g'
+		-e 's|?|？|g'
+		-e 's|\||ǀ|g'
+		-e 's|\*|🞵|g'
+	)
+	if [[ $1 == dir ]]; then
+		args+=(-e 's|\.$|.'$'\342\200\213|g')
+	else
+		args+=(-e 's| |-|g')
+	fi
+	sed "${args[@]}"
+}
+
+remote_exist()
+{
+	if grep -qE '^https?://' <<< "$1"; then
+		if [[ $(curl --disable --referer "$1" -kLsIXGET "$1" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
+			return 0
+		else
+			return 1
+		fi
+	else
+		return 2
+	fi
+
+}
+
+notify()
+{
+	[[ $DISPLAY = '' ]] && return
+	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
+	shift                                                                                    2
+	local -a args
+	while [ -n "$1" ]; do
+		case "$1" in
+			u:*) urgency="${1#u:}" ;;
+			t:*) expire_time="${1#t:}" ;;
+			i:*) icon="${1#i:}" ;;
+			x:*) category="${1#c:}" ;;
+		esac
+		shift
+	done
+	for v in urgency expire_time icon category; do
+		if [[ -n ${!v} ]]; then
+			args+=("--${v//_/-}=${!v}")
+		fi
+	done
+	notify-send "${args[@]}" -a chia-dl "$title" "$body"
+}
+
+xpath()
+{
+	local xpath="$1"
+	shift
+	xmllint --html --xmlout --recover --nocdata --noent --noblanks --xpath "$xpath" - "$@" 2> /dev/null
+}
+#end:code

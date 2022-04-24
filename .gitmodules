@@ -1,0 +1,9 @@
+[submodule "chia-dl/test/bats"]
+	path = chia-dl/test/bats
+	url = https://github.com/bats-core/bats-core.git
+[submodule "chia-dl/test/support"]
+	path = chia-dl/test/support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "chia-dl/test/assert"]
+	path = chia-dl/test/assert
+	url = https://github.com/bats-core/bats-assert.git

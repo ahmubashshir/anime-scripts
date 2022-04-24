@@ -1,9 +1,0 @@
-danime
-*.mp4
-*.jpg
-!.gitigonre
-!.env_setup
-.*
-*~
-*.swp
-chromedriver

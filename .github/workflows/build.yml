@@ -22,7 +22,8 @@ jobs:
       - name: Build binary
         run: |
           mkdir build
-          make -C danime test=no syntax=no install bindir="$(pwd)/build"
+          git show origin/release:danime > build/danime
+          make -C chia-dl test=no syntax=no install bindir="$(pwd)/build"
           echo r$(git rev-list --count HEAD).$(git rev-parse --short HEAD) > build/VERSION
 
       - name: Push built binary to release branch

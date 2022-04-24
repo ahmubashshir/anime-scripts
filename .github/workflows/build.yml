@@ -20,12 +20,12 @@ jobs:
         ref: master
         submodules: true
     - name: Run checks
-      run: make -C chia-dl check
+      run: make -C chia-dl check test=no
+      if: ${{ env.ACT }}
 
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

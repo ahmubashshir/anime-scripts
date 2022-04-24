@@ -219,7 +219,7 @@ except KeyboardInterrupt:
 anime_cover()
 {
 	if [[ ! -e cover.jpg || ! -s cover.jpg ]]; then
-		curl --disable -kLs "$1" | convert "${1##*.}:-" "cover.jpg"
+		curl --disable -kLs "$1" | convert - "cover.jpg"
 	fi &> /dev/null
 	if ! grep -q cover.jpg .hidden && [ -f cover.jpg ]; then
 		echo cover.jpg >> .hidden
@@ -265,7 +265,7 @@ notify()
 {
 	[[ $DISPLAY = '' ]] && return
 	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
-	shift                                                                                    2
+	shift                                                                                  2
 	local -a args
 	while [ -n "$1" ]; do
 		case "$1" in

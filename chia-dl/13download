@@ -177,9 +177,7 @@ chia_get_episede()
 			ret=$?
 
 			if ((ret == 1)); then
-				s=$(stat -Lc%s "$ep_file_name" 2> /dev/null || echo 0)
-				msg2 "Downloaded $ep_file_name [$(byte_hr "$s")]."
-				unset s
+				msg2 "Downloaded $ep_file_name [$(byte_hr "$(stat -Lc%s "$ep_file_name" 2> /dev/null || echo 0)")]."
 				if check_file "$ep_file_name" && (($(chia_db get saved) < idx)); then
 					chia_db set saved "$idx"
 					continue

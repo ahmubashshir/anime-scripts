@@ -19,7 +19,7 @@ pydep()
 {
 	if ! python3 -c "import ${1%%@*}" &> /dev/null; then
 		depfs+=1
-		fail_dep "Please install \`py-module:%s'" "$1"
+		fail_dep "Please install python3 module \`%s'" "$1"
 	fi
 }
 dep()

@@ -227,13 +227,16 @@ if [[ $# -gt 0 ]]; then
 				#+option
 				#:short -u
 				#:long --update
-				#:text Update and continue incomplete downloads,
+				#:text Update and continue incomplete downloads, implies -c -n
 				#:IDNT 4
 				#:text adding '!' as first arg inverts match.
 				#:IDNT 2
 				#:args [! ][id1[ id2[ ...]]]
 				#-option
 				DO_ALT=update
+				CONTINUE=true
+				NOBREAK=true
+				NORESET=true
 				if (($# > 1)); then
 					shift
 					DO_UPDATE_ONLY=("$@")

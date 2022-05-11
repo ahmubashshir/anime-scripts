@@ -65,13 +65,11 @@ chia_get()
 
 	fi
 	bug get-db
-	if ! {
-		chia_db has && ((FILE_LIST))
-	} && [ -z "$FILE_LIST_RANGE" ]; then
+	if ! chia_db has || ((FILE_LIST)) && [ -z "$FILE_LIST_RANGE" ]; then
 		chia_db add
+		chia_db set path "\"$PWD\""
+		chia_db set title "\"$title\""
 	fi
-	chia_db set path "\"$PWD\""
-	chia_db set title "\"$title\""
 	chia_db set status "\"$status\""
 	chia_db set is-dub "$dubbed"
 
@@ -100,8 +98,8 @@ chia_get()
 		tput cuu 1
 	fi
 
-	if ((CONTINUE == true)) && [[ -z $FILE_LIST_RANGE ]] && [[ -n "$(chia_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')" ]]; then
-		FILE_LIST_RANGE="$(chia_db get saved | awk '{print ($0 == "null" || $0 == "0")?"1-":$0"-";}')"
+	if ((CONTINUE == true)) && [[ -z $FILE_LIST_RANGE ]]; then
+		FILE_LIST_RANGE="$(chia_db get saved | jq -r 'if . == 0 then 1 else . end|tostring + "-"')"
 	fi
 	# shellcheck disable=SC2001
 	FILE_LIST_RANGE="$(sed 's/^[-,[:blank:]]*//g' <<< "${FILE_LIST_RANGE:-1-}")"

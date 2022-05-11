@@ -18,7 +18,7 @@ chia_db()
 	}; then
 		echo '{}' > "$CACHE_FILE"
 	fi
-	while [[ $1 =~ .*=.* ]]; do
+	while [[ $1 =~ ^[[:alnum:]_]+= ]]; do
 		eval "local $1"
 		shift
 	done
@@ -46,9 +46,7 @@ chia_db_set()
 }
 chia_db_get()
 {
-	{
-		jq -re ".\"$slug\".\"$*\"" "$CACHE_FILE" || echo 0
-	} | tail -1
+	jq -re ".\"$slug\".\"$*\"|if . == null then 0 else . end" "$CACHE_FILE"
 }
 
 chia_db_has()

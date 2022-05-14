@@ -49,10 +49,10 @@ mp4upload:get_url()
 
 xstreamcdn:get_url()
 {
-	curl --disable -sX POST "https://embedsito.com/api/source/$1" \
-		--data "r=https://1anime.to/" --data 'd=embedsito.com' \
+	curl --disable -sX POST "https://fembed-hd.com/api/source/$1" \
+		--data 'r=https://fembed-hd.com' --data 'd=fembed-hd.com' \
 		| jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null \
-		| get_effective_url --referer 'https://embedsito.com'
+		| get_effective_url --referer 'https://fembed-hd.com'
 }
 
 vidcdn:get_url()

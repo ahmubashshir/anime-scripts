@@ -17,6 +17,10 @@ CURL_OPTIONS=(
 	-H 'sec-fetch-dest: empty'
 )
 
+referer()
+{
+	sed -E 's@(https?://[^/]+/).*@\1@' <<< "$1"
+}
 shopt -s nullglob extglob
 if [ -d ~/.local/share/chia-dl ]; then
 	cookies=()
@@ -250,7 +254,7 @@ replace_invalid()
 remote_exist()
 {
 	if grep -qE '^https?://' <<< "$1"; then
-		if [[ $(curl --disable --referer "$1" -kLsIXGET "$1" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
+		if [[ $(curl --disable --referer "$(referer "$1")" -kLsIXGET "$1" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
 			return 0
 		else
 			return 1
@@ -265,7 +269,7 @@ notify()
 {
 	[[ $DISPLAY = '' ]] && return
 	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
-	shift                                                                                  2
+	shift                                                                                2
 	local -a args
 	while [ -n "$1" ]; do
 		case "$1" in

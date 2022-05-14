@@ -287,20 +287,26 @@ download_hls()
 	)
 	return
 }
+# doc:start
+# check_file "file.mp4"
+# returns: 0 1
+# : 0 - OK
+# : 1 - CORRUPTED
+# doc:end
 check_file()
 {
+	unbug download
 	local ret
 	ask "Checking $(ellipsis 40 "$1") integrity"
-	unbug download
-	(($# < 3)) && set "$1" 0 0
-	: | ffmpeg -v quiet -map 0:0 -f null - -i "$1"
+	: | ffprobe -threads 0 -v error -count_frames -i "$1" |& grep -q partial
 	ret=$?
-	if ((ret != 0 || $2 < $3)); then
+	if ((ret == 0)); then
 		echo ": corrupted"
 	else
 		echo ": ok"
 	fi
-	return $ret
+	bug download
+	return $((ret == 1))
 }
 # doc:start
 # download "file.mp4" "http://up.tld/remote"
@@ -363,10 +369,10 @@ download()
 }
 # doc:start
 # comare_episode "local.mp4" "http://up.tld/remote"
-# returns: 0 1 2 3
-# 0 - OK
-# 1 - Exists
-# 2 - Mismatch
+# returns: 0 1 2
+# : 0 - Continue
+# : 1 - Exists
+# : 2 - Mismatch
 # doc:end
 compare_episode()
 {

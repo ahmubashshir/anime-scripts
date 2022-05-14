@@ -23,11 +23,10 @@ if [[ $# -gt 0 ]]; then
 				if [ "${0##*/}" = "35footer" ]; then
 					printf "chia-dl master-r%d.%s\n" \
 						"$(git rev-list --count HEAD)" \
-						"$(git rev-parse --short HEAD)"
-					(($(printf '%d' "$(git diff --shortstat | cut -d' ' -f2)"))) && {
-						printf '-'
-						git diff --shortstat | cut -d' ' -f2
-					}
+						"$(
+							git rev-parse --short HEAD | tr -d \\n
+							git diff --shortstat | awk 'END{ if($1 > 0) print "-" $1 }'
+						)"
 				else
 					printf -- 'chia-dl %s\n' "$(awk '/^#\+VERSION/{print $2;exit}' "$0")"
 				fi

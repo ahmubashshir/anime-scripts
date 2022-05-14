@@ -20,8 +20,8 @@ ifeq ($(VERSION),)
     VERSION = r$(shell git rev-list --count HEAD).$(shell git rev-parse --short HEAD)
 endif
 
-ifneq ($(shell git status -su -- $(PWD) | wc -l),0)
-    VERSION := $(VERSION)-$(shell git status -su -- $(PWD)|wc -l)
+ifneq ($(shell git diff --shortstat -- $(PWD)),)
+    VERSION := $(VERSION)-$(shell git diff --shortstat | awk 'END{print $$1}')
 endif
 
 ifeq ($(test), yes)

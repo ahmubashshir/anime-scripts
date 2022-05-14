@@ -31,16 +31,25 @@ function byte_hr()
 }
 function fget()
 {
-	local dld dlsize ex lsof name perm pid response S size url
+	local dld dlsize ex lsof name perm pid response S size url ref
+	local -a wgargs
 	url="$1"
 	name="$2"
+	ref="$(sed -E 's@(https?://[^/]+/).*@\1@' <<< $url)"
+	wgargs=(
+		"--referer=$ref"
+		"$@"
+		"--show-progress"
+		"-qcO"
+		"$name"
+	)
 	if (($# > 2)); then
 		shift 2
 	else
 		shift $#
 	fi
 
-	S=$(curl --disable --referer "$url" -skLIXGET "$url" 2>&1 | awk '/^HTTP\/[12.]+ 200/,/^\r$/ {gsub(/\r/,"");if(length)print}')
+	S=$(curl --disable --referer "$ref" -skLIXGET "$url" 2>&1 | awk '/^HTTP\/[12.]+ 200/,/^\r$/ {gsub(/\r/,"");if(length)print}')
 	if (exit "$?"); then
 		if [ "$name" = "" ]; then
 			name="${url##*/}"
@@ -72,9 +81,9 @@ function fget()
 					elif [ ! -e "$name" ]; then
 						echo -e "Writing to '$name'\nFile Size: $(byte_hr "$dlsize")"
 					fi
-					wget --referer="$url" "$@" --show-progress -qcO "$name" "$url"
+					wget "${wgargs[@]}" "$url"
 					if (($? == 5)); then
-						wget "$@" --show-progress -qcO "$name" --no-check-certificate "$url" || (exit $?)
+						wget "${wgargs[@]}" --no-check-certificate "$url" || (exit $?)
 					fi
 				else
 					(exit 10)

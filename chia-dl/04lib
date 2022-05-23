@@ -35,7 +35,7 @@ function fget()
 	local -a wgargs
 	url="$1"
 	name="$2"
-	ref="$(sed -E 's@(https?://[^/]+/).*@\1@' <<< $url)"
+	ref="$(sed -E 's@(https?://[^/]+/).*@\1@' <<< "$url")"
 	wgargs=(
 		"--referer=$ref"
 		"$@"

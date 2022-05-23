@@ -11,6 +11,10 @@
 . 14parse
 . deps
 #start:code
+if [[ ! -d $ANIME_PATH ]]; then
+	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1
+fi
+
 if [[ $# -gt 0 ]]; then
 	while [ -n "$1" ]; do
 		case $1 in

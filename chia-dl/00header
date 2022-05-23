@@ -51,9 +51,6 @@ fi
 if [[ $ANIME_PATH = @* ]]; then
 	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#@*}"
 fi
-if [[ ! -d $ANIME_PATH ]]; then
-	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1
-fi
 
 readonly MEDIA_ROOT="${MEDIA_ROOT:-/mnt/Multimedia}"
 readonly ANIME_PATH="${ANIME_PATH:-$MEDIA_ROOT/Anime}"

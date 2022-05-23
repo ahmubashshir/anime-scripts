@@ -8,26 +8,31 @@ fail_dep()
 	local pkg
 	readarray -t pkgs < <(
 		_pkgs="${2#*@}"
-		echo "${_pkgs//@/$'\n'}"
+		[[ $_pkgs == $2 ]] || echo "${_pkgs//@/$'\n'}"
 	)
 	error "$1" "${2%@*}"
 	for pkg in "${pkgs[@]}"; do
 		plainerr 'Available in `%s'\'' as `%s'\' "${pkg%:*}" "${pkg#*:}"
 	done
+	depfs+=1
 }
+
 pydep()
 {
-	if ! python3 -c "import ${1%%@*}" &> /dev/null; then
-		depfs+=1
-		fail_dep "Please install python3 module \`%s'" "$1"
-	fi
+	python3 -c "import ${1%%@*}" &> /dev/null \
+		|| fail_dep "Please install python3 module \`%s'" "$1"
 }
+
+pldep()
+{
+	perl -M "${1%%@*}" -e ';' 2> /dev/null \
+		|| fail_dep "Please install perl module \`%s'" "$1"
+}
+
 dep()
 {
-	if ! type "${1%%@*}" &> /dev/null; then
-		depfs+=1
-		fail_dep "Please install \`%s' or make sure it is in your path." "$1"
-	fi
+	type "${1%%@*}" &> /dev/null \
+		|| fail_dep "Please install \`%s' or make sure it is in your path." "$1"
 }
 
 dep awk@pacman:gawk
@@ -69,6 +74,7 @@ dep xmllint@pacman:libxml
 pydep requests@pypi:requests@pacman:python-requests
 pydep yaml@pypi:yaml@pacman:python-yaml
 pydep numpy@pypi:numpy@pacman:python-numpy
+pldep LWP::Protocol::https@pacman:perl-lwp-protocol-https
 
 if ((depfs > 0)); then
 	error "Install missing dependencies to continue."

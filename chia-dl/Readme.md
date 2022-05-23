@@ -10,19 +10,23 @@
 > tac tail tput tr tty wc wget xargs xmllint
 ## Python 3 modules
 > requests yaml numpy
+## Perl modules
+> LWP::Protocol::https
 ## Arch based distro
-```
+```sh
 sudo pacman -Syu \
-	bc coreutils curl ffmpeg findutils gawk grep \
-	imagemagick jq libnotify libxml lsof ncurses \
-	openssl perl-libwww python python-jsbeautifier \
-	sed wget python-numpy python-requests python-yaml
+    bc coreutils curl ffmpeg findutils gawk grep \
+    imagemagick jq libnotify libxml lsof ncurses \
+    openssl perl-libwww perl-lwp-protocol-https \
+    python python-jsbeautifier sed wget \
+    python-numpy python-requests python-yaml
 ```
 
 # Install
-```
+```sh
 git clone https://github.com/ahmubashshir/anime-scripts
 cd anime-scripts/chia-dl
+./deps           # check for missing dependencies
 cp chia-dl.cfg.example ~/.config/chia-dl.cfg
 make prefix=~/bin install install-libbash
 ${EDITOR:-nano} ~/.config/chia-dl.cfg

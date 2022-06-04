@@ -185,11 +185,13 @@ chia_get_episede()
 					rm "$ep_file_name"
 					ret=0
 				fi
-			elif ((\
-				ret == 2 && (rfail || ${failed_tests:-0} <= 5) && NO_REPLACE == 0)) \
-					|| ((rman + ret == 2)); then
+			elif ((ret == 2 && (rfail || ${failed_tests:-0} <= 5) && NO_REPLACE == 0)) \
+				|| ((rman + ret == 2)); then
 				rm "$ep_file_name.part"
 				ret=0
+			elif ((ret == 3)); then
+				echo Network failure >&2
+				exit 1
 			elif ((ret > 0)); then
 				msg2 "File doesn't match."
 				continue 2
@@ -375,6 +377,7 @@ download()
 # : 0 - Continue
 # : 1 - Exists
 # : 2 - Mismatch
+# : 3 - Network Failure
 # doc:end
 compare_episode()
 {
@@ -396,7 +399,7 @@ compare_episode()
 	fi
 	unbug compare
 	# downloaded, partial
-	local size wsize BS="$BS" hash1 hash2
+	local size wsize BS="$BS"
 	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
 		BS=$(byte_mr <<< "$BS")
 	else
@@ -443,13 +446,30 @@ compare_episode()
 	fi
 
 	for ((i = 0; i < ${TOTAL_CHECKS:-${#offsets}}; i++)); do
+		local start lhash rhash try=5
 		ask 'Comparing episode[test:%d]\r' "$((i + 1))"
+		bug compare
 		start=${offsets[$i]}
-		hash1="$(dd bs=1 count="$BS" status=none if="$1.part" skip="$start" | sha256sum | cut -d\  -f1)"
-		hash2="$(curl --disable -Lskr "$start-$((start + BS - 1))" "$2" | sha256sum | cut -d\  -f1)"
-		test "$hash1" = "$hash2" && failed_tests=$((failed_tests - 1))
-		test "$hash1" = "$hash2" || echo -e "\rComparing episode[test:$((i + 1)):fail]"
-		test "$hash1" = "$hash2" || return 2
+		lhash="$(dd bs=1 count="$BS" status=none if="$1.part" skip="$start" | sha256sum | awk '{print $1}')"
+		while ((--try)) && [[ -z $rhash || $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; do
+			rhash="$(curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" | base64)"
+			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
+				rhash=
+				sleep          2
+			fi
+			rhash=$(base64 -d <<< "$rhash" | sha256sum | awk '{print $1}')
+		done
+		unbug compare
+
+		if [[ "$lhash" == "$rhash" ]]; then
+			failed_tests=$((failed_tests - 1))
+		elif [[ $try -eq 0 && $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; then # network failure
+			return   3
+		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
+			echo   -e "\rComparing episode[test:$((i + 1)):fail]"
+			return                                                        2
+		fi
+		unset start lhash rhash
 	done
 	ask 'Comparing episode[test:1-%d:pass]\n' "${TOTAL_CHECKS:-${#offsets}}"
 	return 0

@@ -110,32 +110,28 @@ contract_limit()
 	# arrays
 	local -a args
 	# variables
-	local max="$1" next_curr=0 curr_prev=0 prev curr next
+	local -i max="$1" prev=0 curr=0 diff=0 oldiff=0
 	# debug
 	bug contract
 	shift
 	# code
 	readarray -t args < <(printf '%s\n' "$@" | tr -s ', ' \\n | sort -un)
-	for ((ind = 2; ind < ${#args[@]}; ind++)); do
-		prev=${args[ind - 2]}
-		curr=${args[ind - 1]}
-		next=${args[ind]}
-		next_curr=$((next - curr))
-		curr_prev=$((curr - prev))
-		if ((ind == 2)); then
+	for ((ind = 1; ind <= ${#args[@]}; ind++)); do
+		prev=${args[ind - 1]}
+		curr=${args[ind]}
+		oldiff=$diff
+		diff=$((curr - prev))
+		if ((ind == 1)); then
 			printf '%d' "$prev"
-		elif ((next_curr >= 2)) && ((curr_prev < 2)); then
-			printf -- '-%d,%d' "$curr" "$next"
-		elif ((curr_prev > 1)) && ((next_curr > 1)); then
-			printf ',%d' "$next"
-		elif ((next >= max)); then
-			printf -- '-\n'
-			break
-		elif ((ind + 1 == ${#args[@]})); then
-			printf -- '-%d\n' "$next"
-			break
+		elif ((diff > 1 && oldiff == 1)); then
+			printf -- '-%d' "$prev"
+		elif ((oldiff > 1)); then
+			printf -- ',%d' "$prev"
+		elif ((prev <= max && (curr > max || ind == ${#args[@]}))); then
+			printf -- '-%d' "$prev"
 		fi
 	done
+	printf   '\n'
 	unbug contract
 	return 0
 }
@@ -269,7 +265,7 @@ notify()
 {
 	[[ $DISPLAY = '' ]] && return
 	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
-	shift                                                                                2
+	shift                                                                            2
 	local -a args
 	while [ -n "$1" ]; do
 		case "$1" in

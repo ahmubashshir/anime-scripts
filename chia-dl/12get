@@ -107,15 +107,16 @@ chia_get()
 		expand_limit "${FILE_LIST_RANGE:-1-}" "${#eps[@]}"
 	)
 
-	if [[ $FILE_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
-		ep_show="range($(ellipsis "$(($(tput cols) - 50))" "$(tr -d \  <<< "$FILE_LIST_RANGE")"))"
+	if ((${#sel[@]} > 1)); then
+		ep_show="range($(
+			ellipsis "$(($(tput cols) - 50))" "$(
+				contract_limit "${#eps[@]}" "${sel[@]}"
+			)"
+		))"
 		dl_notify="Episodes in ${ep_show} are"
-	elif [[ $FILE_LIST_RANGE =~ [[:digit:],]+- ]]; then
-		ep_show="range($FILE_LIST_RANGE${#eps[@]})"
-		dl_notify="Episodes in ${ep_show} are"
-	elif [[ -n $FILE_LIST_RANGE ]]; then
-		ep_show="file $FILE_LIST_RANGE"
-		dl_notify="Episode ${ep_show:5} is"
+	else
+		ep_show="${sel[0]}"
+		dl_notify="Episode ${ep_show} is"
 	fi
 
 	((SKIP_DOWNLOAD == false)) && anime_cover "https://gogocdn.net/cover/${slug}.png"

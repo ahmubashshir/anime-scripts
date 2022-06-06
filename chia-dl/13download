@@ -59,9 +59,10 @@ chia_get_episede()
 
 	isdub=$(chia_db get is-dub)
 	if [[ $ep_slug =~ ^- ]]; then
-		page_slug="$slug"
-		[[ $isdub = true ]] && page_slug+="-dub" && tr=dub
+		[[ $isdub = true   ]] && page_slug+="-dub" && tr=dub
 		page_slug+="$ep_slug"
+	else
+		page_slug="$ep_slug"
 	fi
 
 	bug download
@@ -455,7 +456,7 @@ compare_episode()
 			rhash="$(curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" | base64)"
 			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
 				rhash=
-				sleep          2
+				sleep        2
 			fi
 			rhash=$(base64 -d <<< "$rhash" | sha256sum | awk '{print $1}')
 		done
@@ -464,10 +465,10 @@ compare_episode()
 		if [[ "$lhash" == "$rhash" ]]; then
 			failed_tests=$((failed_tests - 1))
 		elif [[ $try -eq 0 && $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; then # network failure
-			return   3
+			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
-			echo   -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                                        2
+			echo -e "\rComparing episode[test:$((i + 1)):fail]"
+			return                                                      2
 		fi
 		unset start lhash rhash
 	done

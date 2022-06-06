@@ -105,7 +105,7 @@ expand_limit()
 	unbug expand
 	return 0
 }
-contract_limit()
+reduce_limit()
 {
 	# arrays
 	local -a args
@@ -131,7 +131,7 @@ contract_limit()
 			printf -- '-%d' "$prev"
 		fi
 	done
-	printf   '\n'
+	printf '\n'
 	unbug contract
 	return 0
 }
@@ -265,7 +265,7 @@ notify()
 {
 	[[ $DISPLAY = '' ]] && return
 	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
-	shift                                                                            2
+	shift                                                                          2
 	local -a args
 	while [ -n "$1" ]; do
 		case "$1" in

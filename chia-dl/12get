@@ -110,7 +110,7 @@ chia_get()
 	if ((${#sel[@]} > 1)); then
 		ep_show="range($(
 			ellipsis "$(($(tput cols) - 50))" "$(
-				contract_limit "${#eps[@]}" "${sel[@]}"
+				reduce_limit "${#eps[@]}" "${sel[@]}"
 			)"
 		))"
 		dl_notify="Episodes in ${ep_show} are"

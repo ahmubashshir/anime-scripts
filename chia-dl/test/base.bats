@@ -20,14 +20,14 @@ function setup
 	assert_output $'1\n2\n3\n5\n6\n7\n9\n11\n12\n13\n14\n16\n17\n18'
 }
 
-@test "Checking 'contract_limit()'" {
-	run contract_limit 18 1 2 3 5 6 7 9 11 12 13 14 16 17 18
+@test "Checking 'reduce_limit()'" {
+	run reduce_limit 18 1 2 3 5 6 7 9 11 12 13 14 16 17 18
 	assert_output '1-3,5-7,9,11-14,16-18'
 
-	run contract_limit 18 11 12 13 14 16 17 18 19 20 21
+	run reduce_limit 18 11 12 13 14 16 17 18 19 20 21
 	assert_output '11-14,16-18'
 
-	run contract_limit 18 11 12 13 14 16
+	run reduce_limit 18 11 12 13 14 16
 	assert_output '11-14,16'
 }
 

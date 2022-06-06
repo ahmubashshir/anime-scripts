@@ -103,6 +103,9 @@ chia_get()
 	fi
 	# shellcheck disable=SC2001
 	FILE_LIST_RANGE="$(sed 's/^[-,[:blank:]]*//g' <<< "${FILE_LIST_RANGE:-1-}")"
+	readarray -t sel < <(
+		expand_limit "${FILE_LIST_RANGE:-1-}" "${#eps[@]}"
+	)
 
 	if [[ $FILE_LIST_RANGE =~ [[:digit:],]+-[[:digit:],]+ ]]; then
 		ep_show="range($(ellipsis "$(($(tput cols) - 50))" "$(tr -d \  <<< "$FILE_LIST_RANGE")"))"
@@ -118,11 +121,6 @@ chia_get()
 	((SKIP_DOWNLOAD == false)) && anime_cover "https://gogocdn.net/cover/${slug}.png"
 
 	msg2 '%s' "$ep_show"
-
-	readarray -t sel < <(
-		expand_limit "${FILE_LIST_RANGE:-1-}" "${#eps[@]}"
-	)
-
 	for idx in "${sel[@]}"; do
 		ep_slug="${eps[idx - 1]}"
 		if ! chia_get_episede "$slug" "$ep_slug" "$idx" "$((++dl_progress))" "${#sel[@]}"; then

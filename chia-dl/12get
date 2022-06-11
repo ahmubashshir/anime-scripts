@@ -45,7 +45,7 @@ chia_get()
 	msg 'Fetching info: "%s"' "$slug"
 
 	bug get
-	local purl
+	local purl try_page
 	while [[ $purl != https://${DNS_NAME}/anime/${slug}.html ]] \
 		&& ((try_page++ < 5)); do
 		chia_page=$(
@@ -56,7 +56,7 @@ chia_get()
 		((try_page > 1)) && sleep 1
 	done
 	unbug get
-	unset purl
+	unset purl try_page
 
 	readarray -t eps < <(chia_crawl_page <<< "$chia_page")
 	if grep -q '\-dub$' <<< "$slug"; then

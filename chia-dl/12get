@@ -69,10 +69,9 @@ chia_get()
 		chia_db add
 		chia_db set path "\"$PWD\""
 		chia_db set title "\"$title\""
+		chia_db set is-dub "$dubbed"
 	fi
 	chia_db set status "\"$status\""
-	chia_db set is-dub "$dubbed"
-
 	if [[ -n $query ]]; then
 		chia_db set query "\"$query\""
 	fi
@@ -123,14 +122,17 @@ chia_get()
 
 	msg2 '%s' "$ep_show"
 	for idx in "${sel[@]}"; do
-		ep_slug="${eps[idx - 1]}"
-		if ! chia_get_episede "$slug" "$ep_slug" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
+		local ep_slug=''
+		[[ ${eps[idx - 1]} =~ ^- ]] && ep_slug+="$slug"
+		if [[ ${eps[idx - 1]} =~ ^- ]] && chia_db get is-dub | grep -qw true; then
+			ep_slug+=-dub
+		fi
+		ep_slug+="${eps[idx - 1]}"
+		if ! chia_get_episede "$slug" "${ep_slug}" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
 			error "Failed to download: %s" "$slug$ep_slug"
 			notify \
 				"Download Failed" \
-				"Failed to download <a href=\"https://${DNS_NAME}/watch/${slug}$(
-					[[ $dubbed = true ]] && printf '\-dub'
-				)${ep_slug}.html\">file ${ep_slug#*-}</a>" \
+				"Failed to download <a href=\"https://${DNS_NAME}/watch/${ep_slug}.html\">${ep_slug}</a>" \
 				u:normal t:1000000 i:emblem-downloads c:transfer.error
 			((NOBREAK == true)) || break
 		fi

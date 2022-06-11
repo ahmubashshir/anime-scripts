@@ -52,29 +52,25 @@ chia_get_episede()
 	(($# < 3)) && return 1
 
 	local slug="$1" ep_slug="$2" idx="$3" progress="$4" total="$5"
-	local try_page=0 isdub=false chia_page page_slug tr=sub ep_file_name ep_host_sel
+	local try_page=0 chia_page tr=sub ep_file_name ep_host_sel
 	local -a ep_hosts ep_file_url
 
 	local -i rfail=REPLACE_FAIL rman=REPLACE_MANUAL
 
-	isdub=$(chia_db get is-dub)
-	if [[ $ep_slug =~ ^- ]]; then
-		[[ $isdub = true   ]] && page_slug+="-dub" && tr=dub
-		page_slug+="$ep_slug"
-	else
-		page_slug="$ep_slug"
+	if grep -q '\-dub-' <<< "$ep_slug"; then
+		tr=dub
 	fi
 
 	bug download
-	msg '[%d/%d] Fetching episode: %s' "$progress" "$total" "$page_slug"
+	msg '[%d/%d] Fetching episode: %s' "$progress" "$total" "$ep_slug"
 	local purl
-	while [[ $purl != https://${DNS_NAME}/watch/${page_slug}.html ]] \
+	while [[ $purl != https://${DNS_NAME}/watch/${ep_slug}.html ]] \
 		&& ((try_page++ < 5)); do
 		chia_page="$(
 			curl --disable \
 				--referer "https://${DNS_NAME}/anime/${slug}.html" \
 				"${CURL_OPTIONS[@]}" -Lks \
-				"${PUPPETEER_PROXY}https://${DNS_NAME}/watch/${page_slug}.html"
+				"${PUPPETEER_PROXY}https://${DNS_NAME}/watch/${ep_slug}.html"
 		)"
 		purl="$(xpath 'string(//head/link[@rel="canonical"]/@href)' <<< "$chia_page")"
 		((try_page > 1)) && sleep 1
@@ -82,7 +78,7 @@ chia_get_episede()
 	unset purl
 	unbug download
 	if [ -z "$chia_page" ]; then
-		error 'Failed to fetch episode: %s' "$page_slug"
+		error 'Failed to fetch episode: %s' "$ep_slug"
 		return 1
 	fi
 
@@ -456,7 +452,7 @@ compare_episode()
 			rhash="$(curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" | base64)"
 			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
 				rhash=
-				sleep        2
+				sleep    2
 			fi
 			rhash=$(base64 -d <<< "$rhash" | sha256sum | awk '{print $1}')
 		done
@@ -468,7 +464,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                                      2
+			return                                                  2
 		fi
 		unset start lhash rhash
 	done

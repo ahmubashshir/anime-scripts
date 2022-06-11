@@ -34,7 +34,7 @@ chia_get()
 		title="$2" \
 		status="$3" \
 		query="$4" \
-		chia_page ep_show dl_notify idx ep_slug dl_progress dubbed=false
+		chia_page ep_show dl_notify idx ep_slug dl_progress dubbed=false list_range="$FILE_LIST_RANGE"
 
 	local -a eps sel
 
@@ -62,10 +62,10 @@ chia_get()
 	if grep -q '\-dub$' <<< "$slug"; then
 		slug=${slug%*-dub}
 		dubbed=true
-
 	fi
+
 	bug get-db
-	if ! chia_db has || ((FILE_LIST)) && [ -z "$FILE_LIST_RANGE" ]; then
+	if ! chia_db has || ((FILE_LIST)) && [ -z "$list_range" ]; then
 		chia_db add
 		chia_db set path "\"$PWD\""
 		chia_db set title "\"$title\""
@@ -93,18 +93,18 @@ chia_get()
 		return 0
 	}
 
-	if ((FILE_LIST == true)) && [[ -z $FILE_LIST_RANGE ]]; then
-		read -eri "1-${#eps[@]}" -p$'Episode list: ' FILE_LIST_RANGE
+	if ((FILE_LIST == true)) && [[ -z $list_range ]]; then
+		read -eri "1-${#eps[@]}" -p$'Episode list: ' list_range
 		tput cuu 1
 	fi
 
-	if ((CONTINUE == true)) && [[ -z $FILE_LIST_RANGE ]]; then
-		FILE_LIST_RANGE="$(chia_db get saved | jq -r 'if . == 0 then 1 else . end|tostring + "-"')"
+	if ((CONTINUE == true)) && [[ -z $list_range ]]; then
+		list_range="$(chia_db get saved | jq -r 'if . == 0 then 1 else . end|tostring + "-"')"
 	fi
 	# shellcheck disable=SC2001
-	FILE_LIST_RANGE="$(sed 's/^[-,[:blank:]]*//g' <<< "${FILE_LIST_RANGE:-1-}")"
+	list_range="$(sed 's/^[-,[:blank:]]*//g' <<< "${list_range:-1-}")"
 	readarray -t sel < <(
-		expand_limit "${FILE_LIST_RANGE:-1-}" "${#eps[@]}"
+		expand_limit "${list_range:-1-}" "${#eps[@]}"
 	)
 
 	if ((${#sel[@]} > 1)); then

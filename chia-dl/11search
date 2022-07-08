@@ -183,7 +183,6 @@ set_basedir()
 			;;
 		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
 		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;
-		*movie*) echo "$MOVIE_PATH" ;;
 		*) echo "$ANIME_PATH" ;;
 	esac
 }

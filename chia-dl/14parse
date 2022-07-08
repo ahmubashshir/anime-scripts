@@ -71,18 +71,23 @@ vidcdn:get_url()
 			while read -r idx data; do
 				read -r "${kidx[idx]}" < <(
 					case "$idx" in
-						[0-2]) tr -d $'\n' <<< "$data" | od -A n -t x1 | tr -d $' \n' ;;
+						[0-2])
+							tr -d $'\n' <<< "$data" \
+								| od -A n -t x1 \
+								| tr -d $' \n'
+							;;
 						3) echo "$data" ;;
 					esac
 				)
 			done
 			read -r token < <(
 				base64 -d <<< "$token" \
-					| openssl enc -d -aes256 -K "$key" -iv "$iv" \
+					| openssl enc -d -aes256 -K "$key" -iv "$iv" 2> /dev/null \
 					| sed -nE 's/.*&(token.*)/\1/p'
 			)
 			read -r eid < <(
-				openssl enc -e -aes256 -K "$key" -iv "$iv" <<< "${1%%:*}" | base64
+				openssl enc -e -aes256 \
+					-K "$key" -iv "$iv" <<< "${1%%:*}" 2> /dev/null | base64
 			)
 
 			curl --disable -s \
@@ -90,7 +95,7 @@ vidcdn:get_url()
 				"${ajax_url}?id=${eid}&alias=${1%%:*}&$token" \
 				| jq -r .data \
 				| base64 -d \
-				| openssl enc -d -aes256 -K "$dkey" -iv "$iv" \
+				| openssl enc -d -aes256 -K "$dkey" -iv "$iv" 2> /dev/null \
 				| jq -r '.source[0].file' 2> /dev/null
 		)
 }

@@ -91,7 +91,7 @@ chia_get_episede()
 	read -r ep_title < <(
 		xpath 'string(//meta[@property="og:description"][1]/@content)' \
 			<<< "$chia_page" 2> /dev/null \
-			| sed -e 's/(Dub) //' \
+			| sed -e 's/(\(Dub\|Uncensored\)) //g' \
 				-e 's|episode|EP|gI' \
 				-e 's|ova|OVA|gI' \
 				-e 's|ona|ONA|gI' \
@@ -480,7 +480,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                            2
+			return                                          2
 		fi
 		unset start lhash rhash
 	done

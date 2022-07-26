@@ -47,7 +47,7 @@ if len(argv) == 2:
 				exit(0)' "$@"
 }
 
-chia_get_episede()
+chia_get_episode()
 {
 	(($# < 3)) && return 1
 
@@ -480,7 +480,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                          2
+			return                                        2
 		fi
 		unset start lhash rhash
 	done
@@ -495,5 +495,5 @@ if ! {
 		return 0 2> /dev/null
 	}
 }; then
-	chia_get_episede "$@"
+	chia_get_episode "$@"
 fi

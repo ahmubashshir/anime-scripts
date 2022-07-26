@@ -128,7 +128,7 @@ chia_get()
 			ep_slug+=-dub
 		fi
 		ep_slug+="${eps[idx - 1]}"
-		if ! chia_get_episede "$slug" "${ep_slug}" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
+		if ! chia_get_episode "$slug" "${ep_slug}" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
 			error "Failed to download: %s" "$slug$ep_slug"
 			notify \
 				"Download Failed" \

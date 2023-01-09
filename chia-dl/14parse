@@ -4,7 +4,7 @@
 . 01include
 . 03msg
 #start:code
-SUPPORTED_HOSTS='vidcdn|xstreamcdn|mp4upload|doodstream|mixdrop'
+SUPPORTED_HOSTS='vidcdn|xstreamcdn|doodstream|mp4upload|mixdrop'
 
 get_effective_url()
 {
@@ -49,15 +49,16 @@ mp4upload:get_url()
 
 xstreamcdn:get_url()
 {
-	curl --disable -sX POST "https://fembed-hd.com/api/source/$1" \
-		--data 'r=https://fembed-hd.com' --data 'd=fembed-hd.com' \
+	local RHOST="fembed9hd.com"
+	curl --disable -sX POST "https://$RHOST/api/source/$1" \
+		--data "r=https://$RHOST" --data "d=$RHOST" \
 		| jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null \
-		| get_effective_url --referer 'https://fembed-hd.com'
+		| get_effective_url --referer "https://$RHOST"
 }
 
 vidcdn:get_url()
 {
-	local RHOST="https://goload.pro"
+	local RHOST="https://gogohd.pro"
 	local ajax_url="$RHOST/encrypt-ajax.php"
 
 	curl --disable -s "$RHOST/streaming.php?id=${1%%:*}" \

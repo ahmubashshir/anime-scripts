@@ -30,20 +30,13 @@ function byte_hr()
 	printf '%s %s' "$size" "$unit"
 }
 
-get_ref()
-{
-	case "$1" in
-		*.dood*) echo "https://dooood.com" ;;
-		*) sed -E 's@(https?://[^/]+/).*@\1@' <<< "$1" ;;
-	esac
-}
-
 function fget()
 {
 	local dld dlsize ex lsof name perm pid response S size url ref
 	local -a wgargs
 	url="$1"
 	name="$2"
+	shift 2
 	ref="$(get_ref "$url")"
 	wgargs=(
 		"--referer=$ref"

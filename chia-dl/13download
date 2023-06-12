@@ -229,7 +229,7 @@ download_hls()
 				-print_format json \
 				-show_format \
 				-show_programs \
-				-referer "$(referer "$2")" \
+				-referer "$(get_ref "$2")" \
 				-i "$2" -loglevel error
 		)"
 		read -r duration < <(jq -r .format.duration <<< "$ffprobe")
@@ -255,7 +255,7 @@ download_hls()
 				<<< "$ffprobe"
 		)
 		ffmpeg ${HLS_ACCEL:+-hwaccel $HLS_ACCEL} -y -progress /dev/stdout \
-			-referer "$(referer "$2")" -i "$2" -map "0:p:$program" -c copy -f mp4 "$1.part" 2> /dev/null \
+			-referer "$(get_ref "$2")" -i "$2" -map "0:p:$program" -c copy -f mp4 "$1.part" 2> /dev/null \
 			| awk -v "duration=$duration" -F= \
 				'function tttt(s) {
 					t = s % 60
@@ -337,7 +337,7 @@ download()
 		ret=$?
 	else
 		s1=$(
-			curl --disable --referer "$(referer "$2")" -kLsIXGET "$2" \
+			curl --disable --referer "$(get_ref "$2")" -kLsIXGET "$2" \
 				| awk \
 					'/^HTTP\/[12.]+ 200/,/^\r$/ {
 						gsub(/\r/,"")
@@ -423,7 +423,7 @@ compare_episode()
 		BS=$size
 	fi
 	wsize=$(
-		curl --disable -LksIXGET "$2" \
+		curl --disable -LksIXGET "$2" --referer "$(get_ref "$2")" \
 			| awk \
 				'/^HTTP\/[12.]+ 200/,/^\r$/ {
 					gsub(/\r/,"")
@@ -480,7 +480,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                        2
+			return                                      2
 		fi
 		unset start lhash rhash
 	done

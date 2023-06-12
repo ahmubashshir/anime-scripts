@@ -27,6 +27,7 @@ declare +x -ig NOBREAK NORESET DOWNLOAD_ALL \
 	SKIP_DOWNLOAD SKIP_COMPARE update_queue COLOR=${COLOR:-auto}
 #main
 if [ -f ~/.config/chia-dl.cfg ]; then
+	# shellcheck disable=SC2317
 	set()
 	{
 		declare -n var="$1"

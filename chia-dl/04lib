@@ -6,8 +6,8 @@ function check_up_server()
 	local resp t
 	t=$2
 	t=${t:=3}
-	[ $t -gt 3 ] && echo "Resolving $1,wait $t seconds" 1>&2
-	resp=$(curl -m $t -sIXGET "$1" | head -1 | tr -d \  | cut -d/ -f1)
+	[[ $t -gt 3 ]] && echo "Resolving $1,wait $t seconds" 1>&2
+	resp=$(curl -m "$t" -sIXGET "$1" | head -1 | tr -d \  | cut -d/ -f1)
 	if [[ $resp = 'HTTP' ]]; then
 		return 0
 	fi
@@ -156,9 +156,9 @@ function fget()
 		return $ex
 	else
 		if ((dlsize == size)); then
-			echo -e "Already downloaded $name [$(byte_hr $size)]."
+			echo -e "Already downloaded $name [$(byte_hr "$size")]."
 		else
-			echo -e "Already downloaded $name [$(byte_hr $size)],\nbut size doesn't match.[size on server $(byte_hr "$dlsize")]"
+			echo -e "Already downloaded $name [$(byte_hr "$size")],\nbut size doesn't match.[size on server $(byte_hr "$dlsize")]"
 		fi
 		return 0
 	fi

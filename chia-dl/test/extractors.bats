@@ -13,6 +13,8 @@ function setup
 }
 
 @test "get url from mp4upload" {
+	skip 'Video deleted, have to find new video ID to test with'
+
 	${CONNECTED:-false} || skip 'You are currently offline'
 	run get_url mp4upload bj39hjtftcje
 	assert_output --regexp "$regex"
@@ -20,11 +22,13 @@ function setup
 
 @test "get url from vidcdn" {
 	${CONNECTED:-false} || skip 'You are currently offline'
-	run get_url vidcdn MTg0OTQ1
+	run get_url vidcdn MjAyMTUw:23Y-yB82U9FHtx0tqMyyNQ:1686594347
 	assert_output --regexp "$regex"
 }
 
 @test "get url from xstreamcdn" {
+	skip 'Video deleted, have to find new video ID to test with'
+
 	${CONNECTED:-false} || skip 'You are currently offline'
 	run get_url xstreamcdn nd27xs2g7d4z-q2
 	assert_output --regexp "$regex"

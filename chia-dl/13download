@@ -463,9 +463,18 @@ compare_episode()
 		ask 'Comparing episode[test:%d]\r' "$((i + 1))"
 		bug compare
 		start=${offsets[$i]}
-		lhash="$(dd bs=1 count="$BS" status=none if="$1.part" skip="$start" | sha256sum | awk '{print $1}')"
+
+		read -r lhash < <(
+			dd bs=1 count="$BS" status=none if="$1.part" skip="$start" \
+				| sha256sum \
+				| awk '{print $1}'
+		)
+
 		while ((--try)) && [[ -z $rhash || $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; do
-			rhash="$(curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" | base64)"
+			IFS= read -r rhash < <(
+				curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" \
+					| base64 -w0
+			)
 			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
 				rhash=
 				sleep 2
@@ -480,7 +489,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                      2
+			return                                    2
 		fi
 		unset start lhash rhash
 	done

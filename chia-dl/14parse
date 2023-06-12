@@ -88,7 +88,7 @@ vidcdn:get_url()
 			)
 			read -r eid < <(
 				openssl enc -e -aes256 \
-					-K "$key" -iv "$iv" <<< "${1%%:*}" 2> /dev/null | base64
+					-K "$key" -iv "$iv" <<< "${1%%:*}" 2> /dev/null | base64 -w0
 			)
 
 			curl --disable -s \

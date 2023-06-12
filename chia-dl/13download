@@ -472,7 +472,7 @@ compare_episode()
 
 		while ((--try)) && [[ -z $rhash || $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; do
 			IFS= read -r rhash < <(
-				curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" \
+				curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" --referer "$(get_ref "$2")" \
 					| base64 -w0
 			)
 			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
@@ -489,7 +489,7 @@ compare_episode()
 			return 3
 		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
 			echo -e "\rComparing episode[test:$((i + 1)):fail]"
-			return                                    2
+			return 2
 		fi
 		unset start lhash rhash
 	done

@@ -74,7 +74,6 @@ dep xmllint@pacman:libxml
 pydep requests@pypi:requests@pacman:python-requests
 pydep yaml@pypi:yaml@pacman:python-yaml
 pydep numpy@pypi:numpy@pacman:python-numpy
-pldep LWP::Protocol::https@pacman:perl-lwp-protocol-https
 
 if ((depfs > 0)); then
 	error "Install missing dependencies to continue."

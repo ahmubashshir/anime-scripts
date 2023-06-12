@@ -113,12 +113,11 @@ mixdrop:get_url()
 doodstream:get_url()
 {
 
-	local RHOST=https://doodstream.com
+	local RHOST=https://dooood.com
 	local UA='Lynx/2.8.9rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/3.6.5'
-	lwp-request -b "$RHOST" \
-		-H "User-Agent: $UA" "/d/$1" \
+	curl --disable -s --user-agent "$UA" "$RHOST/d/$1" \
 		| xpath 'string(//div[@class="download-content"]/a/@href)' \
-		| xargs -rn 1 lwp-request -b "$RHOST" -H "User-Agent: $UA" \
+		| xargs -ri curl --disable -s --user-agent "$UA" "$RHOST/{}" \
 		| xpath 'string(//a[contains(@onclick, ".dood.video/")]/@onclick)' \
 		| sed -E "s@.*\('((https:)?//[^']+)'.*\)@\1@" \
 		| get_effective_url --referer "$RHOST"

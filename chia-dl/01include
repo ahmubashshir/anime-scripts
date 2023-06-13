@@ -1,5 +1,4 @@
 #!/bin/bash
-# shellcheck disable=SC2034
 ((def_include)) && return 0 || def_include=1
 #start:code
 DNS_NAME=chia-anime.cc
@@ -101,6 +100,30 @@ expand_limit()
 	unbug expand
 	return 0
 }
+
+format_string()
+{
+	declare -a str_args
+	declare -i str_iter
+	declare -i str_key
+	if [[ $# -gt 1 ]]; then
+		str_args=("${@:2}")
+	else
+		readarray -t str_args
+	fi
+
+	while [[ $1 =~ \{[0-9]+\} ]] || [[ $1 =~ \{\} ]]; do
+		str_key=${BASH_REMATCH:1:-1}
+		if [[ "${BASH_REMATCH:1:-1}" ]]; then
+			set -- "${1//\{$str_key\}/${str_args[str_key]}}"
+		else
+			set -- "${1/\{\}/${str_args[str_iter]}}"
+			str_iter+=1
+		fi
+	done
+	printf '%s\n' "$1"
+}
+
 reduce_limit()
 {
 	# arrays
@@ -269,9 +292,10 @@ notify()
 {
 	[[ $DISPLAY = '' ]] && return
 	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
-	shift                                                                        2
+	shift 2
 	local -a args
 	while [ -n "$1" ]; do
+		# shellcheck disable=SC2034
 		case "$1" in
 			u:*) urgency="${1#u:}" ;;
 			t:*) expire_time="${1#t:}" ;;

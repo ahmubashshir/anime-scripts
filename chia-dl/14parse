@@ -127,8 +127,7 @@ mixdrop:get_url()
 				[[ $c =~ ^[0-9a-df-p]$ ]] && printf '{%d}' $((26#$c)) || printf '%s' "$c"
 			done
 	)
-
-	format_string "https://$fmtstr" "${data[@]}"
+	((${#data[@]} == 0)) || format_string "https://$fmtstr" "${data[@]}"
 }
 
 doodstream:get_url()

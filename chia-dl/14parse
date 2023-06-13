@@ -52,6 +52,7 @@ xstreamcdn:get_url()
 		| get_effective_url --referer "https://$RHOST"
 }
 
+# shellcheck disable=SC2317
 streamsb:get_url()
 {
 	return # doesn't work
@@ -115,9 +116,19 @@ vidcdn:get_url()
 
 mixdrop:get_url()
 {
-	curl --disable -s "https://mixdrop.to/e/$1" \
-		| sed -nE '/^eval/{s/^.*'\''(.+)'\''\.split.+$/\1/g;s/\|/\n/gp' \
-		| format_string 'https://{2}-{3}.{5}.{7}/{15}/{4}/{6}?{2}={9}&e={17}&{18}={16}'
+	local payload fmtstr
+	local -a data
+
+	IFS= read -r payload < <(curl --disable -s "https://mixdrop.to/e/$1" | sed -n '/^eval/p')
+	mapfile -t data < <(sed -nE 's/^.*'\''(.+)'\''\.split.+$/\1/g;s/\|/\n/gp' <<< "$payload")
+	read -r fmtstr < <(
+		sed -nE 's,^.+\;1\.d="//([^"]+)"\;.+$,\1,p' <<< "$payload" \
+			| while read -rn1 c; do
+				[[ $c =~ ^[0-9a-df-p]$ ]] && printf '{%d}' $((26#$c)) || printf '%s' "$c"
+			done
+	)
+
+	format_string "https://$fmtstr" "${data[@]}"
 }
 
 doodstream:get_url()

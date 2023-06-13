@@ -43,7 +43,7 @@ function setup
 }
 
 @test "get url from mixdrop" {
-	skip 'Video deleted, have to find new video ID to test with'
+	# skip 'Video deleted, have to find new video ID to test with'
 
 	${CONNECTED:-false} || skip 'You are currently offline'
 	run get_url mixdrop rw6vnp0xu3nj7w

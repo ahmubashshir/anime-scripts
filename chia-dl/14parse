@@ -116,10 +116,8 @@ vidcdn:get_url()
 mixdrop:get_url()
 {
 	curl --disable -s "https://mixdrop.to/e/$1" \
-		| grep '^eval' \
-		| beautify_js \
-		| grep MDCore.wurl \
-		| sed -E 's@.* = "//(.*)".*@https://\1@'
+		| sed -nE '/^eval/{s/^.*'\''(.+)'\''\.split.+$/\1/g;s/\|/\n/gp' \
+		| format_string 'https://{2}-{3}.{5}.{7}/{15}/{4}/{6}?{2}={9}&e={17}&{18}={16}'
 }
 
 doodstream:get_url()

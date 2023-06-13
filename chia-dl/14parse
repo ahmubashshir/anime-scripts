@@ -33,18 +33,14 @@ get_url()
 		return
 	fi
 }
-beautify_js()
-{
-	js-beautify -xn -e \\n -k --brace-style=expand - 2> /dev/null
-}
 
 mp4upload:get_url()
 {
-	curl --disable -ks "https://www.mp4upload.com/embed-$1.html" \
-		| grep 'eval(' \
-		| cut -d\> -f2- \
-		| beautify_js \
-		| sed -znE 's@.*(http(s|)://[[:alnum:]]+.mp4upload.com:[[:digit:]]+/[[:lower:]]/[[:alnum:]]+/[[:alnum:]-]+.mp4).*@\1\n@p'
+	curl --disable -s "https://www.mp4upload.com/$1" \
+		--referer "https://www.mp4upload.com/$1" \
+		--data-raw 'op=download2' \
+		--data-raw "id=$1" \
+		--write-out '%{redirect_url}\n'
 }
 
 xstreamcdn:get_url()
@@ -54,6 +50,22 @@ xstreamcdn:get_url()
 		--data "r=https://$RHOST" --data "d=$RHOST" \
 		| jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null \
 		| get_effective_url --referer "https://$RHOST"
+}
+
+streamsb:get_url()
+{
+	return # doesn't work
+	local RHOST=sbani.pro
+	curl -s "https://$RHOST/d/$1" \
+		| xpath 'string(//div[contains(@onclick, "download_video")][1]/@onclick)' \
+		| sed -E "s;^.*\bdownload_video\s*\(\s*'(.+)'\s*,\s*'(.)'\s*,\s*'(.+)'\s*\).*$;\1\t\2\t\3;" \
+		| (
+			read -r id t hash
+			curl --disable -s "https://$RHOST/dl?op=download_orig&id=$id&mode=$t&hash=$hash" \
+				--referer "https://$RHOST/dl?op=download_orig&id=$id&mode=$t&hash=$hash" \
+				--data-urlencode "op=download_orig&id=$id&mode=$t&hash=$hash"
+		)
+
 }
 
 vidcdn:get_url()

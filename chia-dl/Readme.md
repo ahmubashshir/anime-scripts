@@ -5,7 +5,7 @@
 # Dependencies
 ## Executables
 > awk base64 bc convert curl cut date dd ffmpeg ffprobe 
-> grep head jq js-beautify lsof lwp-request mkdir mv 
+> grep head jq lsof mkdir mv 
 > notify-send openssl python3 rm sed sha256sum sort stat
 > tac tail tput tr tty wc wget xargs xmllint
 ## Python 3 modules

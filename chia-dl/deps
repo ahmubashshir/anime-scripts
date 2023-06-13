@@ -48,9 +48,7 @@ dep ffprobe@pacman:ffmpeg
 dep grep@pacman:grep
 dep head@pacman:coreutils
 dep jq@pacman:jq
-dep js-beautify@pacman:python-jsbeautifier
 dep lsof@pacman:lsof
-dep lwp-request@pacman:perl-libwww
 dep mkdir@pacman:coreutils
 dep mv@pacman:coreutils
 dep notify-send@pacman:libnotify

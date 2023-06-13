@@ -31,6 +31,20 @@ function setup
 	assert_output '11-14,16'
 }
 
+@test "Checking 'format_string()'" {
+	run format_string '{1}://{0}?arg={2}' host proto val
+	assert_output 'proto://host?arg=val'
+
+	run format_string '{}://{}?arg={}' proto host val
+	assert_output 'proto://host?arg=val'
+
+	run format_string '{}://{}?arg={}' <<< $'proto\nhost\nval\n'
+	assert_output 'proto://host?arg=val'
+
+	run format_string '{1}://{0}?arg={2}' <<< $'host\nproto\nval\n'
+	assert_output 'proto://host?arg=val'
+}
+
 @test "Checking 'byte_mr()'" {
 	run byte_mr <<< "2.5M"
 	assert_output '2500000'

@@ -270,6 +270,7 @@ get_ref()
 {
 	case "$1" in
 		*.dood*) echo "https://dooood.com" ;;
+		*.mxdcontent.net/*) echo "https://mixdrop.co" ;;
 		*) sed -E 's@(https?://[^/]+/).*@\1@' <<< "$1" ;;
 	esac
 }

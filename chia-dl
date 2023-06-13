@@ -1,0 +1,2256 @@
+#!/bin/bash
+
+#+VERSION r301.8a00894
+
+declare -a exit_traps
+trap 'on_exit' INT ERR TERM EXIT QUIT ABRT
+function on_exit
+{
+	local ret=$?
+	for each in "${exit_traps[@]}"; do
+		if [ "$(type -t "$each")" = "function" ]; then
+			"$each"
+		fi
+	done
+	exit $ret
+}
+
+#variables
+readonly UPDATE_REPO=https://raw.githubusercontent.com/ahmubashshir/anime-scripts/release
+declare +x -irg true=1 false=0 auto=true always=2 never=false
+declare +x -ig NOBREAK NORESET DOWNLOAD_ALL \
+	AUTO_UPDATE FILE_LIST CONTINUE \
+	SKIP_DOWNLOAD SKIP_COMPARE update_queue COLOR=${COLOR:-auto}
+#main
+if [ -f ~/.config/chia-dl.cfg ]; then
+	set()
+	{
+		declare -n var="$1"
+		if [[ -z $var ]] && (($# == 2)); then
+			var="$2"
+		elif ((${#var[@]} == 0)) && (($# == 2)); then
+			shift
+			var=("$@")
+		fi
+		declare -g "$1"
+	}
+	source ~/.config/chia-dl.cfg
+	unset -f set
+fi
+if [ -n "$AP" ]; then
+	#+env
+	#:text Set ANIME_PATH for only this instance.
+	#:note @ denotes $MEDIA_ROOT/
+	#-env
+	ANIME_PATH="$AP"
+fi
+if [[ $ANIME_PATH = @* ]]; then
+	ANIME_PATH="$MEDIA_ROOT/${ANIME_PATH#@*}"
+fi
+
+readonly MEDIA_ROOT="${MEDIA_ROOT:-/mnt/Multimedia}"
+readonly ANIME_PATH="${ANIME_PATH:-$MEDIA_ROOT/Anime}"
+readonly CARTOON_PATH="${CARTOON_PATH:-$MEDIA_ROOT/Animetion-Movie/Series}"
+readonly MOVIE_PATH="${MOVIE_PATH:-$MEDIA_ROOT/Movie}"
+readonly POWER_RANGERS_PATH="${POWER_RANGERS_PATH:-$MOVIE_PATH/Power Rangers}"
+
+NOBREAK=${NOBREAK:-true}
+NORESET=${NORESET:-false}
+CONTINUE=${CONTINUE:-true}
+DOWNLOAD_ALL=${DOWNLOAD_ALL:-false}
+AUTO_UPDATE=${AUTO_UPDATE:-auto}
+FILE_LIST=${FILE_LIST:-false}
+SEARCHSTR=
+DNS_NAME=chia-anime.cc
+export USER_AGENT="${USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36}"
+
+CURL_OPTIONS=(
+	--compressed
+	-H 'authority: '"$DNS_NAME"
+	-H 'pragma: no-cache'
+	-H 'cache-control: no-cache'
+	-H 'user-agent: '"$USER_AGENT"
+	-H 'origin: https://'"$DNS_NAME"
+	-H 'sec-fetch-site: same-origin'
+	-H 'sec-fetch-mode: cors'
+	-H 'sec-fetch-dest: empty'
+)
+
+shopt -s nullglob extglob
+if [ -d ~/.local/share/chia-dl ]; then
+	cookies=()
+	for each in ~/.local/share/chia-dl/cookies-*.txt; do
+		cookies+=("$each")
+	done
+	if ((${#cookies[@]})); then
+		cat "${cookies[@]}" > ~/.local/share/chia-dl/cookies.txt
+	fi
+	unset cookies
+	if [ -f ~/.local/share/chia-dl/cookies.txt ]; then
+		CURL_OPTIONS+=(--cookie ~/.local/share/chia-dl/cookies.txt)
+	fi
+fi
+
+langs=(
+	'০১২৩৪৫৬৭৮৯'
+	'〇一二三四五六七八九'
+	'０１２３４５６７８９'
+)
+
+ellipsis()
+{
+	python3 -c "try:
+	from sys import argv
+	l=int(int(argv[1])/2)
+	if len(' '.join(argv[2:]))>l*2:
+		print(' '.join(argv[2:])[0:l],'...',' '.join(argv[2:])[-l:],sep='')
+	else:
+		print(' '.join(argv[2:]),sep='')
+except KeyboardInterrupt:
+	pass" "$@"
+
+}
+
+bug()
+{
+	local ret=$?
+	[[ :$DEBUG: =~ :($1|all): ]] || return
+	[[ $- =~ x ]] || set -x
+	return $ret
+}
+unbug()
+{
+	local ret=$?
+	[[ :$DEBUG: =~ :($1|all): ]] || return
+	[[ $- =~ x ]] && set +x
+	return $ret
+}
+
+expand_limit()
+{
+	local start end range="$1" max="$2"
+	bug expand
+	if [[ $range =~ ^[[:digit:]]+-$ ]]; then
+		for ((start = ${range%%-*}; start <= max; start++)); do
+			((start <= max)) && printf "%d\n" "$start"
+		done
+	else
+		local -a ranges
+		readarray -t ranges < <(
+			tr -s ',' '\n' <<< "$range"
+		)
+		for range in "${ranges[@]}"; do
+			if [[ $range =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
+				start=${range%%-*}
+				end=${range##*-}
+				if ((end > max)); then
+					end=$max
+				fi
+				expand_limit "$start-" "$end"
+			elif [[ $range =~ ^[[:digit:]]+$ ]]; then
+				((range <= max)) && printf "%d\n" "$range"
+			else
+				expand_limit "$range" "$max"
+			fi
+		done
+	fi
+	unbug expand
+	return 0
+}
+
+format_string()
+{
+	declare -a str_args
+	declare -i str_iter
+	declare -i str_key
+	if [[ $# -gt 1 ]]; then
+		str_args=("${@:2}")
+	else
+		readarray -t str_args
+	fi
+
+	while [[ $1 =~ \{[0-9]+\} ]] || [[ $1 =~ \{\} ]]; do
+		str_key=${BASH_REMATCH:1:-1}
+		if [[ "${BASH_REMATCH:1:-1}" ]]; then
+			set -- "${1//\{$str_key\}/${str_args[str_key]}}"
+		else
+			set -- "${1/\{\}/${str_args[str_iter]}}"
+			str_iter+=1
+		fi
+	done
+	printf '%s\n' "$1"
+}
+
+reduce_limit()
+{
+	local -a args
+	local -i max="$1" prev=0 curr=0 diff=0 oldiff=0
+	bug contract
+	shift
+	readarray -t args < <(printf '%s\n' "$@" | tr -s ', ' \\n | sort -un)
+	for ((ind = 1; ind <= ${#args[@]}; ind++)); do
+		prev=${args[ind - 1]}
+		curr=${args[ind]}
+		oldiff=$diff
+		diff=$((curr - prev))
+		if ((ind == 1)); then
+			printf '%d' "$prev"
+		elif ((diff > 1 && oldiff == 1)); then
+			printf -- '-%d' "$prev"
+		elif ((oldiff > 1)); then
+			printf -- ',%d' "$prev"
+		elif ((prev <= max && (curr > max || ind == ${#args[@]}))); then
+			printf -- '-%d' "$prev"
+		fi
+	done
+	printf '\n'
+	unbug contract
+	return 0
+}
+byte_mr()
+{
+	sed \
+		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[kK]/\1*1000/g' \
+		-e 's/\([0-9][0-9]*\(\.[0-9]\+\)\?\)[mM]/\1*1000000/g' \
+		| bc \
+		| sed \
+			-e 's/\..*$//'
+}
+validate_limit()
+{
+	bug validate
+	local range="$1" ret=0 start end
+	local -a ranges
+	if ! [[ $range =~ ^[[:digit:],-]+$ ]]; then
+		ret=1
+	elif [[ $range =~ ^[[:digit:]]+-$ ]]; then
+		ret=0
+	else
+		readarray -t ranges < <(
+			tr -s ',' '\n' <<< "$range"
+		)
+		for range in "${ranges[@]}"; do
+			if [[ $range =~ ^[[:digit:]]+-[[:digit:]]+$ ]]; then
+				start=${range%%-*}
+				end=${range#*-}
+				if ((end <= start)); then
+					((ret++))
+				fi
+			elif ! {
+				[[ $range =~ ^[[:digit:]]+-$ ]] \
+					|| [[ $range =~ ^[[:digit:]]+$ ]]
+			}; then
+				((ret++))
+			fi
+		done
+	fi
+	unbug validate
+	return "$ret"
+}
+num_unicode2ascii()
+{
+	python3 -c 'from sys import argv
+if not len(argv)>1:
+	exit(0)
+
+try:
+	_in = input()
+	for tr in argv[1:]:
+		_in = _in.translate(str.maketrans(tr, "0123456789"))
+	print(_in)
+except:
+	pass' "${langs[@]}"
+}
+srand()
+{
+	python3 -c 'import numpy as np
+from sys import argv
+def random_spaced(low, high, delta, n, size=1):
+	"""
+	Choose n random values between low and high, with minimum spacing delta.
+		If size is None, one sample is returned.
+	Set size=m (an integer) to return m samples.
+		The values in each sample returned by random_spaced are in increasing
+	order.
+	"""
+	empty_space = high - low - (n-1)*delta
+	if empty_space < 0:
+		return [low, high - delta]
+	if size is None:
+		u = np.random.rand(n)
+	else:
+		u = np.random.rand(size, n)
+		x = empty_space * np.sort(u, axis=-1)
+	return low + x + delta * np.arange(n)
+try:
+		print(*(str(int(n)) for n in random_spaced(int(argv[1]),int(argv[2]),int(argv[3]),int(argv[4]))[0]),sep=" ")
+except KeyboardInterrupt:
+	pass' "$@"
+
+}
+anime_cover()
+{
+	if [[ ! -e cover.jpg || ! -s cover.jpg ]]; then
+		curl --disable -kLs "$1" | convert - "cover.jpg"
+	fi &> /dev/null
+	if ! grep -q cover.jpg .hidden && [ -f cover.jpg ]; then
+		echo cover.jpg >> .hidden
+	fi &> /dev/null
+}
+replace_invalid()
+{
+	local -a args
+	args=(
+		-e 's|<|＜|g'
+		-e 's|>|＞|g'
+		-e 's|:|꞉|g'
+		-e 's|\"|＂|g'
+		-e 's|/|⧸|g'
+		-e 's|\\|⧹|g'
+		-e 's|?|？|g'
+		-e 's|\||ǀ|g'
+		-e 's|\*|🞵|g'
+	)
+	if [[ $1 == dir ]]; then
+		args+=(-e 's|\.$|.'$'\342\200\213|g')
+	else
+		args+=(-e 's| |-|g')
+	fi
+	sed "${args[@]}"
+}
+
+get_ref()
+{
+	case "$1" in
+		*.dood*) echo "https://dooood.com" ;;
+		*.mxdcontent.net/*) echo "https://mixdrop.co" ;;
+		*) sed -E 's@(https?://[^/]+/).*@\1@' <<< "$1" ;;
+	esac
+}
+
+remote_exist()
+{
+	if grep -qE '^https?://' <<< "$1"; then
+		if [[ $(curl --disable --referer "$(get_ref "$1")" -kLsIXGET "$1" | awk '/HTTP\// {print $2}' | tail -1) =~ 2[[:digit:]]. ]]; then
+			return 0
+		else
+			return 1
+		fi
+	else
+		return 2
+	fi
+
+}
+
+notify()
+{
+	[[ $DISPLAY = '' ]] && return
+	local title="$1" body="$2" v urgency=normal expire_time=1000000 icon=emblem-downloads category
+	shift 2
+	local -a args
+	while [ -n "$1" ]; do
+		case "$1" in
+			u:*) urgency="${1#u:}" ;;
+			t:*) expire_time="${1#t:}" ;;
+			i:*) icon="${1#i:}" ;;
+			x:*) category="${1#c:}" ;;
+		esac
+		shift
+	done
+	for v in urgency expire_time icon category; do
+		if [[ -n ${!v} ]]; then
+			args+=("--${v//_/-}=${!v}")
+		fi
+	done
+	notify-send "${args[@]}" -a chia-dl "$title" "$body"
+}
+
+xpath()
+{
+	local xpath="$1"
+	shift
+	xmllint --html --xmlout --recover --nocdata --noent --noblanks --xpath "$xpath" - "$@" 2> /dev/null
+}
+help()
+{
+	echo "$(basename "$0") Help:"
+	echo Usage:
+	printf "  %s [options] <anime name>\n" "$(basename "$0")"
+	help_options
+	help_examples
+	help_env
+}
+help_options()
+{
+	local line TAB i
+	echo Options:
+	sed -n '/#+option/,/#-option/{s/^[[:blank:]]*//p}' "$0" | while read -r line; do
+		if [[ $line = \#+option ]]; then
+			TAB=2
+			printf '\t'
+		elif [[ $line =~ ^#:IDNT ]]; then
+			TAB=$(echo "$line " | cut -d' ' -f2)
+		elif [[ $line =~ ^#:short ]] || [[ $line =~ ^#:long ]]; then
+			echo "$line " | cut -d' ' -f2- | tr -d '\n\r'
+		elif [[ $line =~ ^#:text ]]; then
+			for ((i = 0; i < TAB; i++)); do
+				printf '\t'
+			done
+			echo -e "$line" | cut -d' ' -f2-
+		elif [[ $line =~ ^#:args ]]; then
+			for ((i = 0; i < TAB + 2; i++)); do
+				printf '\t'
+			done
+			echo -n "Argument: "
+			echo -e "$line" | cut -d' ' -f2-
+		fi
+	done
+}
+help_examples()
+{
+	echo Examples:
+	echo $'\t'not yet implemented.
+}
+help_env()
+{
+	echo Env Variable:
+	echo $'\t'not yet implemented.
+}
+chia_get_license()
+{
+	echo " Copyright $(date +%Y) Ahmad Hasan Mubashshir <ahmubashshir@gmail.com>"
+	echo
+	echo " 'chia-dl' is free software; you can redistribute it and/or modify"
+	echo " it under the terms of the GNU General Public License as published by"
+	echo " the Free Software Foundation; either version 2 of the License, or"
+	echo " (at your option) any later version."
+	echo
+	if [ -e "LICENSE" ] && [ "$(sha256sum LICENSE | awk '{print $1}')" = "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986" ]; then
+		echo "See 'LICENSE' for more details."
+		return 0
+	fi
+	echo " 'chia-dl' is distributed in the hope that it will be useful,"
+	echo " but WITHOUT ANY WARRANTY; without even the implied warranty of"
+	echo " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
+	echo " GNU General Public License for more details."
+	echo
+	echo " You should have received a copy of the GNU General Public License"
+	echo " along with 'chia-dl'; if not, write to the Free Software"
+	echo " Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,"
+	echo " MA 02110-1301, USA."
+}
+
+check_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE == never && AUTO_UPDATE <= auto)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^#+VERSION/{print $3;exit}' "$0")
+	LATEST=$(curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $LATEST ]]; then return 1; fi
+	LATEST=$(
+		printf '%s\n' "$VERSION" "$LATEST" \
+			| sort --version-sort --reverse \
+			| head -n1
+	)
+	if [[ "$VERSION" != "$LATEST" ]]; then
+		printf 'Update Available!\n'
+		printf 'Current version: %s\n' "$VERSION"
+		printf 'Latest version: %s\n' "$LATEST"
+		return 0
+	fi
+	return 1
+}
+
+self_update()
+{
+	if ((def_help)); then
+		printf "Use git to update the repo\n"
+		return 1
+	fi
+	if ((CHECK_UPDATE == never && AUTO_UPDATE <= auto)); then
+		return 1
+	fi
+
+	local VERSION UPDATE
+	VERSION=$(awk '/^#+VERSION/{print $3;exit}' "$0")
+	UPDATE=$(curl --disable -Ls "$UPDATE_REPO/VERSION")
+	if [[ -z $UPDATE ]]; then return 1; fi
+
+	printf 'Updating: %s -> %s\n' "$VERSION" "$UPDATE"
+	curl --disable --compressed -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -Ls "$UPDATE_REPO/chia-dl" > "$0~update"
+	ret=$?
+	if ((ret == 0)); then
+		chmod +x "$0~update"
+		mv "$0~update" "$0"
+	else
+		rm -f "$0~update"
+	fi
+	return "$ret"
+}
+colorize()
+{
+	if tput setaf 0 &> /dev/null; then
+		ALL_OFF="$(tput sgr0)"
+		BOLD="$(tput bold)"
+		BLUE="${BOLD}$(tput setaf 4)"
+		GREEN="${BOLD}$(tput setaf 2)"
+		RED="${BOLD}$(tput setaf 1)"
+		YELLOW="${BOLD}$(tput setaf 3)"
+	else
+		ALL_OFF="\e[0m"
+		BOLD="\e[1m"
+		BLUE="${BOLD}\e[34m"
+		GREEN="${BOLD}\e[32m"
+		RED="${BOLD}\e[31m"
+		YELLOW="${BOLD}\e[33m"
+	fi
+	readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
+}
+
+plain()
+{
+	((QUIET)) && return
+	local mesg=$1
+	shift
+	printf "${BOLD}    ${mesg}${ALL_OFF}\n" "$@"
+}
+
+plainerr()
+{
+	plain "$@" >&2
+}
+
+msg()
+{
+	((QUIET)) && return
+	local mesg=$1
+	shift
+	printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@"
+}
+
+msg2()
+{
+	((QUIET)) && return
+	local mesg=$1
+	shift
+	printf "${BLUE}  ->${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@"
+}
+
+ask()
+{
+	local mesg=$1
+	shift
+	printf "${BLUE}::${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}" "$@"
+}
+
+opt()
+{
+	((QUIET)) && return
+	printf "$@"
+}
+
+warning()
+{
+	local mesg=$1
+	shift
+	printf "${YELLOW}==> $(gettext "WARNING:")${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+}
+
+error()
+{
+	local mesg=$1
+	shift
+	printf "${RED}==> $(gettext "ERROR:")${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+}
+if ((COLOR != never)) && ( ((COLOR == auto))  && tty -s || ((COLOR == always)) ); then
+	colorize
+fi
+function check_up_server()
+{
+	local resp t
+	t=$2
+	t=${t:=3}
+	[[ $t -gt 3 ]] && echo "Resolving $1,wait $t seconds" 1>&2
+	resp=$(curl -m "$t" -sIXGET "$1" | head -1 | tr -d \  | cut -d/ -f1)
+	if [[ $resp = 'HTTP' ]]; then
+		return 0
+	fi
+	return 1
+}
+
+function byte_hr()
+{
+	local n size unit
+	size=$1
+	for n in 'B' 'kB' 'MB' 'GB' 'TB' 'PB' 'EB' 'ZB'; do
+		unit=$n
+		i=${size%.*}
+		if ((i / 1024 == 0)); then
+			break
+		else
+			size=$(echo "scale=2;$size/1024.00" | bc | sed 's|\.00$||g')
+		fi
+	done
+	printf '%s %s' "$size" "$unit"
+}
+
+function fget()
+{
+	local dld dlsize ex lsof name perm pid response S size url ref
+	local -a wgargs
+	url="$1"
+	name="$2"
+	shift 2
+	ref="$(get_ref "$url")"
+	wgargs=(
+		"--referer=$ref"
+		"$@"
+		"--show-progress"
+		"-qcO"
+		"$name"
+	)
+	if (($# > 2)); then
+		shift 2
+	else
+		shift $#
+	fi
+
+	S=$(curl --disable --referer "$ref" -skLIXGET "$url" 2>&1 | awk '/^HTTP\/[12.]+ 200/,/^\r$/ {gsub(/\r/,"");if(length)print}')
+	if (exit "$?"); then
+		if [ "$name" = "" ]; then
+			name="${url##*/}"
+		fi
+		dlsize=$(awk 'tolower($0) ~ /content-length:/ {print $2}' <<< "$S" | tail -1)
+		dld="false"
+		if [ -e "$name" ]; then
+			lsof=$(lsof "$name" 2> /dev/null)
+			pid=$(awk '/[[:digit:]]+[w:W:u]/ {print $2}' <<< "$lsof" | tail -1)
+			perm=$(awk '/[[:digit:]]+[w:W:u]/ {print $4}' <<< "$lsof" | tail -1)
+			process=$(awk '/[[:digit:]]+[w:W:u]/ {print $1}' <<< "$lsof" | tail -1)
+			size=$(stat -Lc%s "$name")
+		else
+			size=0
+			pid=""
+			perm=""
+			process=""
+		fi
+		if [ -e "$name" ] && ((dlsize <= size)); then
+			dld="true"
+		fi
+		if [ $dld = "false" ]; then
+			response=$(awk '/HTTP\/[12.]/ {print $2}' <<< "$S" | tail -1)
+			if [[ $response =~ 20. ]]; then
+				if [[ "$perm" == "" ]]; then
+					echo "Server Response:$response $(server_responce "$response")"
+					if [ -e "$name" ] && ((dlsize > size)) && [ "$pid" = "" ]; then
+						echo -e "Appending to '$name'\nleft $(byte_hr $((dlsize - size))) from $(byte_hr "$dlsize")"
+					elif [ ! -e "$name" ]; then
+						echo -e "Writing to '$name'\nFile Size: $(byte_hr "$dlsize")"
+					fi
+					wget "${wgargs[@]}" "$url"
+					if (($? == 5)); then
+						wget "${wgargs[@]}" --no-check-certificate "$url" || (exit $?)
+					fi
+				else
+					(exit 10)
+				fi
+			else
+				echo "$response $(server_responce "$response")"
+				[[ $response =~ 40. ]] && ${SHOW_URL:-false} && echo "$url"
+				if [[ "${response:0:1}${response:2:3}" =~ ^[[:digit:],-]+$ ]]; then
+					return "${response:0:1}${response:2:3}"
+				else
+					echo "${response:0:1}${response:2:3}"
+					return 99
+				fi
+			fi
+		fi
+	else
+		(exit 4)
+	fi
+	ex=$?
+	if [ "$dld" = "false" ]; then
+		case $ex in
+			0 | 8)
+				echo -e "$(
+					tput setaf 2
+					tput bold
+				)Saved $name [$(byte_hr "$dlsize" "")]"
+				;;
+
+			1) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Unknown error occured" ;;
+			2) echo -e "$(tput setaf 1)Option parsing error" ;;
+			3) echo -e "$(
+				tput setaf 1
+				tput smul
+			)I/O Error" ;;
+			4) echo -e "$(
+				tput setaf 1
+				tput smul
+			)Network Failure" ;;
+			5) echo -e "$(
+				tput setaf 1
+				tput dim
+			)SSL verification failure" ;;
+			6) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Username/password authentication failure" ;;
+			7) echo -e "$(
+				tput setaf 1
+				tput dim
+			)Protocol errors" ;;
+			10) echo -e "$(
+				tput setaf 1
+				tput dim
+			)'$name' is Open in $process for writing.\npid:$pid\tFD:$perm" ;;
+			*) true ;;
+		esac
+		tput sgr0
+		return $ex
+	else
+		if ((dlsize == size)); then
+			echo -e "Already downloaded $name [$(byte_hr "$size")]."
+		else
+			echo -e "Already downloaded $name [$(byte_hr "$size")],\nbut size doesn't match.[size on server $(byte_hr "$dlsize")]"
+		fi
+		return 0
+	fi
+}
+function server_responce()
+{
+	case $1 in
+		100) echo "Continue" ;;
+		101) echo "Switching Protocols" ;;
+		102) echo "Processing" ;;
+		200) echo "OK" ;;
+		201) echo "Created" ;;
+		202) echo "Accepted" ;;
+		203) echo "Non-authoritative Information" ;;
+		204) echo "No Content" ;;
+		205) echo "Reset Content" ;;
+		206) echo "Partial Content" ;;
+		207) echo "Multi-Status" ;;
+		208) echo "Already Reported" ;;
+		226) echo "IM Used" ;;
+		300) echo "Multiple Choices" ;;
+		301) echo "Moved Permanently" ;;
+		302) echo "Found" ;;
+		303) echo "See Other" ;;
+		304) echo "Not Modified" ;;
+		305) echo "Use Proxy" ;;
+		307) echo "Temporary Redirect" ;;
+		308) echo "Permanent Redirect" ;;
+		400) echo "Bad Request" ;;
+		401) echo "Unauthorized" ;;
+		402) echo "Payment Required" ;;
+		403) echo "Forbidden" ;;
+		404) echo "Not Found" ;;
+		405) echo "Method Not Allowed" ;;
+		406) echo "Not Acceptable" ;;
+		407) echo "Proxy Authentication Required" ;;
+		408) echo "Request Timeout" ;;
+		409) echo "Conflict" ;;
+		410) echo "Gone" ;;
+		411) echo "Length Required" ;;
+		412) echo "Precondition Failed" ;;
+		413) echo "Payload Too Large" ;;
+		414) echo "Request-URI Too Long" ;;
+		415) echo "Unsupported Media Type" ;;
+		416) echo "Requested Range Not Satisfiable" ;;
+		417) echo "Expectation Failed" ;;
+		418) echo "I'm a teapot" ;;
+		421) echo "Misdirected Request" ;;
+		422) echo "Unprocessable Entity" ;;
+		423) echo "Locked" ;;
+		424) echo "Failed Dependency" ;;
+		426) echo "Upgrade Required" ;;
+		428) echo "Precondition Required" ;;
+		429) echo "Too Many Requests" ;;
+		431) echo "Request Header Fields Too Large" ;;
+		444) echo "Connection Closed Without Response" ;;
+		451) echo "Unavailable For Legal Reasons" ;;
+		499) echo "Client Closed Request" ;;
+		500) echo "Internal Server Error" ;;
+		501) echo "Not Implemented" ;;
+		502) echo "Bad Gateway" ;;
+		503) echo "Service Unavailable" ;;
+		504) echo "Gateway Timeout" ;;
+		505) echo "HTTP Version Not Supported" ;;
+		506) echo "Variant Also Negotiates" ;;
+		507) echo "Insufficient Storage" ;;
+		508) echo "Loop Detected" ;;
+		510) echo "Not Extended" ;;
+		511) echo "Network Authentication Required" ;;
+		599) echo "Network Connect Timeout Error" ;;
+		*) echo "Invalid Response" ;;
+	esac
+	return 0
+}
+chia_db()
+{
+	local CACHE_FILE act=$1
+	local -I slug
+	shift
+	if [ -n "$AP" ]; then
+		CACHE_FILE="$ANIME_PATH/.chia_queue.json"
+	else
+		CACHE_FILE="$MEDIA_ROOT/.chia_queue.json"
+	fi
+	if ! {
+		jq 'keys' "$CACHE_FILE" 2> /dev/null | grep -q '\['
+	}; then
+		echo '{}' > "$CACHE_FILE"
+	fi
+	while [[ $1 =~ ^[[:alnum:]_]+= ]]; do
+		eval "local $1"
+		shift
+	done
+	"chia_db_$act" "$@"
+}
+chia_db_add()
+{
+
+	data="$(jq '. * {"'"$slug"'":{ "title":null ,"path":null,"total":null,"saved":null,"is-dub":null}}' "$CACHE_FILE")"
+	chia_db_write "$data"
+}
+chia_db_list()
+{
+
+	for slug in $(jq -r 'keys[] | tostring' "$CACHE_FILE"); do
+		echo "$slug"
+	done
+}
+chia_db_set()
+{
+	if chia_db_has; then
+		data="$(jq '."'"$slug"'"."'"$1"'"='"$2" "$CACHE_FILE")"
+		chia_db_write "$data"
+	fi
+}
+chia_db_get()
+{
+	jq -re ".\"$slug\".\"$*\"|if . == null then 0 else . end" "$CACHE_FILE"
+}
+
+chia_db_has()
+{
+	jq -e '."'"$slug"'"' "$CACHE_FILE" &> /dev/null
+}
+
+chia_db_del()
+{
+	if chia_db_has; then
+		data="$(jq 'del(."'"$slug"'")' "$CACHE_FILE")"
+		chia_db_write "$data"
+	fi
+}
+chia_db_write()
+{
+	if [ -n "$1" ]; then
+		echo "$1" > "$CACHE_FILE~"
+		if jq . "$CACHE_FILE~" > /dev/null 2>&1; then
+			mv "$CACHE_FILE~" "$CACHE_FILE"
+		else
+			rm "$CACHE_FILE~"
+		fi
+	fi
+}
+chia_api_search()
+{
+	local arg
+	while [[ $# -gt 0 ]]; do
+		arg+="$(jq -r '@uri' <<< "\"$1\"")"
+		shift
+		[[ $# -eq 0 ]] || arg+="+"
+	done
+	bug search
+	curl --disable \
+		-s "https://$DNS_NAME/search?keyword=$arg" \
+		-H 'X-Requested-With: XMLHttpRequest' \
+		| jq -rc 'sort_by(.released)[]'
+	unbug search
+}
+
+chia_search()
+{
+	local -a RES sel
+	local cnt=0 total_res i
+	msg 'Searching for "%s"' "$*"
+	readarray -t RES < <(chia_api_search "$@")
+	total_res="${#RES[@]}"
+
+	if ((total_res == 0)); then
+		error 'No result: %s' "$*"
+		plainerr 'You should check your keywords.'
+		return 4
+	fi
+
+	if ((total_res == 1)); then
+		RES_LIST='1'
+	elif [ -z "$RES_LIST" ] && ((DOWNLOAD_ALL == false)); then
+		printf '%s\n' "${RES[@]}" \
+			| while read -r line; do
+				opt "${BOLD}%-${#total_res}d${ALL_OFF}> ${BOLD}${YELLOW}[Year: %04d, Status: %9s] ${GREEN}%s${ALL_OFF}\n" \
+					"$((++cnt))" \
+					"$(jq -r '.released' <<< "$line")" \
+					"$(jq -r '.status' <<< "$line")" \
+					"$(jq -r '.name' <<< "$line")"
+			done
+		msg "Download: (eg: \"1,3,7\", \"1-4\", \"1-3,7\")"
+		ask " range: "
+		read -r RES_LIST
+	elif ((DOWNLOAD_ALL == true)) && [ -z "$RES_LIST" ]; then
+		RES_LIST='1-'
+	fi
+
+	if ! [[ $RES_LIST =~ ^[[:digit:],-]+$ ]]; then
+		RES_LIST=$(
+			sed 's/[^[:digit:],-]/,/g' <<< "$RES_LIST" | tr -s , | sed 's/-,/,/g'
+		)
+	fi
+
+	readarray -t sel < <(
+		expand_limit "$(num_unicode2ascii <<< "$RES_LIST")" "$total_res"
+	)
+
+	for i in "${sel[@]}"; do
+		local target base name
+		target=${RES[i - 1]}
+
+		base="$(set_basedir "$(jq -r .alias <<< "$target")")"
+		if ! [ -d "$base" ] || ! [ -e "$base" ]; then
+			rm -f "$base"
+			mkdir -p "$base"
+		fi
+
+		cd "$base" || true
+		bug dir
+		read -r name < <(jq -r .name <<< "$target" | sed 's@ *(Dub)$@@')
+		read -r dir < <(replace_invalid dir <<< "$name")
+
+		((SKIP_DOWNLOAD == false)) && if [ ! -d "$dir" ]; then
+			rm -f "$dir"
+			mkdir "$dir"
+		fi
+		((SKIP_DOWNLOAD == false)) && {
+			cd "$dir" || continue
+		}
+
+		chia_get \
+			"$(jq -r .alias <<< "$target")" \
+			"$name" \
+			"$(jq -r '.status' <<< "$target" | tr '[:upper:]' '[:lower:]')" \
+			"$*"
+		if ((total_res > 1 && NOBREAK == false)); then
+			read -rsp$'Press Return to download next.\n'
+		fi
+	done
+	msg 'See you later :3'
+	return 0
+}
+
+chia_list_queue()
+{
+	local slug
+	local -a slugs
+	readarray -t slugs < <(chia_db list)
+	for slug in "${slugs[@]}"; do
+		if ! [ -d "$(chia_db get path)" ]; then
+			chia_db del
+			continue
+		fi
+		msg "$(chia_db get title)"
+	done
+	return 0
+}
+
+chia_queue_update()
+{
+	local new_eps
+	if ! [ -d "$(chia_db get path)" ]; then
+		chia_db del
+		return
+	fi
+	msg "Checking update: %s" "$slug"
+	new_eps=$(($(chia_get_len "$slug") - $(chia_db get saved)))
+	if ((new_eps > 0)); then
+		updatable+=("$slug")
+		msg2 "new: %d eps" "$new_eps"
+	fi
+}
+
+chia_update()
+{
+	local slug dir updatable
+	NORESET=true
+	updatable=()
+	if (("${#DO_UPDATE_ONLY[@]}" == 0)); then
+		readarray -t DO_UPDATE_ONLY < <(
+			chia_db list
+		)
+	fi
+
+	if (("${#DO_UPDATE_ONLY[@]}" > 1)) && [ "${DO_UPDATE_ONLY[0]}" = "!" ]; then
+		DO_UPDATE_ONLY=("$(printf '%s|' "${DO_UPDATE_ONLY[@]:1}" | sed 's/|$//')")
+		for slug in $(chia_db list); do
+			if grep -qE "${DO_UPDATE_ONLY[0]}" <<< "$slug"; then
+				continue
+			fi
+			chia_queue_update
+		done
+	else
+		for slug in "${DO_UPDATE_ONLY[@]}"; do
+			chia_queue_update
+		done
+	fi
+
+	for slug in "${updatable[@]}"; do
+		dir="$(chia_db get path)"
+		if ! [ -d "$dir" ]; then
+			mkdir -p "$dir" || continue
+		fi
+		cd "$dir" || continue
+
+		chia_get "$slug" "$(chia_db get title)" "$(chia_db get status)"
+
+		if [ "$(chia_db get saved)" -ge "$(chia_db get total)" ]; then
+			chia_db del
+		fi
+		if ((NOBREAK == false)); then
+			read -rsp$'Press Return to download next.'
+			printf '\n'
+		fi
+	done
+}
+
+set_basedir()
+{
+	case $1 in
+		*-avatar-the-legend-of-korra-* | *-avatar-the-last-airbender-*)
+			echo "$CARTOON_PATH/Avatar"
+			;;
+		*power-rangers*) echo "$POWER_RANGERS_PATH" ;;
+		*tv-series* | *kamen-rider*) echo "$TV_SERIES_PATH" ;;
+		*) echo "$ANIME_PATH" ;;
+	esac
+}
+chia_get_len()
+{
+	local slug="$1" try_page=0
+	[ "$slug" = "" ] && return 3
+
+	until curl --disable "${CURL_OPTIONS[@]}" -ksL "${PUPPETEER_PROXY}https://${DNS_NAME}/anime/${slug}.html" || ((++try_page > 5)); do
+		sleep 1
+	done \
+		| chia_crawl_page \
+		| wc -l
+}
+
+chia_crawl_page()
+{
+	xpath '//div[@class="list_episode"]//li/a/@href' \
+		| sed -nE 's@.*/watch/([[:alnum:]-]+)\.html.*@\1@p' \
+		| tac \
+		| sed -E "s/^$slug//"
+}
+
+chia_get()
+{
+	local \
+		slug="$1" \
+		title="$2" \
+		status="$3" \
+		query="$4" \
+		chia_page ep_show dl_notify idx ep_slug dl_progress dubbed=false list_range="$FILE_LIST_RANGE"
+
+	local -a eps sel
+
+	if [ "$slug" = "" ]; then
+		return 3
+	fi
+
+	msg 'Fetching info: "%s"' "$slug"
+
+	bug get
+	local purl try_page
+	while [[ $purl != https://${DNS_NAME}/anime/${slug}.html ]] \
+		&& ((try_page++ < 5)); do
+		chia_page=$(
+			curl --disable "${CURL_OPTIONS[@]}" -ksL \
+				"${PUPPETEER_PROXY}https://${DNS_NAME}/anime/${slug}.html"
+		)
+		purl=$(xpath 'string(//head/link[@rel="canonical"]/@href)' <<< "$chia_page")
+		((try_page > 1)) && sleep 1
+	done
+	unbug get
+	unset purl try_page
+
+	readarray -t eps < <(chia_crawl_page <<< "$chia_page")
+	if grep -q '\-dub$' <<< "$slug"; then
+		slug=${slug%*-dub}
+		dubbed=true
+	fi
+
+	bug get-db
+	if ! chia_db has || ((FILE_LIST)) && [ -z "$list_range" ]; then
+		chia_db add
+		chia_db set path "\"$PWD\""
+		chia_db set title "\"$title\""
+		chia_db set is-dub "$dubbed"
+	fi
+	chia_db set status "\"$status\""
+	if [[ -n $query ]]; then
+		chia_db set query "\"$query\""
+	fi
+	unbug get-db
+
+	((${#eps[@]} == 0)) && error "No episode is available to download yet." && exit 1
+	msg2 'Downloading: %s' "$title"
+
+	bug get-db
+	case "$status" in
+		ongoing) chia_db set total "$((${#eps[@]} + 1))" ;;
+		*) chia_db set total "${#eps[@]}" ;;
+	esac
+	unbug get-db
+
+	((update_queue)) && {
+		msg2 "Appending to queue."
+		return 0
+	}
+
+	if ((FILE_LIST == true)) && [[ -z $list_range ]]; then
+		read -eri "1-${#eps[@]}" -p$'Episode list: ' list_range
+		tput cuu 1
+	fi
+
+	if ((CONTINUE == true)) && [[ -z $list_range ]]; then
+		list_range="$(chia_db get saved | jq -r 'if . == 0 then 1 else . end|tostring + "-"')"
+	fi
+	list_range="$(sed 's/^[-,[:blank:]]*//g' <<< "${list_range:-1-}")"
+	readarray -t sel < <(
+		expand_limit "${list_range:-1-}" "${#eps[@]}"
+	)
+
+	if ((${#sel[@]} > 1)); then
+		ep_show="range($(
+			ellipsis "$(($(tput cols) - 50))" "$(
+				reduce_limit "${#eps[@]}" "${sel[@]}"
+			)"
+		))"
+		dl_notify="Episodes in ${ep_show} are"
+	else
+		ep_show="${sel[0]}"
+		dl_notify="Episode ${ep_show} is"
+	fi
+
+	((SKIP_DOWNLOAD == false)) && anime_cover "https://gogocdn.net/cover/${slug}.png"
+
+	msg2 '%s' "$ep_show"
+	for idx in "${sel[@]}"; do
+		local ep_slug=''
+		[[ ${eps[idx - 1]} =~ ^- ]] && ep_slug+="$slug"
+		if [[ ${eps[idx - 1]} =~ ^- ]] && chia_db get is-dub | grep -qw true; then
+			ep_slug+=-dub
+		fi
+		ep_slug+="${eps[idx - 1]}"
+		if ! chia_get_episode "$slug" "${ep_slug}" "$idx" "$((++dl_progress))" "${#sel[@]}"; then
+			error "Failed to download: %s" "$slug$ep_slug"
+			notify \
+				"Download Failed" \
+				"Failed to download <a href=\"https://${DNS_NAME}/watch/${ep_slug}.html\">${ep_slug}</a>" \
+				u:normal t:1000000 i:emblem-downloads c:transfer.error
+			((NOBREAK == true)) || break
+		fi
+	done
+	if chia_db has && [ "$(chia_db get saved)" -ge "$(chia_db get total)" ]; then
+		chia_db del
+	fi
+	notify "Download Completed" "<b>$title</b>\n${dl_notify} downloaded" t:1000000 i:emblem-downloads c:transfer.complete u:normal
+}
+
+chia_ep_get_hosts()
+{
+	xpath '//div[i[contains(@class,"iconlayer-")]]//a[not(contains(@class, "selected"))]' \
+		| sed -E \
+			-e 's@.* class="play-video (\w+)" data-video="(https:|)//([^"]+)">.*@\1 \3@' \
+			-e 's@amp\;@@g' \
+		| sed -E \
+			-e '/^vidcdn/s@ .+\?id=([^&]+)&token=([^&]+)&expires=([^&]+)$@ \1:\2:\3@' \
+			-e '/^mp4upload/s@ .+/embed-([^.]+).html$@ \1@' \
+			-e '/\/.+$/s@ .+/([^/]+)$@ \1@' \
+			-e 's@ @/@'
+}
+
+get_mapped()
+{
+	python3 -c 'import yaml
+import requests as r
+from sys import argv, exit
+try:
+	with open("maps.yml") as file:
+		maps = yaml.load(file, Loader=yaml.FullLoader)
+except FileNotFoundError:
+	exit(0)
+
+if len(argv) == 2:
+	ep=int(argv[1])
+	if ep in maps["eps"].keys():
+		data = r.get(maps["api"]%maps["eps"][ep])
+		if data.ok:
+			json = data.json()
+		else:
+			exit(0)
+		for n in ["source", "source_bk"]:
+			if n in json.keys():
+				print(next(k["file"] for k in json[n]))
+				exit(0)' "$@"
+}
+
+chia_get_episode()
+{
+	(($# < 3)) && return 1
+
+	local slug="$1" ep_slug="$2" idx="$3" progress="$4" total="$5"
+	local try_page=0 chia_page tr=sub ep_file_name ep_host_sel
+	local -a ep_hosts ep_file_url
+
+	local -i rfail=REPLACE_FAIL rman=REPLACE_MANUAL
+
+	if grep -q '\-dub-' <<< "$ep_slug"; then
+		tr=dub
+	fi
+
+	bug download
+	msg '[%d/%d] Fetching episode: %s' "$progress" "$total" "$ep_slug"
+	local purl
+	while [[ $purl != https://${DNS_NAME}/watch/${ep_slug}.html ]] \
+		&& ((try_page++ < 5)); do
+		chia_page="$(
+			curl --disable \
+				--referer "https://${DNS_NAME}/anime/${slug}.html" \
+				"${CURL_OPTIONS[@]}" -Lks \
+				"${PUPPETEER_PROXY}https://${DNS_NAME}/watch/${ep_slug}.html"
+		)"
+		purl="$(xpath 'string(//head/link[@rel="canonical"]/@href)' <<< "$chia_page")"
+		((try_page > 1)) && sleep 1
+	done
+	unset purl
+	unbug download
+	if [ -z "$chia_page" ]; then
+		error 'Failed to fetch episode: %s' "$ep_slug"
+		return 1
+	fi
+
+	readarray -t ep_hosts < <(
+		chia_ep_get_hosts <<< "$chia_page" | grep -v '^vidcdn'
+		chia_ep_get_hosts <<< "$chia_page" | grep '^vidcdn'
+	)
+
+	read -r ep_title < <(
+		xpath 'string(//meta[@property="og:description"][1]/@content)' \
+			<<< "$chia_page" 2> /dev/null \
+			| sed -e 's/(\(Dub\|Uncensored\)) //g' \
+				-e 's|episode|EP|gI' \
+				-e 's|ova|OVA|gI' \
+				-e 's|ona|ONA|gI' \
+				-e 's|movie|Movie|gI' \
+				-e 's|special|Special|gI' \
+				-Ee '/(OVA|ONA|Special) EP [0-9]+$/s/EP ([0-9]+(\.[0-9]+)?)$/\1/' \
+				-e '/Movie/s/ EP [0-9]+$//'
+	)
+	read -r ep_file_name < <(
+		read -r num < <(
+			if [[ $ep_title =~ [[:space:]]+Movie[[:space:]]+ ]]; then
+				echo 0
+			else
+				sed -E 's/.* (EP|OVA|ONA|Special) ([0-9]+(\.[0-9]+)?)$/\2/' <<< "$ep_title"
+			fi
+		)
+		read -r title < <(
+			sed -E 's/(.* (EP|OVA|ONA|Special)) ([0-9]+(\.[0-9]+)?)$/\1/' <<< "$ep_title" | sed 's/ EP$//'
+		)
+		printf '%s EP%06.2lf\n' "$title" "$num" \
+			| sed -Ee 's/\.0+$//;s/(Movie) EP0+/\1/' \
+			| replace_invalid \
+			| xargs printf "%s-${tr}bed.mp4"
+	)
+	readarray -t ep_hosts < <(
+		printf '%s\n' "${ep_hosts[@]}" \
+			| awk -e '!seen[$0]++' \
+			| if [[ -n $PREFERRED_HOSTS ]]; then
+				awk \
+					'/^('"${PREFERRED_HOSTS//,/|}"')\// {
+					print
+				}
+				!/^('"${PREFERRED_HOSTS//,/|}"')\//{
+					lines[a++]=$0
+				}
+				END {
+					for(i in lines)
+						print lines[i]
+				}'
+			else
+				cat
+			fi
+	)
+
+	ep_title=$(ellipsis $(($(tput cols) - 8)) "$ep_title")
+	msg2 'Downloading "%s"' "$ep_title"
+	if ((${#ep_hosts[@]} == 1)) && ((rfail == 0)); then
+		rfail=1
+	elif ((${#ep_hosts[@]} > 1)) && ((rfail == 1)); then
+		rfail=0
+	fi
+	bug download
+	for ep_host_sel in "${ep_hosts[@]}"; do
+		local ep_file_id ep_file_host file_num=0 curi
+		ep_file_url=()
+		ep_file_host=$(cut -d/ -f1 <<< "$ep_host_sel")
+		ep_file_id=$(cut -d/ -f2- <<< "$ep_host_sel")
+		[ -z "$ep_file_id" ] && continue
+
+		unbug download
+		ask '\033[KGetting url from %s: %s\r' "$ep_file_host" "${ep_file_id%%:*}"
+		bug download
+
+		readarray -t ep_file_url < <(get_url "$ep_file_host" "$ep_file_id")
+
+		if ((${#ep_file_url[@]} == 0)) && [ "$(printf '%s\n' "${ep_hosts[@]}" | wc -l)" -eq 1 ] && [ -f maps.yml ]; then
+			ep_file_url=()
+			readarray -t ep_file_url < <(get_mapped "$idx")
+		fi
+
+		for curi in "${ep_file_url[@]}"; do
+			if remote_exist "$curi"; then
+				continue
+			fi
+			ep_file_url=()
+		done
+
+		if ((${#ep_file_url[@]} == 0)); then
+			continue
+		fi
+		if ((${#ep_file_url[@]} == 1)); then
+			unset file_num
+		fi
+		printf '\n'
+		for curi in "${ep_file_url[@]}"; do
+			if [ -n "$file_num" ]; then
+				((file_num++))
+				ep_file_name="$(replace_invalid <<< "$ep_title")-part$file_num-${tr}bed.mp4"
+			fi
+			ep_file_name="${ep_file_name//---/--}"
+			((SKIP_DOWNLOAD == false)) || continue
+
+			compare_episode "$ep_file_name" "$curi"
+			ret=$?
+
+			if ((ret == 1)); then
+				msg2 "Downloaded $ep_file_name [$(byte_hr "$(stat -Lc%s "$ep_file_name" 2> /dev/null || echo 0)")]."
+				if check_file "$ep_file_name" && (($(chia_db get saved) < idx)); then
+					chia_db set saved "$idx"
+					continue
+				elif ((rfail)); then
+					rm "$ep_file_name"
+					ret=0
+				fi
+			elif ((ret == 2 && (rfail || ${failed_tests:-0} <= 5) && NO_REPLACE == 0)) \
+				|| ((rman + ret == 2)); then
+				rm "$ep_file_name.part"
+				ret=0
+			elif ((ret == 3)); then
+				echo Network failure >&2
+				exit 1
+			elif ((ret > 0)); then
+				msg2 "File doesn't match."
+				continue 2
+			fi
+
+			if ((ret == 0)); then
+				download "$ep_file_name" "$curi" && chia_db set saved "$idx"
+			fi
+		done
+		break
+	done
+	unbug download
+	return 0
+}
+
+download_hls()
+{
+	(
+		set -e -o pipefail
+		ffprobe="$(
+			ffprobe \
+				-print_format json \
+				-show_format \
+				-show_programs \
+				-referer "$(get_ref "$2")" \
+				-i "$2" -loglevel error
+		)"
+		read -r duration < <(jq -r .format.duration <<< "$ffprobe")
+		read -r program < <(
+			jq -r '
+					[
+					  .programs
+					  | sort_by(.tags.variant_bitrate)[]
+					  | select(.streams[].display_aspect_ratio == "16:9")
+					  | {
+					      i: .program_id,
+					      b:.tags.variant_bitrate,
+					      h: (.streams[]|select(.height)).height,
+					      w:  (.streams[]|select(.width)).width
+						}
+					] | sort_by(.b)
+					  | if length > 2 then
+					      .[1]
+					    else
+					      .[0]
+					    end
+					  | .i' \
+				<<< "$ffprobe"
+		)
+		ffmpeg ${HLS_ACCEL:+-hwaccel $HLS_ACCEL} -y -progress /dev/stdout \
+			-referer "$(get_ref "$2")" -i "$2" -map "0:p:$program" -c copy -f mp4 "$1.part" 2> /dev/null \
+			| awk -v "duration=$duration" -F= \
+				'function tttt(s) {
+					t = s % 60
+					d = sprintf("%02d", t);
+					s = (s - t) / 60;
+					t = s % 60
+					s = (s - t) / 60;
+					d = sprintf("%02d:", t) d;
+					if (s > 0) {
+						d = sprintf("%02d:", s) d;
+					}
+					return d
+				}
+				function calceta(d, s, S) {
+					if (s == 0 || d == 0) return "INF"
+					s = int((S - s) / (s/d));
+					return tttt(s)
+				}
+				function pbar(enc, duration, start) {
+					cols = 40;
+					progress = enc / duration;
+					fill = cols * progress;
+
+					bar = gensub(/ /,"#","g",sprintf("%" fill "s",""))
+					diff = systime() - start
+					eta = calceta(diff, enc, duration)
+
+					diff = tttt(diff)
+					if (progress == 0) fill = 1
+					blank = sprintf("%" fill - cols "s","")
+					printf "\033[2K\r%6.2f%% [%s%s] elapsed: %s  eta: %s", progress * 100 - 0.01, bar, blank, diff, eta
+				}
+				BEGIN {
+					from = systime()
+					duration = duration * 1000000
+					enc = 0
+					pbar(enc, duration, from);
+				}
+				/out_time_ms/ {enc = $2 }
+				{
+					pbar(enc, duration , from)
+				}
+				END{printf "\n";}'
+	)
+	return
+}
+# doc:start
+# check_file "file.mp4"
+# returns: 0 1
+# : 0 - OK
+# : 1 - CORRUPTED
+# doc:end
+check_file()
+{
+	local -i return
+	unbug download
+	ask "Checking $(ellipsis 40 "$1") integrity"
+	: | ffprobe -threads 0 -v error -count_frames -i "$1" |& grep -q partial
+	return=$?
+	if ((return == 0)); then
+		echo ": corrupted"
+	else
+		echo ": ok"
+	fi
+	bug download
+	((return))
+}
+# doc:start
+# download "file.mp4" "http://up.tld/remote"
+# returns: nothing
+# doc:end
+download()
+{
+	local -i s1 s2 ret tried
+	if [[ $2 =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+		echo
+		msg2 'Downloading "%s"' "$1"
+		download_hls "$@"
+		ret=$?
+	else
+		s1=$(
+			curl --disable --referer "$(get_ref "$2")" -kLsIXGET "$2" \
+				| awk \
+					'/^HTTP\/[12.]+ 200/,/^\r$/ {
+						gsub(/\r/,"")
+						if( tolower($1) ~ /^content-length:$/) {
+							print $2
+						}
+					}'
+		)
+		s2=$(stat -Lc%s "$1.part" 2> /dev/null || echo 0)
+		if ((s1 >= s2)); then
+			if [[ -f "$1" && ! -f "$1.part" ]]; then
+				mv "$1" "$1.part"
+			fi
+			until fget "$2" "$1.part" --no-check-certificate; do
+				ret=$?
+				if [[ $ret = 10 ]]; then
+					ret=0
+					break
+				elif ((tried <= ${MAX_TRY:-5})); then
+					tput cuu 2
+					((tried > 1)) && (
+						tput el1
+						tput el
+						tput cuu1
+					)
+					tput el1
+					tput el
+					((tried += 1))
+					echo "Retrying...[$tried]"
+				else
+					break
+				fi
+			done
+		else
+			echo "Manually downloaded $1[$(byte_hr "$s2")],skipping."
+		fi
+	fi
+	if [[ $CHECK_FILE != false ]]; then
+		check_file "$1.part"
+		ret=$?
+	fi
+	if ((ret == 0)); then
+		mv "$1.part" "$1"
+	fi
+	return $ret
+}
+# doc:start
+# comare_episode "local.mp4" "http://up.tld/remote"
+# returns: 0 1 2
+# : 0 - Continue
+# : 1 - Exists
+# : 2 - Mismatch
+# : 3 - Network Failure
+# doc:end
+compare_episode()
+{
+	((SKIP_COMPARE == false)) || return 0
+	bug compare
+
+	if [[ $2 =~ https://[[:alnum:][:punct:]]*/[[:alnum:][:punct:]]*.m3u8[[:alnum:][:punct:]]* ]]; then
+		printf '\nHLS Remote: skipping comparison'
+		tput cuu1
+		return 0
+	fi
+	if ! [[ -e "$1" || -e "$1.part" ]]; then
+		return 0
+	fi
+	if [[ -e "$1" && ! -e "$1.part" ]]; then
+		return 1
+	fi
+	unbug compare
+	local size wsize BS="$BS"
+	if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+		BS=$(byte_mr <<< "$BS")
+	else
+		BS=524288
+	fi
+	size=$(stat -Lc%s "$1.part")
+	if ((BS > size)); then
+		BS=$size
+	fi
+	wsize=$(
+		curl --disable -LksIXGET "$2" --referer "$(get_ref "$2")" \
+			| awk \
+				'/^HTTP\/[12.]+ 200/,/^\r$/ {
+					gsub(/\r/,"")
+					if( tolower($1) ~ /^content-length:$/) {
+						print $2
+					}
+				}'
+	)
+	if ((size > wsize)); then
+		return 2
+	elif ((size == 0)); then
+		return 0
+	fi
+	bug compare
+	if command -v mediainfo &> /dev/null; then
+		asize=$(
+			mediainfo "$1.part" 2> /dev/null \
+				| sed -nE '/^stream size/Is/^.*:\s+([0-9.]+)\s+MiB.*/\1/Ip' \
+				| awk '{ d +=  $1 * 1048576};END {print int(d)}'
+		)
+	else
+		asize=$size
+	fi
+	if ((asize > wsize)); then
+		return 2
+	fi
+	unbug compare
+	failed_tests=${TOTAL_CHECKS:-10}
+	IFS=' ' read -ra offsets < <(srand 0 $((size - BS)) $((BS / 2)) "${TOTAL_CHECKS:-10}")
+	if ((${#offsets} == 0)); then
+		return 0
+	fi
+
+	for ((i = 0; i < ${TOTAL_CHECKS:-${#offsets}}; i++)); do
+		local start lhash rhash try=5
+		ask 'Comparing episode[test:%d]\r' "$((i + 1))"
+		bug compare
+		start=${offsets[$i]}
+
+		read -r lhash < <(
+			dd bs=1 count="$BS" status=none if="$1.part" skip="$start" \
+				| sha256sum \
+				| awk '{print $1}'
+		)
+
+		while ((--try)) && [[ -z $rhash || $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; do
+			IFS= read -r rhash < <(
+				curl --disable --fail -Lskr "$start-$((start + BS - 1))" "$2" --referer "$(get_ref "$2")" \
+					| base64 -w0
+			)
+			if [[ $(base64 -d <<< "$rhash" | wc --bytes) -ne $BS ]]; then
+				rhash=
+				sleep 2
+			fi
+			rhash=$(base64 -d <<< "$rhash" | sha256sum | awk '{print $1}')
+		done
+		unbug compare
+
+		if [[ "$lhash" == "$rhash" ]]; then
+			failed_tests=$((failed_tests - 1))
+		elif [[ $try -eq 0 && $rhash == "$(: | sha256sum | awk '{print $1}')" ]]; then # network failure
+			return 3
+		elif [[ "$lhash" != "$rhash" ]]; then # file mismatch
+			echo -e "\rComparing episode[test:$((i + 1)):fail]"
+			return 2
+		fi
+		unset start lhash rhash
+	done
+	ask 'Comparing episode[test:1-%d:pass]\n' "${TOTAL_CHECKS:-${#offsets}}"
+	return 0
+}
+SUPPORTED_HOSTS='vidcdn|xstreamcdn|doodstream|mp4upload|mixdrop'
+
+get_effective_url()
+{
+	xargs -rn 1 curl --disable -ILksXGET "$@" -o /dev/null -w '%{url_effective}\n' 2> /dev/null | grep '^http'
+}
+get_url()
+{
+	local try=0 url
+	mirror="${1//[^[:alnum:]]/}"
+
+	if ! grep -q "$1" <<< "$SUPPORTED_HOSTS"; then
+		msg2 "unimplemented:$1"
+		return 1
+	fi
+	if [[ $(type -t "${mirror}:get_url" || type -w "${mirror}:get_url") ]]; then
+		try=0
+		while [[ -z $url ]] && ((try++ < 5)); do
+			((try > 1)) && sleep 2
+			bug parse
+			url="$("${mirror}:get_url" "$2")"
+			unbug parse
+		done
+		echo "$url"
+	else
+		msg2 "unimplemented:${1/_/.}"
+		return
+	fi
+}
+
+mp4upload:get_url()
+{
+	curl --disable -s "https://www.mp4upload.com/$1" \
+		--referer "https://www.mp4upload.com/$1" \
+		--data-raw 'op=download2' \
+		--data-raw "id=$1" \
+		--write-out '%{redirect_url}\n'
+}
+
+xstreamcdn:get_url()
+{
+	local RHOST="fembed9hd.com"
+	curl --disable -sX POST "https://$RHOST/api/source/$1" \
+		--data "r=https://$RHOST" --data "d=$RHOST" \
+		| jq -r 'select(.success == true).data|[ reverse[]|select(.label == "720p" or .label == "480p")][0].file' 2> /dev/null \
+		| get_effective_url --referer "https://$RHOST"
+}
+
+# shellcheck disable=SC2317
+streamsb:get_url()
+{
+	return # doesn't work
+	local RHOST=sbani.pro
+	curl -s "https://$RHOST/d/$1" \
+		| xpath 'string(//div[contains(@onclick, "download_video")][1]/@onclick)' \
+		| sed -E "s;^.*\bdownload_video\s*\(\s*'(.+)'\s*,\s*'(.)'\s*,\s*'(.+)'\s*\).*$;\1\t\2\t\3;" \
+		| (
+			read -r id t hash
+			curl --disable -s "https://$RHOST/dl?op=download_orig&id=$id&mode=$t&hash=$hash" \
+				--referer "https://$RHOST/dl?op=download_orig&id=$id&mode=$t&hash=$hash" \
+				--data-urlencode "op=download_orig&id=$id&mode=$t&hash=$hash"
+		)
+
+}
+
+vidcdn:get_url()
+{
+	local RHOST="https://gogohd.pro"
+	local ajax_url="$RHOST/encrypt-ajax.php"
+
+	curl --disable -s "$RHOST/streaming.php?id=${1%%:*}" \
+		| sed -nE \
+			-e 's/.*class="container-(.*)">/0 \1/p' \
+			-e 's/.*class="wrapper container-(.*)">/1 \1/p' \
+			-e 's/.*class=".*videocontent-(.*)">/2 \1/p' \
+			-e 's/.*data-value="(.*)">.*/3 \1/p' \
+		| (
+			kidx=('key' 'iv' 'dkey' 'token')
+			while read -r idx data; do
+				read -r "${kidx[idx]}" < <(
+					case "$idx" in
+						[0-2])
+							tr -d $'\n' <<< "$data" \
+								| od -A n -t x1 \
+								| tr -d $' \n'
+							;;
+						3) echo "$data" ;;
+					esac
+				)
+			done
+			read -r token < <(
+				base64 -d <<< "$token" \
+					| openssl enc -d -aes256 -K "$key" -iv "$iv" 2> /dev/null \
+					| sed -nE 's/.*&(token.*)/\1/p'
+			)
+			read -r eid < <(
+				openssl enc -e -aes256 \
+					-K "$key" -iv "$iv" <<< "${1%%:*}" 2> /dev/null | base64 -w0
+			)
+
+			curl --disable -s \
+				-H "X-Requested-With:XMLHttpRequest" \
+				"${ajax_url}?id=${eid}&alias=${1%%:*}&$token" \
+				| jq -r .data \
+				| base64 -d \
+				| openssl enc -d -aes256 -K "$dkey" -iv "$iv" 2> /dev/null \
+				| jq -r '.source[0].file' 2> /dev/null
+		)
+}
+
+mixdrop:get_url()
+{
+	local payload fmtstr
+	local -a data
+
+	IFS= read -r payload < <(curl --disable -s "https://mixdrop.to/e/$1" | sed -n '/^eval/p')
+	mapfile -t data < <(sed -nE 's/^.*'\''(.+)'\''\.split.+$/\1/g;s/\|/\n/gp' <<< "$payload")
+	read -r fmtstr < <(
+		sed -nE 's,^.+\;1\.d="//([^"]+)"\;.+$,\1,p' <<< "$payload" \
+			| while read -rn1 c; do
+				[[ $c =~ ^[0-9a-df-p]$ ]] && printf '{%d}' $((26#$c)) || printf '%s' "$c"
+			done
+	)
+	((${#data[@]} == 0)) || format_string "https://$fmtstr" "${data[@]}"
+}
+
+doodstream:get_url()
+{
+
+	local RHOST=https://dooood.com
+	local UA='Lynx/2.8.9rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/3.6.5'
+	curl --disable -s --user-agent "$UA" "$RHOST/d/$1" \
+		| xpath 'string(//div[@class="download-content"]/a/@href)' \
+		| xargs -ri curl --disable -s --user-agent "$UA" "$RHOST/{}" \
+		| xpath 'string(//a[contains(@onclick, ".dood.video/")]/@onclick)' \
+		| sed -E "s@.*\('((https:)?//[^']+)'.*\)@\1@" \
+		| get_effective_url --referer "$RHOST"
+}
+typeset -gi depfs=0
+fail_dep()
+{
+	local -a pkgs
+	local pkg
+	readarray -t pkgs < <(
+		_pkgs="${2#*@}"
+		[[ "$_pkgs" == "$2" ]] || echo "${_pkgs//@/$'\n'}"
+	)
+	error "$1" "${2%@*}"
+	for pkg in "${pkgs[@]}"; do
+		plainerr 'Available in `%s'\'' as `%s'\' "${pkg%:*}" "${pkg#*:}"
+	done
+	depfs+=1
+}
+
+pydep()
+{
+	python3 -c "import ${1%%@*}" &> /dev/null \
+		|| fail_dep "Please install python3 module \`%s'" "$1"
+}
+
+pldep()
+{
+	perl "-M${1%%@*}" -e ';' 2> /dev/null \
+		|| fail_dep "Please install perl module \`%s'" "$1"
+}
+
+dep()
+{
+	type "${1%%@*}" &> /dev/null \
+		|| fail_dep "Please install \`%s' or make sure it is in your path." "$1"
+}
+
+dep awk@pacman:gawk
+dep base64@pacman:coreutils
+dep bc@pacman:bc
+dep convert@pacman:imagemagick
+dep curl@pacman:curl
+dep cut@pacman:coreutils
+dep date@pacman:coreutils
+dep dd@pacman:coreutils
+dep ffmpeg@pacman:ffmpeg
+dep ffprobe@pacman:ffmpeg
+dep grep@pacman:grep
+dep head@pacman:coreutils
+dep jq@pacman:jq
+dep lsof@pacman:lsof
+dep mkdir@pacman:coreutils
+dep mv@pacman:coreutils
+dep notify-send@pacman:libnotify
+dep openssl@pacman:openssl
+dep python3@pacman:python
+dep rm@pacman:coreutils
+dep sed@pacman:sed
+dep sha256sum@pacman:coreutils
+dep sort@pacman:coreutils
+dep stat@pacman:coreutils
+dep tac@pacman:coreutils
+dep tail@pacman:coreutils
+dep tput@pacman:ncurses
+dep tr@pacman:coreutils
+dep tty@pacman:coreutils
+dep wc@pacman:coreutils
+dep wget@pacman:wget
+dep xargs@pacman:findutils
+dep xmllint@pacman:libxml
+
+pydep requests@pypi:requests@pacman:python-requests
+pydep yaml@pypi:yaml@pacman:python-yaml
+pydep numpy@pypi:numpy@pacman:python-numpy
+
+if ((depfs > 0)); then
+	error "Install missing dependencies to continue."
+	exit 3
+else
+	unset -f fail_dep pydep dep
+	unset depfs
+fi
+if [[ ! -d $ANIME_PATH ]]; then
+	mkdir -p "$ANIME_PATH" &> /dev/null || exit 1
+fi
+
+if [[ $# -gt 0 ]]; then
+	while [ -n "$1" ]; do
+		case $1 in
+			-v | --version)
+				#+option
+				#:short -v
+				#:long --version
+				#:text Show version and license.
+				#-option
+				if [ "${0##*/}" = "35footer" ]; then
+					printf "chia-dl master-r%d.%s\n" \
+						"$(git rev-list --count HEAD)" \
+						"$(
+							git rev-parse --short HEAD | tr -d \\n
+							git diff --shortstat | awk 'END{ if($1 > 0) print "-" $1 }'
+						)"
+				else
+					printf -- 'chia-dl %s\n' "$(awk '/^#\+VERSION/{print $2;exit}' "$0")"
+				fi
+				printf '\n'
+				chia_get_license
+				exit 0
+				;;
+			-L | --license)
+				#+option
+				#:short -L
+				#:long --license
+				#:text Show license.
+				#-option
+				chia_get_license
+				exit 0
+				;;
+			-U | --self-update)
+				#+option
+				#:short -U
+				#:long --self-update
+				#:IDNT 1
+				#:text Update this program.
+				#-option
+				((CHECK_UPDATE = always))
+				;;
+			--list-mirror)
+				#+option
+				#:long --list-mirror
+				#:text List supported mirrors
+				#-option
+				readarray -t mirrors < <(
+					printf '%s' "${SUPPORTED_HOSTS//|/$'\n'}"
+				)
+				msg 'Supported mirrors'
+				msg2 '%s' "${mirrors[@]}"
+				exit 0
+				;;
+			-m | --mirror)
+				#+option
+				#:short -m
+				#:long --mirror
+				#:text select preferred mirrors.
+				#:args mirror1[,mirror2[,...]]
+				#-option
+				if grep -Eq "${2//,/|}" <<< "${SUPPORTED_HOSTS//|/$'\n'}"; then
+					PREFERRED_HOSTS="${PREFERRED_HOSTS:+$PREFERRED_HOSTS,}$2"
+				fi
+				shift
+				;;
+			--mirror=[[:alnum:].,]*)
+				tmp="${1##*=}"
+				if grep -Eq "${tmp//,/|}" <<< "${SUPPORTED_HOSTS//|/$'\n'}"; then
+					PREFERRED_HOSTS="${PREFERRED_HOSTS:+$PREFERRED_HOSTS,}$tmp"
+				fi
+				unset tmp
+				;;
+			--break | -b)
+				#+option
+				#:short -b
+				#:long --break
+				#:text break on error
+				#-option
+				NOBREAK=false
+				;;
+			-nb | --no-break)
+				#+option
+				#:short -nb
+				#:long --no-break
+				#:text don't break on error
+				#-option
+				NOBREAK=true
+				;;
+			-B[[:digit:].]*[kKmM] | --block=[[:digit:].]*[kKmM])
+				#+option
+				#:short -B
+				#:long --block
+				#:text set block size for testing.(allowed suffixes: kM)
+				#:args <block size>
+				#-option
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]] || BS=${1/-B/}
+				BS=$(byte_mr <<< "$BS")
+				;;
+			-B[[:digit:].]* | --block=[[:digit:].]*)
+				BS=${1#*=}
+				[[ $BS =~ ^[[:digit:].]+$ ]] || BS=${1/-B/}
+				;;
+			-B | --block)
+				BS=$2
+				if [[ $BS =~ ^[[:digit:].]+[[:digit:]kKmM]$ ]]; then
+					BS=$(byte_mr <<< "$BS")
+					shift
+				else
+					echo "Invalid block size." 1>&2
+				fi
+				;;
+			--debug | --debug=[[:alnum:].:-]*)
+				#+option
+				#:long --debug
+				#:text enable debug mode
+				#:args [all | type1[:type2[...]]
+				#-option
+				DEBUG=${1#*=}
+				[[ $DEBUG = --debug ]] && DEBUG=all
+				;;
+			-c | --continue)
+				#+option
+				#:short -c
+				#:long --continue
+				#:text Reload previous episode selection.
+				#-option
+				CONTINUE=true
+				;;
+			-nc | --no-continue)
+				#+option
+				#:short -nc
+				#:long --no-continue
+				#:IDNT 1
+				#:text Don't Reload previous episode selection.
+				#-option
+				CONTINUE=false
+				;;
+			-n | --no-break-or-reset)
+				#+option
+				#:short -n
+				#:long --no-break-or-reset
+				#:IDNT 1
+				#:text equivalent to -nb -nr.
+				#-option
+				NOBREAK=true
+				NORESET=true
+				;;
+			-R | --reset)
+				#+option
+				#:short -R
+				#:long --reset
+				#:text Clear screen on selection change.
+				#-option
+				NORESET=false
+				;;
+			-r | --replace)
+				#+option
+				#:short -r
+				#:long --replace
+				#:text Replace unmatched episode.
+				#:args <manual | fail>
+				#-option
+				if grep -qiE 'manual|fail' <<< "$2"; then
+					declare -gi "REPLACE_$(tr '[:lower:]' '[:upper:]' <<< "$2")=1"
+					shift
+				else
+					declare -gi REPLACE_FAIL=1 REPLACE_MANUAL=1
+				fi
+				;;
+			-r[fm] | --replace=fail | --replace=manual)
+				REPLACE="$(tr '[:lower:]' '[:upper:]' <<< "${1#*=}")"
+				if ! grep -qiE 'manual|fail' <<< "$REPLACE"; then
+					REPLACE="$(
+						if [ "${1/-r/}" = "m" ]; then
+							echo manual
+						else
+							echo fail
+						fi | tr '[:lower:]' '[:upper:]'
+					)"
+				fi
+				declare -gi "REPLACE_$REPLACE=1"
+				unset REPLACE
+				;;
+			-f | --file-list)
+				#+option
+				#:short -f
+				#:long --file-list
+				#:text Ask for list of files to download.
+				#-option
+				FILE_LIST=true
+				;;
+			-s | --select)
+				#+option
+				#:short -s
+				#:long --select
+				#:text Select search results.
+				#:args <result-index-list>
+				#-option
+				if [[ $2 =~ ^[[:digit:],-]+$ ]]; then
+					RES_LIST=$2
+					shift
+				else
+					error 'Invalid selection index: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			--select=[[:digit:],-]*)
+				RES_LIST=${1#*=}
+				[[ $RES_LIST =~ ^[[:digit:],-]+$ ]] || unset RES_LIST
+				;;
+			-u | --update)
+				#+option
+				#:short -u
+				#:long --update
+				#:text Update and continue incomplete downloads, implies -c -n
+				#:IDNT 4
+				#:text adding '!' as first arg inverts match.
+				#:IDNT 2
+				#:args [! ][id1[ id2[ ...]]]
+				#-option
+				DO_ALT=update
+				CONTINUE=true
+				NOBREAK=true
+				NORESET=true
+				if (($# > 1)); then
+					shift
+					DO_UPDATE_ONLY=("$@")
+				fi
+				;;
+			-l | --list)
+				#+option
+				#:short -l
+				#:long --list
+				#:text List updatable/interrupted series.
+				#-option
+				DO_ALT=list-queue
+				;;
+			-h | --help)
+				#+option
+				#:short -h
+				#:long --help
+				#:text Show help
+				#-option
+				help
+				exit 0
+				;;
+			-T[[:digit:]]* | --timeout=[[:digit:]]*)
+				RSOLV=${1#*=}
+				[[ $RSOLV =~ ^[[:digit:]]+$ ]] || RSOLV=${1/-T/}
+				;;
+			-T | --timeout)
+				#+option
+				#:short -T
+				#:long --timeout
+				#:text Set timeout for requests.
+				#-option
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					RSOLV=${2}
+					shift
+				else
+					error 'Invalid argument: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			-t | --try)
+				#+option
+				#:short -t
+				#:long --try
+				#:text set retry attempts
+				#:args <retry>
+				#-option
+				if [[ ${2} =~ ^[[:digit:],-]+$ ]]; then
+					MAX_TRY=${2}
+					shift
+				else
+					error 'Invalid argument: %s' "$1 $2"
+					exit 1
+				fi
+				;;
+			-t[[:digit:]]* | --try=[[:digit:]]*)
+				MAX_TRY=${1#*=}
+				[[ $MAX_TRY =~ ^[[:digit:]]+$ ]] || MAX_TRY=${1/-t/}
+				;;
+			-a | --all)
+				#+option
+				#:short -a
+				#:long --all
+				#:text Download all results. implies -n
+				#-option
+				DOWNLOAD_ALL=true
+				NOBREAK=true
+				NORESET=true
+				unset RES_LIST
+				;;
+			-q | --queue)
+				#+option
+				#:short -q
+				#:long --queue
+				#:text Add selected results to download queue. implies -n
+				#-option
+				NOBREAK=true
+				NORESET=true
+				update_queue=1
+				;;
+			-nr | --no-reset)
+				#+option
+				#:short -nr
+				#:long --no-reset
+				#:text Don't reset terminal on selection download.
+				#-option
+				NORESET=true
+				;;
+			-d | --dry-run)
+				#+option
+				#:short -d
+				#:long --dry-run
+				#:text Don't download anything
+				#-option
+				SKIP_DOWNLOAD=true
+				;;
+			-[[:alnum:]]?? | --[[:alnum:]]*)
+				echo "Invalid option -- $1" 1>&2
+				exit 1
+				;;
+			*)
+				SEARCHSTR="$(sed 's|^ *||g;s|* $||g' <<< "$SEARCHSTR $1")"
+				;;
+		esac
+		shift
+	done
+	if ((CHECK_UPDATE >= auto && AUTO_UPDATE >= auto)) && check_update; then
+		if self_update; then
+			export PREFERRED_HOSTS SKIP_DOWNLOAD \
+				NOBREAK NORESET update_queue DOWNLOAD_ALL DO_ALT RES_LIST FILE_LIST \
+				REPLACE_FAIL REPLACE_MANUAL DEBUG CONTINUE
+			exec "$0" "$SEARCHSTR"
+		else
+			exit
+		fi
+	fi
+	if [[ -n "$RES_LIST" ]] && ((DOWNLOAD_ALL)); then
+		DOWNLOAD_ALL=false
+		warning "--all/-a option can only be used when no"
+		plain "election or episode limit specified."
+		msg "Disabling autodownload mode"
+	fi
+	if [[ $SEARCHSTR != '' ]] || [[ -n $DO_ALT ]]; then
+		if ((NC)) || check_up_server "${PUPPETEER_PROXY}https://$DNS_NAME" "${RSOLV:-1}"; then
+			case $DO_ALT in
+				update)
+					chia_update
+					exit
+					;;
+				list-queue)
+					chia_list_queue
+					exit
+					;;
+			esac
+			chia_search "$SEARCHSTR"
+			exit $?
+		else
+			error 'Request timed out'
+			exit 5
+		fi
+	else
+		help
+		exit 1
+	fi
+else
+	help
+	exit 1
+fi
